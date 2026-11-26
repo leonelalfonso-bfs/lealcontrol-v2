@@ -405,11 +405,11 @@ export function QualityPg05Page() {
     <div className="workspace-page pad">
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "flex-start" }}>
         <div>
-          <Link to={`/calidad/documentos/${plantillaCode}`} style={{ fontSize: 13 }}>
+          <Link className="t-small" to={`/calidad/documentos/${plantillaCode}`}>
             ← Plantilla {plantillaCode}
           </Link>
           <h1 style={{ margin: "4px 0 0" }}>PG05 · Compras (evaluación y desempeño de proveedores)</h1>
-          <p style={{ marginTop: 6, color: "var(--lc-ink-3)", maxWidth: 680 }}>
+          <p className="muted" style={{ marginTop: 6, maxWidth: 680 }}>
             Evaluación inicial, listado de proveedores habilitados y seguimiento de desempeño periódico.
           </p>
         </div>
@@ -425,10 +425,10 @@ export function QualityPg05Page() {
         </div>
       </div>
 
-      {error && <p style={{ color: "var(--lc-danger)" }}>{error}</p>}
-      {msg && <p style={{ color: "var(--lc-ok)" }}>{msg}</p>}
+      {error && <p className="t-danger">{error}</p>}
+      {msg && <p className="t-ok">{msg}</p>}
 
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "12px 0", fontSize: 13 }}>
+      <div className="t-small" style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "12px 0" }}>
         <span className="card pad" style={{ padding: "6px 10px" }}>
           Evaluaciones borrador: <strong>{summary?.evaluationsDraft ?? 0}</strong>
         </span>
@@ -459,7 +459,7 @@ export function QualityPg05Page() {
 
       {showForm && tab === "r01" && (
         <form className="card pad" onSubmit={(e) => void onCreateEval(e)} style={{ marginBottom: 16 }}>
-          <h3 style={{ marginTop: 0 }}>Nueva evaluación inicial (borrador)</h3>
+          <h3>Nueva evaluación inicial (borrador)</h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
             <label>
               Proveedor
@@ -474,7 +474,7 @@ export function QualityPg05Page() {
               <input type="date" value={eValidUntil} onChange={(ev) => setEValidUntil(ev.target.value)} />
             </label>
           </div>
-          <label style={{ display: "block", marginTop: 12 }}>
+          <label style={{ marginTop: 12 }}>
             Alcance
             <input value={eScope} onChange={(ev) => setEScope(ev.target.value)} style={{ width: "100%" }} />
           </label>
@@ -489,7 +489,7 @@ export function QualityPg05Page() {
               <textarea value={eWeaknesses} onChange={(ev) => setEWeaknesses(ev.target.value)} rows={2} style={{ width: "100%" }} />
             </label>
           </div>
-          <label style={{ display: "block", marginTop: 8 }}>
+          <label style={{ marginTop: 8 }}>
             Notas
             <textarea value={eNotes} onChange={(ev) => setENotes(ev.target.value)} rows={2} style={{ width: "100%" }} />
           </label>
@@ -501,7 +501,7 @@ export function QualityPg05Page() {
 
       {showForm && tab === "r03" && (
         <form className="card pad" onSubmit={(e) => void onCreatePerf(e)} style={{ marginBottom: 16 }}>
-          <h3 style={{ marginTop: 0 }}>Nueva revisión de desempeño</h3>
+          <h3>Nueva revisión de desempeño</h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
             <label>
               Proveedor
@@ -521,11 +521,11 @@ export function QualityPg05Page() {
             </label>
           </div>
           <CriteriaTable answers={newPerformanceCriteria} onChange={setNewPerformanceCriteria} />
-          <label style={{ display: "block", marginTop: 12 }}>
+          <label style={{ marginTop: 12 }}>
             Comentarios
             <textarea value={pComments} onChange={(ev) => setPComments(ev.target.value)} rows={2} style={{ width: "100%" }} />
           </label>
-          <label style={{ display: "block", marginTop: 8 }}>
+          <label style={{ marginTop: 8 }}>
             Notas
             <textarea value={pNotes} onChange={(ev) => setPNotes(ev.target.value)} rows={2} style={{ width: "100%" }} />
           </label>
@@ -550,7 +550,7 @@ export function QualityPg05Page() {
               <p className="muted">Sin evaluaciones.</p>
             ) : (
               <div style={{ overflowX: "auto" }}>
-                <table className="data-table" style={{ width: "100%", fontSize: 13 }}>
+                <table className="data-table">
                   <thead>
                     <tr>
                       <th>Número</th>
@@ -589,7 +589,7 @@ export function QualityPg05Page() {
               <p className="muted">Sin proveedores habilitados.</p>
             ) : (
               <div style={{ overflowX: "auto" }}>
-                <table className="data-table" style={{ width: "100%", fontSize: 13 }}>
+                <table className="data-table">
                   <thead>
                     <tr>
                       <th>Proveedor</th>
@@ -625,7 +625,7 @@ export function QualityPg05Page() {
             <p className="muted">Sin revisiones de desempeño.</p>
           ) : (
             <div style={{ overflowX: "auto" }}>
-              <table className="data-table" style={{ width: "100%", fontSize: 13 }}>
+              <table className="data-table">
                 <thead>
                   <tr>
                     <th>Número</th>
@@ -641,7 +641,7 @@ export function QualityPg05Page() {
                     <tr
                       key={r.id}
                       onClick={() => setSelectedId(r.id)}
-                      style={{ cursor: "pointer", background: selectedId === r.id ? "#e0f2fe" : undefined }}
+                      style={{ cursor: "pointer", background: selectedId === r.id ? "var(--lc-accent-soft)" : undefined }}
                     >
                       <td>{r.number}</td>
                       <td>{r.supplierName}</td>
@@ -664,8 +664,8 @@ export function QualityPg05Page() {
                 <p className="muted">Seleccioná una evaluación.</p>
               ) : (
                 <>
-                  <h3 style={{ marginTop: 0 }}>{selectedEval.number}</h3>
-                  <p style={{ marginTop: 0, color: "var(--lc-ink-3)", fontSize: 13 }}>
+                  <h3>{selectedEval.number}</h3>
+                  <p className="muted t-small" style={{ marginTop: 0 }}>
                     {EVAL_STATUS[selectedEval.status] ?? selectedEval.status}
                     {selectedEval.isExpired ? " · vencida" : ""} · {selectedEval.supplierName}
                   </p>
@@ -679,32 +679,32 @@ export function QualityPg05Page() {
                   </p>
                   {selectedEval.status !== "Cancelled" && (
                     <>
-                      <label style={{ display: "block", marginBottom: 8 }}>
+                      <label>
                         Alcance
                         <input value={eScope} onChange={(ev) => setEScope(ev.target.value)} style={{ width: "100%" }} />
                       </label>
-                      <label style={{ display: "block", marginBottom: 8 }}>
+                      <label>
                         Fecha evaluación
                         <input type="date" value={eEvaluatedAt} onChange={(ev) => setEEvaluatedAt(ev.target.value)} />
                       </label>
                       <CriteriaTable answers={editCriteriaAnswers} onChange={setEditCriteriaAnswers} />
-                      <label style={{ display: "block", marginBottom: 8 }}>
+                      <label>
                         Fortalezas
                         <textarea value={eStrengths} onChange={(ev) => setEStrengths(ev.target.value)} rows={2} style={{ width: "100%" }} />
                       </label>
-                      <label style={{ display: "block", marginBottom: 8 }}>
+                      <label>
                         Debilidades
                         <textarea value={eWeaknesses} onChange={(ev) => setEWeaknesses(ev.target.value)} rows={2} style={{ width: "100%" }} />
                       </label>
-                      <label style={{ display: "block", marginBottom: 8 }}>
+                      <label>
                         Aprobado por
                         <input value={eApprovedBy} onChange={(ev) => setEApprovedBy(ev.target.value)} style={{ width: "100%" }} />
                       </label>
-                      <label style={{ display: "block", marginBottom: 8 }}>
+                      <label>
                         Vigente hasta
                         <input type="date" value={eValidUntil} onChange={(ev) => setEValidUntil(ev.target.value)} />
                       </label>
-                      <label style={{ display: "block", marginBottom: 8 }}>
+                      <label>
                         Notas
                         <textarea value={eNotes} onChange={(ev) => setENotes(ev.target.value)} rows={2} style={{ width: "100%" }} />
                       </label>
@@ -842,7 +842,7 @@ export function QualityPg05Page() {
                         </button>
                       </div>
                       {selectedEval.approvedBy ? (
-                        <p style={{ fontSize: 12, color: "var(--lc-ink-3)", marginTop: 12 }}>
+                        <p className="muted t-small" style={{ marginTop: 12 }}>
                           Aprobada por {selectedEval.approvedBy}
                           {selectedEval.approvedAt ? ` · ${fmtDate(selectedEval.approvedAt)}` : ""}
                         </p>
@@ -857,31 +857,31 @@ export function QualityPg05Page() {
                 <p className="muted">Seleccioná una revisión de desempeño.</p>
               ) : (
                 <>
-                  <h3 style={{ marginTop: 0 }}>{selectedPerf.number}</h3>
-                  <p style={{ marginTop: 0, color: "var(--lc-ink-3)", fontSize: 13 }}>
+                  <h3>{selectedPerf.number}</h3>
+                  <p className="muted t-small" style={{ marginTop: 0 }}>
                     {PERF_STATUS[selectedPerf.status] ?? selectedPerf.status} · {selectedPerf.supplierName}
                     {selectedPerf.period ? ` · ${selectedPerf.period}` : ""}
                   </p>
                   {selectedPerf.status === "Draft" && (
                     <>
-                      <label style={{ display: "block", marginBottom: 8 }}>
+                      <label>
                         Período
                         <input value={pPeriod} onChange={(ev) => setPPeriod(ev.target.value)} style={{ width: "100%" }} />
                       </label>
-                      <label style={{ display: "block", marginBottom: 8 }}>
+                      <label>
                         Fecha revisión
                         <input type="date" value={pReviewDate} onChange={(ev) => setPReviewDate(ev.target.value)} />
                       </label>
-                      <label style={{ display: "block", marginBottom: 8 }}>
+                      <label>
                         Revisado por
                         <input value={pReviewedBy} onChange={(ev) => setPReviewedBy(ev.target.value)} style={{ width: "100%" }} />
                       </label>
                       <CriteriaTable answers={editPerformanceCriteria} onChange={setEditPerformanceCriteria} />
-                      <label style={{ display: "block", marginBottom: 8 }}>
+                      <label>
                         Comentarios
                         <textarea value={pComments} onChange={(ev) => setPComments(ev.target.value)} rows={3} style={{ width: "100%" }} />
                       </label>
-                      <label style={{ display: "block", marginBottom: 8 }}>
+                      <label>
                         Notas
                         <textarea value={pNotes} onChange={(ev) => setPNotes(ev.target.value)} rows={2} style={{ width: "100%" }} />
                       </label>
@@ -968,7 +968,7 @@ export function QualityPg05Page() {
                     </>
                   )}
                   {selectedPerf.status !== "Draft" && (
-                    <div style={{ fontSize: 13, color: "var(--lc-ink-3)" }}>
+                    <div className="muted t-small">
                       <div>
                         <strong>Revisó:</strong> {selectedPerf.reviewedBy || "—"}
                       </div>

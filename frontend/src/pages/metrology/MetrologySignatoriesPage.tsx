@@ -66,7 +66,7 @@ export function MetrologySignatoriesPage() {
 
       <div className="card pad stack" style={{ gap: 6 }}>
         <h3 style={{ margin: 0 }}>Responsables técnicos con firma</h3>
-        <table style={{ fontSize: "0.88rem" }}>
+        <table>
           <thead><tr><th>Aclaración</th><th>Cargo</th><th>Matrícula</th><th>Firma</th></tr></thead>
           <tbody>
             {list.map((s) => <tr key={s.userId}><td>{s.fullName}</td><td>{s.title ?? "—"}</td><td>{s.license ?? "—"}</td><td>{s.hasSignature ? "✓ cargada" : "falta"}</td></tr>)}

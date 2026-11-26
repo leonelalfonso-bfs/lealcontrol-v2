@@ -148,7 +148,7 @@ export function QualityLinkedItPage() {
   if (!itCode || !meta) {
     return (
       <div className="workspace-page pad">
-        <p style={{ color: "var(--lc-danger)" }}>Instructivo o registro no válido. Usá IT01–IT04 y r1/r2/r3.</p>
+        <p className="t-danger">Instructivo o registro no válido. Usá IT01–IT04 y r1/r2/r3.</p>
         <Link to="/calidad/registros">← Registros operativos</Link>
       </div>
     );
@@ -158,15 +158,15 @@ export function QualityLinkedItPage() {
     <div className="workspace-page pad">
       <div className="page-head" style={{ marginBottom: 16 }}>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-          <Link to="/calidad/registros" style={{ fontSize: 13 }}>
+          <Link className="t-small" to="/calidad/registros">
             ← Registros
           </Link>
-          <Link to={`/calidad/documentos/${encodeURIComponent(docCode)}`} style={{ fontSize: 13 }}>
+          <Link className="t-small" to={`/calidad/documentos/${encodeURIComponent(docCode)}`}>
             Árbol: {docCode}
           </Link>
         </div>
         <h1 style={{ margin: "8px 0 0" }}>{pageTitle}</h1>
-        <p style={{ color: "var(--lc-ink-3)", marginTop: 6, maxWidth: 760 }}>{subtitle}</p>
+        <p className="muted" style={{ marginTop: 6, maxWidth: 760 }}>{subtitle}</p>
       </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
@@ -185,12 +185,12 @@ export function QualityLinkedItPage() {
         )}
       </div>
 
-      {error && <p style={{ color: "var(--lc-danger)" }}>{error}</p>}
+      {error && <p className="t-danger">{error}</p>}
       {loading && <p>Cargando…</p>}
 
       {!loading && meta.focus === "equipment" && (
         <div className="card" style={{ padding: 0, overflow: "auto" }}>
-          <table className="table" style={{ width: "100%" }}>
+          <table className="table">
             <thead>
               <tr>
                 <th>Código</th>
@@ -220,7 +220,7 @@ export function QualityLinkedItPage() {
                     {eq.maxCapacity != null ? `${eq.maxCapacity} ${eq.unit || "kg"}` : "—"}
                   </td>
                   <td>{labelOf(EQUIPMENT_STATUS, eq.status)}</td>
-                  <td style={{ textAlign: "right" }}>
+                  <td className="t-right">
                     <Link className="btn ghost compact" to={`/metrologia/equipos/${eq.id}`}>
                       Abrir
                     </Link>
@@ -234,7 +234,7 @@ export function QualityLinkedItPage() {
 
       {!loading && meta.focus === "reports" && (
         <div className="card" style={{ padding: 0, overflow: "auto" }}>
-          <table className="table" style={{ width: "100%" }}>
+          <table className="table">
             <thead>
               <tr>
                 <th>Certificado</th>
@@ -257,19 +257,19 @@ export function QualityLinkedItPage() {
               {reports.map((r) => (
                 <tr key={r.id}>
                   <td>
-                    <strong style={{ color: "var(--lc-accent-strong)" }}>{certOf(r)}</strong>
+                    <strong className="t-accent">{certOf(r)}</strong>
                   </td>
                   <td>{fmtDate(r.calibrationDate)}</td>
                   <td>
                     <strong>{r.equipmentCode}</strong>
-                    <div className="muted" style={{ fontSize: 12 }}>
+                    <div className="muted t-small">
                       {r.equipmentDescription || "—"}
                     </div>
                   </td>
                   <td>{r.customerName || "—"}</td>
                   <td>{labelOf(METROLOGY_REPORT_STATUS, reportStatusOf(r))}</td>
                   <td>{verdictLabel(r)}</td>
-                  <td style={{ textAlign: "right" }}>
+                  <td className="t-right">
                     <Link className="btn ghost compact" to={`/metrologia/informes/${r.id}/imprimir`} target="_blank">
                       Ver / Imprimir
                     </Link>
@@ -283,7 +283,7 @@ export function QualityLinkedItPage() {
 
       {!loading && meta.focus === "seals" && (
         <div className="card" style={{ padding: 0, overflow: "auto" }}>
-          <table className="table" style={{ width: "100%" }}>
+          <table className="table">
             <thead>
               <tr>
                 <th>Certificado</th>
@@ -306,14 +306,14 @@ export function QualityLinkedItPage() {
               {reports.map((r) => (
                 <tr key={r.id}>
                   <td>
-                    <strong style={{ color: "var(--lc-accent-strong)" }}>{certOf(r)}</strong>
+                    <strong className="t-accent">{certOf(r)}</strong>
                   </td>
                   <td>{fmtDate(r.calibrationDate)}</td>
                   <td>{r.equipmentCode}</td>
                   <td>{r.customerName || "—"}</td>
                   <td>{r.sealsPlaced || "—"}</td>
                   <td>{labelOf(METROLOGY_REPORT_STATUS, reportStatusOf(r))}</td>
-                  <td style={{ textAlign: "right" }}>
+                  <td className="t-right">
                     <Link className="btn ghost compact" to={`/metrologia/informes/${r.id}/imprimir`} target="_blank">
                       Ver / Imprimir
                     </Link>

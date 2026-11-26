@@ -310,7 +310,7 @@ export function MetrologyEquipmentFormPage() {
 
   if (loading) {
     return (
-      <div className="page-wide" style={{ padding: 40, textAlign: "center" }}>
+      <div className="page-wide t-center" style={{ padding: 40 }}>
         <div className="muted">Cargando ficha técnica del instrumento...</div>
       </div>
     );
@@ -320,26 +320,26 @@ export function MetrologyEquipmentFormPage() {
     <div className="page-wide" style={{ paddingBottom: 60 }}>
       {/* Breadcrumb & Header */}
       <div style={{ marginBottom: 20 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "var(--lc-ink-3)", marginBottom: 6 }}>
+        <div className="t-small muted" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
           <Link to="/metrologia" style={{ color: "inherit", textDecoration: "none" }}>Metrología Legal</Link>
           <span>›</span>
           <Link to="/metrologia/equipos" style={{ color: "inherit", textDecoration: "none" }}>Gestión de Equipos</Link>
           <span>›</span>
-          <span style={{ color: "var(--lc-accent-strong)", fontWeight: 700 }}>{isEditing ? `Editar [${code}]` : "Alta de Instrumento"}</span>
+          <span className="t-accent t-strong">{isEditing ? `Editar [${code}]` : "Alta de Instrumento"}</span>
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
-            <h1 style={{ margin: "0 0 4px", fontSize: "1.75rem", fontWeight: 800, color: "var(--lc-ink)" }}>
+            <h1 style={{ margin: "0 0 4px" }}>
               {isEditing ? `⚖️ Ficha Técnica: ${description || code}` : "➕ Alta de Instrumento de Pesar"}
             </h1>
-            <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
+            <p className="muted" style={{ margin: 0 }}>
               Registro integral de plataforma, indicadores, disposiciones de aprobación y capacidades según normativa argentina.
             </p>
           </div>
 
           <div style={{ display: "flex", gap: 10 }}>
-            <Link to="/metrologia/equipos" className="btn ghost" style={{ padding: "8px 16px", fontWeight: 600 }}>
+            <Link to="/metrologia/equipos" className="btn ghost">
               ← Cancelar y Volver
             </Link>
             <button
@@ -347,7 +347,7 @@ export function MetrologyEquipmentFormPage() {
               onClick={handleSubmit}
               disabled={saving}
               className="btn"
-              style={{ background: "var(--lc-accent)", color: "#fff", fontWeight: 800, padding: "8px 24px", fontSize: "0.92rem", minWidth: 160 }}
+              style={{ minWidth: 160 }}
             >
               {saving ? "Guardando..." : "💾 Guardar Instrumento"}
             </button>
@@ -356,7 +356,7 @@ export function MetrologyEquipmentFormPage() {
       </div>
 
       {error && (
-        <div className="alert" style={{ marginBottom: 20, background: "var(--lc-danger-bg)", color: "var(--lc-danger)", border: "1px solid var(--lc-danger-bg)", padding: "14px 18px", borderRadius: 8, fontSize: "0.92rem" }}>
+        <div className="alert" style={{ marginBottom: 20 }}>
           ⚠️ {error}
         </div>
       )}
@@ -372,38 +372,38 @@ export function MetrologyEquipmentFormPage() {
             zIndex: showCustomerDropdown ? 9999 : 5
           }}
         >
-          <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--lc-accent-strong)", marginBottom: 14 }}>
+          <div className="t-strong t-accent" style={{ marginBottom: 14 }}>
             1. IDENTIFICACIÓN GENERAL & UBICACIÓN
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Código Interno *</label>
-              <input
+              <label>Código Interno *</label>
+              <input className="t-strong"
                 type="text"
                 required
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 placeholder="ej. BAL-CAM-01"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontWeight: 800, fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             <div style={{ gridColumn: "span 2" }}>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Descripción Completa del Instrumento *</label>
+              <label>Descripción Completa del Instrumento *</label>
               <input
                 type="text"
                 required
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="ej. Balanza para Camiones 80t - Planta Silos Norte"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             {/* Campo Autocomplete de Cliente (Inline no-clipping) */}
             <div ref={customerDropdownRef} style={{ gridColumn: "span 2" }}>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>
+              <label>
                 Cliente / Propietario del Instrumento
               </label>
 
@@ -421,9 +421,9 @@ export function MetrologyEquipmentFormPage() {
                   }}
                 >
                   <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    <strong style={{ color: "var(--lc-ok)", fontSize: "0.98rem" }}>🏢 {customerName}</strong>
+                    <strong className="t-ok" style={{ fontSize: "0.98rem" }}>🏢 {customerName}</strong>
                     {selectedCustomerDoc && (
-                      <span className="muted" style={{ fontSize: "0.86rem", marginLeft: 10 }}>
+                      <span className="muted" style={{ marginLeft: 10 }}>
                         (CUIT: {selectedCustomerDoc})
                       </span>
                     )}
@@ -436,7 +436,6 @@ export function MetrologyEquipmentFormPage() {
                         setCustomerSearchQuery("");
                       }}
                       className="btn ghost compact"
-                      style={{ fontSize: "0.82rem", padding: "5px 12px", background: "var(--lc-surface)", border: "1px solid var(--lc-line-2)" }}
                     >
                       🔍 Cambiar
                     </button>
@@ -450,7 +449,6 @@ export function MetrologyEquipmentFormPage() {
                         setLocation("");
                       }}
                       className="btn ghost compact"
-                      style={{ fontSize: "0.82rem", color: "var(--lc-danger)", padding: "5px 12px", background: "var(--lc-surface)", border: "1px solid var(--lc-danger-bg)" }}
                       title="Asignar como Uso Interno / Propio"
                     >
                       ✕ Quitar
@@ -458,28 +456,20 @@ export function MetrologyEquipmentFormPage() {
                   </div>
                 </div>
               ) : (
-                <div style={{ background: "var(--lc-surface-2)", border: "1px solid var(--lc-line-2)", borderRadius: 8, padding: 14 }}>
+                <div className="box">
                   <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
                     <input
                       type="text"
                       value={customerSearchQuery}
                       onChange={(e) => setCustomerSearchQuery(e.target.value)}
                       placeholder="🔍 Escribí nombre, razón social o CUIT para buscar cliente..."
-                      style={{
-                        flex: 1,
-                        padding: "10px 14px",
-                        borderRadius: 6,
-                        border: "2px solid var(--lc-accent)",
-                        fontSize: "0.92rem",
-                        background: "var(--lc-surface)"
-                      }}
+                      style={{ flex: 1 }}
                     />
                     {customerId && (
                       <button
                         type="button"
                         onClick={() => setShowCustomerDropdown(false)}
                         className="btn ghost compact"
-                        style={{ padding: "0 14px" }}
                       >
                         Cancelar
                       </button>
@@ -516,14 +506,14 @@ export function MetrologyEquipmentFormPage() {
                         alignItems: "center"
                       }}
                     >
-                      <span style={{ fontWeight: 700, color: "var(--lc-ink-2)", fontSize: "0.88rem" }}>
+                      <span className="t-strong muted">
                         🏢 -- Uso Interno / Propio (Sin Cliente Externo) --
                       </span>
-                      <span className="tag" style={{ fontSize: "0.72rem", background: "var(--lc-line)" }}>Propio</span>
+                      <span className="tag t-small" style={{ background: "var(--lc-line)" }}>Propio</span>
                     </div>
 
                     {filteredSuggestions.length === 0 ? (
-                      <div style={{ padding: "16px", textAlign: "center" }} className="muted">
+                      <div style={{ padding: "16px" }} className="muted t-center">
                         {customerSearchQuery ? `No se encontraron clientes con "${customerSearchQuery}"` : "Sin clientes registrados."}
                       </div>
                     ) : (
@@ -550,15 +540,15 @@ export function MetrologyEquipmentFormPage() {
                             onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
                           >
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                              <strong style={{ color: "var(--lc-ink)", fontSize: "0.92rem" }}>{displayName}</strong>
+                              <strong>{displayName}</strong>
                               {c.documentNumber && (
-                                <span style={{ fontFamily: "monospace", fontSize: "0.84rem", color: "var(--lc-accent-strong)", fontWeight: 700 }}>
+                                <span className="t-mono t-accent t-strong" style={{ fontSize: "0.84rem" }}>
                                   CUIT: {c.documentNumber}
                                 </span>
                               )}
                             </div>
                             {(c.city || c.province) && (
-                              <div className="muted" style={{ fontSize: "0.78rem", marginTop: 2 }}>
+                              <div className="muted t-small" style={{ marginTop: 2 }}>
                                 📍 {[c.city, c.province].filter(Boolean).join(", ")}
                               </div>
                             )}
@@ -573,13 +563,13 @@ export function MetrologyEquipmentFormPage() {
 
             {/* Campo Ubicación Física / Planta vinculado al cliente */}
             <div style={{ gridColumn: "span 2" }}>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>
+              <label>
                 Ubicación Física / Planta del Instrumento
               </label>
 
               {customerLocations.length > 0 && !isManualLocation ? (
                 <div style={{ display: "flex", gap: 8 }}>
-                  <select
+                  <select className="t-strong"
                     value={location}
                     onChange={(e) => {
                       if (e.target.value === "__MANUAL__") {
@@ -588,7 +578,7 @@ export function MetrologyEquipmentFormPage() {
                         setLocation(e.target.value);
                       }
                     }}
-                    style={{ flex: 1, padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem", fontWeight: 600 }}
+                    style={{ flex: 1 }}
                   >
                     <option value="">-- Seleccionar Planta o Sucursal del Cliente --</option>
                     {customerLocations.map((loc) => (
@@ -602,7 +592,7 @@ export function MetrologyEquipmentFormPage() {
                     type="button"
                     onClick={() => setIsManualLocation(true)}
                     className="btn ghost compact"
-                    style={{ fontSize: "0.8rem", whiteSpace: "nowrap" }}
+                    style={{ whiteSpace: "nowrap" }}
                   >
                     ✍️ Texto libre
                   </button>
@@ -615,26 +605,26 @@ export function MetrologyEquipmentFormPage() {
                       value={location}
                       onChange={(e) => setLocation(e.target.value)}
                       placeholder="ej. Planta Silos Norte, Báscula Entrada, Molino Central"
-                      style={{ flex: 1, padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                      style={{ flex: 1 }}
                     />
                     {customerLocations.length > 0 && (
                       <button
                         type="button"
                         onClick={() => setIsManualLocation(false)}
                         className="btn ghost compact"
-                        style={{ fontSize: "0.8rem", whiteSpace: "nowrap" }}
+                        style={{ whiteSpace: "nowrap" }}
                       >
                         📍 Ver Plantas del Cliente ({customerLocations.length})
                       </button>
                     )}
                   </div>
                   {customerLocations.length > 0 && (
-                    <small className="muted" style={{ fontSize: "0.75rem", display: "block", marginTop: 4 }}>
+                    <small className="muted t-small" style={{ display: "block", marginTop: 4 }}>
                       Plantas detectadas en la ficha del cliente: {customerLocations.map((l) => l.name).join(", ")}.
                     </small>
                   )}
                   {customerLocations.length === 0 && customerId && (
-                    <small className="muted" style={{ fontSize: "0.75rem", display: "block", marginTop: 4 }}>
+                    <small className="muted t-small" style={{ display: "block", marginTop: 4 }}>
                       Este cliente no tiene sucursales cargadas en el Directorio; podés escribir la ubicación libremente.
                     </small>
                   )}
@@ -643,11 +633,11 @@ export function MetrologyEquipmentFormPage() {
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Normativa Aplicable</label>
+              <label>Normativa Aplicable</label>
               <select
                 value={applicableStandard}
                 onChange={(e) => setApplicableStandard(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               >
                 <option value="Res25_2025">Resolución 25/2025 (Vigente)</option>
                 <option value="Res2307_1980">Resolución 2307/1980 (Histórica)</option>
@@ -658,17 +648,17 @@ export function MetrologyEquipmentFormPage() {
 
         {/* SECCIÓN 2: PLATAFORMA */}
         <div className="card pad" style={{ marginBottom: 20, borderLeft: "5px solid var(--lc-info)" }}>
-          <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--lc-info)", marginBottom: 14 }}>
+          <div className="t-strong t-info" style={{ marginBottom: 14 }}>
             2. PLATAFORMA DE PESAJES / RECEPTOR DE CARGA
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Tipo de Plataforma</label>
+              <label>Tipo de Plataforma</label>
               <select
                 value={platformType}
                 onChange={(e) => setPlatformType(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               >
                 <option value="TruckScale">Báscula para Camiones</option>
                 <option value="IndustrialPlatform">Plataforma Industrial de Piso</option>
@@ -679,78 +669,78 @@ export function MetrologyEquipmentFormPage() {
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Marca Plataforma</label>
+              <label>Marca Plataforma</label>
               <input
                 type="text"
                 value={brand}
                 onChange={(e) => setBrand(e.target.value)}
                 placeholder="ej. Toledo, Systel, Básculas Sur"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Modelo Plataforma</label>
+              <label>Modelo Plataforma</label>
               <input
                 type="text"
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
                 placeholder="ej. BF-30 / 80t"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Número de Serie Plataforma</label>
+              <label>Número de Serie Plataforma</label>
               <input
                 type="text"
                 value={serialNumber}
                 onChange={(e) => setSerialNumber(e.target.value)}
                 placeholder="S/N de receptor / plataforma"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Código Aprobación Modelo</label>
+              <label>Código Aprobación Modelo</label>
               <input
                 type="text"
                 value={platformApprovalCode}
                 onChange={(e) => setPlatformApprovalCode(e.target.value)}
                 placeholder="ej. CAM-082"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Nº Disposición Aprobación</label>
+              <label>Nº Disposición Aprobación</label>
               <input
                 type="text"
                 value={platformApprovalNumber}
                 onChange={(e) => setPlatformApprovalNumber(e.target.value)}
                 placeholder="ej. Disp. DNCI 142/2018"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Fecha de Disposición</label>
+              <label>Fecha de Disposición</label>
               <input
                 type="date"
                 value={platformApprovalDate}
                 onChange={(e) => setPlatformApprovalDate(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Dimensiones Plataforma</label>
+              <label>Dimensiones Plataforma</label>
               <input
                 type="text"
                 value={platformDimensions}
                 onChange={(e) => setPlatformDimensions(e.target.value)}
                 placeholder="ej. 20.00m x 3.00m"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               />
             </div>
           </div>
@@ -758,82 +748,82 @@ export function MetrologyEquipmentFormPage() {
 
         {/* SECCIÓN 3: INDICADOR PRINCIPAL (1) */}
         <div className="card pad" style={{ marginBottom: 20, borderLeft: "5px solid var(--lc-violet)" }}>
-          <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--lc-violet)", marginBottom: 14 }}>
+          <div className="t-strong t-violet" style={{ marginBottom: 14 }}>
             3. INDICADOR METROLÓGICO PRINCIPAL (INDICADOR 1)
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Marca Indicador 1</label>
+              <label>Marca Indicador 1</label>
               <input
                 type="text"
                 value={indicator1Brand}
                 onChange={(e) => setIndicator1Brand(e.target.value)}
                 placeholder="ej. Systel, Toledo, Kretz"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Modelo Indicador 1</label>
+              <label>Modelo Indicador 1</label>
               <input
                 type="text"
                 value={indicator1Model}
                 onChange={(e) => setIndicator1Model(e.target.value)}
                 placeholder="ej. Matrix II / IND560"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Número de Serie</label>
+              <label>Número de Serie</label>
               <input
                 type="text"
                 value={indicator1SerialNumber}
                 onChange={(e) => setIndicator1SerialNumber(e.target.value)}
                 placeholder="ej. SN-883492"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Código Aprobación Modelo</label>
+              <label>Código Aprobación Modelo</label>
               <input
                 type="text"
                 value={indicator1ApprovalCode}
                 onChange={(e) => setIndicator1ApprovalCode(e.target.value)}
                 placeholder="ej. IND-044"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Nº Disposición Aprobación</label>
+              <label>Nº Disposición Aprobación</label>
               <input
                 type="text"
                 value={indicator1ApprovalNumber}
                 onChange={(e) => setIndicator1ApprovalNumber(e.target.value)}
                 placeholder="ej. Disp. DNCI 88/2019"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Fecha de Disposición</label>
+              <label>Fecha de Disposición</label>
               <input
                 type="date"
                 value={indicator1ApprovalDate}
                 onChange={(e) => setIndicator1ApprovalDate(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Tipo de Indicador</label>
+              <label>Tipo de Indicador</label>
               <select
                 value={indicator1Type}
                 onChange={(e) => setIndicator1Type(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               >
                 <option value="Digital">Digital Electrónico</option>
                 <option value="MechanicalDial">Mecánico Cuadrante / Aguja</option>
@@ -846,10 +836,10 @@ export function MetrologyEquipmentFormPage() {
         {/* SECCIÓN 4: SEGUNDO INDICADOR (OPCIONAL) */}
         <div className="card pad" style={{ marginBottom: 20, borderLeft: "5px solid var(--lc-warn)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-            <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--lc-warn)" }}>
+            <div className="t-strong t-warn">
               4. SEGUNDO INDICADOR (BALANZAS HÍBRIDAS / CABEZAL SECUNDARIO)
             </div>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.88rem" }}>
+            <label style={{ alignItems: "center", gap: 8, cursor: "pointer" }}>
               <input
                 type="checkbox"
                 checked={hasSecondaryIndicator}
@@ -863,76 +853,76 @@ export function MetrologyEquipmentFormPage() {
           {hasSecondaryIndicator && (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, background: "var(--lc-warn-bg)", padding: 16, borderRadius: 8, border: "1px solid var(--lc-warn-bg)" }}>
               <div>
-                <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Marca Indicador 2</label>
+                <label>Marca Indicador 2</label>
                 <input
                   type="text"
                   value={indicator2Brand}
                   onChange={(e) => setIndicator2Brand(e.target.value)}
                   placeholder="ej. Bianchetti"
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                  style={{ width: "100%" }}
                 />
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Modelo Indicador 2</label>
+                <label>Modelo Indicador 2</label>
                 <input
                   type="text"
                   value={indicator2Model}
                   onChange={(e) => setIndicator2Model(e.target.value)}
                   placeholder="ej. Mecánico Cuadrante"
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                  style={{ width: "100%" }}
                 />
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Número de Serie 2</label>
+                <label>Número de Serie 2</label>
                 <input
                   type="text"
                   value={indicator2SerialNumber}
                   onChange={(e) => setIndicator2SerialNumber(e.target.value)}
                   placeholder="ej. MEC-9912"
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                  style={{ width: "100%" }}
                 />
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Código Aprobación Modelo 2</label>
+                <label>Código Aprobación Modelo 2</label>
                 <input
                   type="text"
                   value={indicator2ApprovalCode}
                   onChange={(e) => setIndicator2ApprovalCode(e.target.value)}
                   placeholder="ej. IND-012"
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                  style={{ width: "100%" }}
                 />
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Nº Disposición Aprobación 2</label>
+                <label>Nº Disposición Aprobación 2</label>
                 <input
                   type="text"
                   value={indicator2ApprovalNumber}
                   onChange={(e) => setIndicator2ApprovalNumber(e.target.value)}
                   placeholder="ej. Disp. DNCI 05/1998"
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                  style={{ width: "100%" }}
                 />
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Fecha Disposición 2</label>
+                <label>Fecha Disposición 2</label>
                 <input
                   type="date"
                   value={indicator2ApprovalDate}
                   onChange={(e) => setIndicator2ApprovalDate(e.target.value)}
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                  style={{ width: "100%" }}
                 />
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Tipo Indicador 2</label>
+                <label>Tipo Indicador 2</label>
                 <select
                   value={indicator2Type}
                   onChange={(e) => setIndicator2Type(e.target.value)}
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                  style={{ width: "100%" }}
                 >
                   <option value="MechanicalDial">Mecánico Cuadrante / Aguja</option>
                   <option value="MechanicalSteelyard">Mecánico Romano / Pilón</option>
@@ -945,78 +935,78 @@ export function MetrologyEquipmentFormPage() {
 
         {/* SECCIÓN 5: ESPECIFICACIONES METROLÓGICAS & RANGOS */}
         <div className="card pad" style={{ marginBottom: 30, borderLeft: "5px solid var(--lc-ok)" }}>
-          <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--lc-ok)", marginBottom: 14 }}>
+          <div className="t-strong t-ok" style={{ marginBottom: 14 }}>
             5. ESPECIFICACIONES METROLÓGICAS & RANGOS DE ENSAYO
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 16 }}>
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Capacidad Máx (Max) *</label>
-              <input
+              <label>Capacidad Máx (Max) *</label>
+              <input className="t-strong"
                 type="number"
                 step="any"
                 required
                 value={maxCapacity}
                 onChange={(e) => setMaxCapacity(Number(e.target.value))}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontWeight: 800, fontSize: "0.95rem" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Carga máxima de uso (ensayo de campo)</label>
-              <input
+              <label>Carga máxima de uso (ensayo de campo)</label>
+              <input className="t-strong"
                 type="number"
                 step="any"
                 min="0"
                 value={maximumOperationalLoad}
                 onChange={(e) => setMaximumOperationalLoad(Number(e.target.value))}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontWeight: 800, fontSize: "0.95rem" }}
+                style={{ width: "100%" }}
               />
-              <small style={{ display: "block", marginTop: 5, color: "var(--lc-ink-3)", lineHeight: 1.35 }}>No modifica el Max metrológico. Se usa para sugerir 50 % y 100 % de fidelidad y siempre puede ajustarse por servicio.</small>
+              <small className="muted" style={{ display: "block", marginTop: 5, lineHeight: 1.35 }}>No modifica el Max metrológico. Se usa para sugerir 50 % y 100 % de fidelidad y siempre puede ajustarse por servicio.</small>
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Capacidad Mín (Min) *</label>
-              <input
+              <label>Capacidad Mín (Min) *</label>
+              <input className="t-strong"
                 type="number"
                 step="any"
                 required
                 value={minCapacity}
                 onChange={(e) => setMinCapacity(Number(e.target.value))}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontWeight: 800, fontSize: "0.95rem" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>División Real (d) *</label>
+              <label>División Real (d) *</label>
               <input
                 type="number"
                 step="any"
                 required
                 value={divisionD}
                 onChange={(e) => setDivisionD(Number(e.target.value))}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.95rem" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Intervalo Verificación (e) *</label>
+              <label>Intervalo Verificación (e) *</label>
               <input
                 type="number"
                 step="any"
                 required
                 value={verificationIntervalE}
                 onChange={(e) => setVerificationIntervalE(Number(e.target.value))}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.95rem" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Unidad de Medida</label>
+              <label>Unidad de Medida</label>
               <select
                 value={unit}
                 onChange={(e) => setUnit(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               >
                 <option value="kg">kg (Kilogramos)</option>
                 <option value="t">t (Toneladas)</option>
@@ -1026,11 +1016,11 @@ export function MetrologyEquipmentFormPage() {
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Clase de Exactitud</label>
+              <label>Clase de Exactitud</label>
               <select
                 value={accuracyClass}
                 onChange={(e) => setAccuracyClass(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               >
                 <option value="I">Clase I (Especial / Analítica)</option>
                 <option value="II">Clase II (Fina / Precisión)</option>
@@ -1040,23 +1030,23 @@ export function MetrologyEquipmentFormPage() {
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Cantidad Celdas de Carga</label>
+              <label>Cantidad Celdas de Carga</label>
               <input
                 type="number"
                 step="1"
                 min="0"
                 value={loadCellsCount}
                 onChange={(e) => setLoadCellsCount(parseInt(e.target.value) || 0)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Estado Operativo</label>
+              <label>Estado Operativo</label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               >
                 <option value="Active">✓ Activo / Operativo</option>
                 <option value="UnderMaintenance">En Mantenimiento</option>
@@ -1066,37 +1056,29 @@ export function MetrologyEquipmentFormPage() {
           </div>
 
           <div>
-            <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Notas Técnicas y Observaciones</label>
+            <label>Notas Técnicas y Observaciones</label>
             <textarea
               rows={2}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Historial de reparaciones, precintos, marcas de verificación..."
-              style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.9rem" }}
+              style={{ width: "100%" }}
             />
           </div>
         </div>
 
         {/* BOTTOM ACTION BAR */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            background: "var(--lc-surface-2)",
-            padding: "16px 24px",
-            borderRadius: 10,
-            border: "1px solid var(--lc-line)"
-          }}
+        <div className="box"
+          style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
         >
-          <Link to="/metrologia/equipos" className="btn ghost" style={{ padding: "9px 20px" }}>
+          <Link to="/metrologia/equipos" className="btn ghost">
             ← Cancelar y Volver
           </Link>
           <button
             type="submit"
             disabled={saving}
             className="btn"
-            style={{ background: "var(--lc-accent)", color: "#fff", fontWeight: 800, padding: "10px 28px", fontSize: "0.95rem", minWidth: 200 }}
+            style={{ minWidth: 200 }}
           >
             {saving ? "Guardando..." : "💾 Guardar Instrumento"}
           </button>

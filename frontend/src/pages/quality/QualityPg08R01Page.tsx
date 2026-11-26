@@ -46,7 +46,7 @@ function parseSnapshot(raw: unknown): SnapshotCounts | null {
 
 function SnapshotSummary({ snapshot }: { snapshot: SnapshotCounts | null }) {
   if (!snapshot) {
-    return <p style={{ fontSize: 13, color: "var(--lc-ink-3)" }}>Sin snapshot de inputs.</p>;
+    return <p className="muted t-small">Sin snapshot de inputs.</p>;
   }
 
   const kindEntries = snapshot.nonConformities?.byKind
@@ -56,15 +56,8 @@ function SnapshotSummary({ snapshot }: { snapshot: SnapshotCounts | null }) {
   const below = snapshot.indicators?.belowTarget ?? [];
 
   return (
-    <dl
-      style={{
-        margin: 0,
-        fontSize: 13,
-        color: "var(--lc-ink-3)",
-        display: "grid",
-        gridTemplateColumns: "auto 1fr",
-        gap: "4px 12px"
-      }}
+    <dl className="muted t-small"
+      style={{ margin: 0, display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}
     >
       <dt>Quejas</dt>
       <dd style={{ margin: 0 }}>
@@ -310,11 +303,11 @@ export function QualityPg08R01Page() {
     <div className="workspace-page pad">
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "flex-start" }}>
         <div>
-          <Link to="/calidad/documentos/PG08-R01" style={{ fontSize: 13 }}>
+          <Link className="t-small" to="/calidad/documentos/PG08-R01">
             ← Plantilla PG08-R01
           </Link>
           <h1 style={{ margin: "4px 0 0" }}>PG08-R01 · Revisión por la dirección</h1>
-          <p style={{ marginTop: 6, color: "var(--lc-ink-3)", maxWidth: 640 }}>
+          <p className="muted" style={{ marginTop: 6, maxWidth: 640 }}>
             Cada revisión se <strong>genera en el sistema</strong> (REV-AAAA-NNNN). Los inputs del año
             (quejas, NC, auditorías, indicadores, personal, proveedores) se arman solos al crear o al
             refrescar.
@@ -330,16 +323,16 @@ export function QualityPg08R01Page() {
         </div>
       </div>
 
-      {error && <p style={{ color: "var(--lc-danger)" }}>{error}</p>}
-      {msg && <p style={{ color: "var(--lc-ok)" }}>{msg}</p>}
-      <p style={{ fontSize: 13, color: "var(--lc-ink-3)" }}>
+      {error && <p className="t-danger">{error}</p>}
+      {msg && <p className="t-ok">{msg}</p>}
+      <p className="muted t-small">
         Borradores: <strong>{draftCount}</strong> · Completadas: <strong>{completedCount}</strong> · Total:{" "}
         {rows.length}
       </p>
 
       {showForm && (
         <form className="card pad" onSubmit={(e) => void onCreate(e)} style={{ marginBottom: 16 }}>
-          <h3 style={{ marginTop: 0 }}>Nueva revisión por la dirección</h3>
+          <h3>Nueva revisión por la dirección</h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
             <label>
               Año programa
@@ -350,11 +343,11 @@ export function QualityPg08R01Page() {
               <input type="date" value={reviewDate} onChange={(e) => setReviewDate(e.target.value)} required />
             </label>
           </div>
-          <label style={{ display: "block", marginTop: 12 }}>
+          <label style={{ marginTop: 12 }}>
             Participantes
             <textarea value={attendees} onChange={(e) => setAttendees(e.target.value)} rows={2} style={{ width: "100%" }} />
           </label>
-          <label style={{ display: "block", marginTop: 8 }}>
+          <label style={{ marginTop: 8 }}>
             Notas sobre inputs
             <textarea
               value={inputsNotes}
@@ -363,7 +356,7 @@ export function QualityPg08R01Page() {
               style={{ width: "100%" }}
             />
           </label>
-          <label style={{ display: "block", marginTop: 8 }}>
+          <label style={{ marginTop: 8 }}>
             Notas
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} style={{ width: "100%" }} />
           </label>
@@ -409,7 +402,7 @@ export function QualityPg08R01Page() {
             <p className="muted">Sin revisiones con este filtro.</p>
           ) : (
             <div style={{ overflowX: "auto" }}>
-              <table className="data-table" style={{ width: "100%", fontSize: 13 }}>
+              <table className="data-table">
                 <thead>
                   <tr>
                     <th>Número</th>
@@ -426,7 +419,7 @@ export function QualityPg08R01Page() {
                       onClick={() => setSelectedId(r.id)}
                       style={{
                         cursor: "pointer",
-                        background: selectedId === r.id ? "#e0f2fe" : undefined
+                        background: selectedId === r.id ? "var(--lc-accent-soft)" : undefined
                       }}
                     >
                       <td>{r.number}</td>
@@ -449,8 +442,8 @@ export function QualityPg08R01Page() {
             <p className="muted">Seleccioná una revisión para ver inputs, decisiones y exportar PDF.</p>
           ) : (
             <>
-              <h3 style={{ marginTop: 0 }}>{selected.number}</h3>
-              <p style={{ marginTop: 0, color: "var(--lc-ink-3)", fontSize: 13 }}>
+              <h3>{selected.number}</h3>
+              <p className="muted t-small" style={{ marginTop: 0 }}>
                 {statusLabel(selected.status)} · Año {selected.programYear}
               </p>
               <p style={{ marginBottom: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -462,7 +455,7 @@ export function QualityPg08R01Page() {
                 </Link>
               </p>
 
-              <h4 style={{ marginBottom: 6, fontSize: 13 }}>Resumen de inputs (auto)</h4>
+              <h4 style={{ marginBottom: 6 }}>Resumen de inputs (auto)</h4>
               <SnapshotSummary snapshot={snapshot} />
 
               {editable && (
@@ -489,11 +482,11 @@ export function QualityPg08R01Page() {
                     </button>
                   </div>
 
-                  <label style={{ display: "block", marginBottom: 8 }}>
+                  <label>
                     Fecha de revisión
                     <input type="date" value={editReviewDate} onChange={(e) => setEditReviewDate(e.target.value)} />
                   </label>
-                  <label style={{ display: "block", marginBottom: 8 }}>
+                  <label>
                     Participantes
                     <textarea
                       value={editAttendees}
@@ -502,7 +495,7 @@ export function QualityPg08R01Page() {
                       style={{ width: "100%" }}
                     />
                   </label>
-                  <label style={{ display: "block", marginBottom: 8 }}>
+                  <label>
                     Notas sobre inputs
                     <textarea
                       value={editInputsNotes}
@@ -511,7 +504,7 @@ export function QualityPg08R01Page() {
                       style={{ width: "100%" }}
                     />
                   </label>
-                  <label style={{ display: "block", marginBottom: 8 }}>
+                  <label>
                     Decisiones
                     <textarea
                       value={editDecisions}
@@ -521,7 +514,7 @@ export function QualityPg08R01Page() {
                       required
                     />
                   </label>
-                  <label style={{ display: "block", marginBottom: 8 }}>
+                  <label>
                     Acciones
                     <textarea
                       value={editActions}
@@ -530,7 +523,7 @@ export function QualityPg08R01Page() {
                       style={{ width: "100%" }}
                     />
                   </label>
-                  <label style={{ display: "block", marginBottom: 8 }}>
+                  <label>
                     Seguimiento
                     <textarea
                       value={editFollowUp}
@@ -539,7 +532,7 @@ export function QualityPg08R01Page() {
                       style={{ width: "100%" }}
                     />
                   </label>
-                  <label style={{ display: "block", marginBottom: 8 }}>
+                  <label>
                     Notas
                     <textarea
                       value={editNotes}
@@ -573,7 +566,7 @@ export function QualityPg08R01Page() {
               )}
 
               {!editable && (
-                <div style={{ fontSize: 13, color: "var(--lc-ink-3)", marginTop: 12 }}>
+                <div className="muted t-small" style={{ marginTop: 12 }}>
                   <div>
                     <strong>Participantes:</strong> {selected.attendees || "—"}
                   </div>

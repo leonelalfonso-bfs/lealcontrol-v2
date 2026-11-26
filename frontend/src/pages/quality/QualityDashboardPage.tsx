@@ -45,10 +45,10 @@ export function QualityDashboardPage() {
     <div className="workspace-page pad">
       <div className="page-head" style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <div>
-          <span className="eyebrow" style={{ color: "var(--lc-accent-strong)", fontWeight: 800 }}>CALIDAD · ISO/IEC 17025</span>
+          <span className="eyebrow t-accent t-strong">CALIDAD · ISO/IEC 17025</span>
           <h1 style={{ margin: "4px 0 0" }}>Tablero del SGC</h1>
           {presentation && (
-            <p style={{ margin: "6px 0 0", color: "var(--lc-warn)", fontWeight: 700, fontSize: 13 }}>
+            <p className="t-warn t-strong t-small" style={{ margin: "6px 0 0" }}>
               Modo presentación activo · solo lectura
             </p>
           )}
@@ -59,7 +59,7 @@ export function QualityDashboardPage() {
         </div>
       </div>
 
-      {error && <p style={{ color: "var(--lc-danger)" }}>{error}</p>}
+      {error && <p className="t-danger">{error}</p>}
 
       {data && (
         <>
@@ -74,8 +74,8 @@ export function QualityDashboardPage() {
           >
             {kpi.map((k) => (
               <div className={`card pad quality-kpi ${"tone" in k ? `quality-kpi--${k.tone}` : ""}`} key={k.label}>
-                <div style={{ fontSize: 12, color: "var(--lc-ink-3)" }}>{k.label}</div>
-                <strong style={{ fontSize: 26, color: k.danger ? "#b91c1c" : undefined }}>{k.value}</strong>
+                <div className="muted t-small">{k.label}</div>
+                <strong className="t-xl" style={{ color: k.danger ? "#b91c1c" : undefined }}>{k.value}</strong>
               </div>
             ))}
           </div>
@@ -167,8 +167,8 @@ export function QualityDashboardPage() {
 
           {data.clauseMatrix && data.clauseMatrix.length > 0 && (
             <div className="card pad" style={{ marginTop: 20 }}>
-              <h3 style={{ marginTop: 0 }}>Matriz cláusulas ISO/IEC 17025</h3>
-              <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
+              <h3>Matriz cláusulas ISO/IEC 17025</h3>
+              <p className="muted t-small" style={{ marginTop: 0 }}>
                 Verde: hay documento vigente/aprobado que cubre la cláusula. Rojo: solo borrador u obsoleto.
               </p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -212,16 +212,16 @@ function AlertList({
 }) {
   return (
     <div className="card pad">
-      <h3 style={{ marginTop: 0, fontSize: 15 }}>{title}</h3>
+      <h3>{title}</h3>
       {items.length === 0 ? (
-        <p className="muted" style={{ margin: 0, fontSize: 13 }}>{empty}</p>
+        <p className="muted t-small" style={{ margin: 0 }}>{empty}</p>
       ) : (
         <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 8 }}>
           {items.slice(0, 8).map((it) => (
             <li key={it.key}>
               <Link to={it.href} style={{ textDecoration: "none", color: "inherit" }}>
-                <div style={{ fontWeight: 700, fontSize: 13, color: it.danger ? "#b91c1c" : undefined }}>{it.primary}</div>
-                <div className="muted" style={{ fontSize: 12 }}>{it.secondary}</div>
+                <div className="t-strong t-small" style={{ color: it.danger ? "#b91c1c" : undefined }}>{it.primary}</div>
+                <div className="muted t-small">{it.secondary}</div>
               </Link>
             </li>
           ))}

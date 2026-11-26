@@ -197,14 +197,14 @@ export function QualityPg03R01Page() {
     <div className="workspace-page pad">
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "flex-start" }}>
         <div>
-          <Link to="/calidad/documentos/PG03-R01" style={{ fontSize: 13 }}>← Plantilla PG03-R01</Link>
+          <Link className="t-small" to="/calidad/documentos/PG03-R01">← Plantilla PG03-R01</Link>
           <h1 style={{ margin: "8px 0 0" }}>PG03-R01 · Seguimiento de quejas</h1>
-          <p style={{ color: "var(--lc-ink-3)", marginTop: 6, maxWidth: 720 }}>
+          <p className="muted" style={{ marginTop: 6, maxWidth: 720 }}>
             Cada queja se <strong>genera en el sistema</strong> (número QJ-AAAA-NNNN, plazos SLA y workflow).
             El PDF de evidencia es opcional; el registro no es un Word subido.
           </p>
           {overdueOpen > 0 && (
-            <p style={{ color: "var(--lc-danger)", fontWeight: 700, marginTop: 8 }}>
+            <p className="t-danger t-strong" style={{ marginTop: 8 }}>
               {overdueOpen} queja(s) abierta(s) fuera de plazo
             </p>
           )}
@@ -221,7 +221,7 @@ export function QualityPg03R01Page() {
       </div>
 
       <div className="card pad" style={{ marginTop: 12, display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-        <span style={{ fontSize: 13, fontWeight: 700 }}>Filtro:</span>
+        <span className="t-strong t-small">Filtro:</span>
         {(
           [
             ["all", "Todas"],
@@ -247,7 +247,7 @@ export function QualityPg03R01Page() {
       {(error || msg) && (
         <div
           className="card pad"
-          style={{ marginTop: 12, background: error ? "var(--lc-danger-bg)" : "var(--lc-ok-bg)", color: error ? "var(--lc-danger)" : "var(--lc-ok)" }}
+          style={{ marginTop: 12, color: error ? "var(--lc-danger)" : "var(--lc-ok)" }}
         >
           {error || msg}
         </div>
@@ -255,7 +255,7 @@ export function QualityPg03R01Page() {
 
       {showForm && (
         <form className="card pad" style={{ marginTop: 16 }} onSubmit={(e) => void onCreate(e)}>
-          <h3 style={{ marginTop: 0 }}>Alta de queja (instancia operativa)</h3>
+          <h3>Alta de queja (instancia operativa)</h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
             <label>
               Reclamante *
@@ -286,11 +286,11 @@ export function QualityPg03R01Page() {
               <input type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
             </label>
           </div>
-          <label style={{ display: "block", marginTop: 12 }}>
+          <label style={{ marginTop: 12 }}>
             Descripción *
             <textarea required value={description} onChange={(e) => setDescription(e.target.value)} rows={3} style={{ width: "100%" }} />
           </label>
-          <label style={{ display: "block", marginTop: 12 }}>
+          <label style={{ marginTop: 12 }}>
             Notas internas
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} style={{ width: "100%" }} />
           </label>
@@ -303,7 +303,7 @@ export function QualityPg03R01Page() {
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(280px, 1fr) minmax(300px, 1fr)", gap: 16, marginTop: 16, alignItems: "start" }}>
         <div className="card pad">
-          <h3 style={{ marginTop: 0 }}>Quejas ({filtered.length})</h3>
+          <h3>Quejas ({filtered.length})</h3>
           {loading ? (
             <div className="muted">Cargando…</div>
           ) : filtered.length === 0 ? (
@@ -336,7 +336,7 @@ export function QualityPg03R01Page() {
                       <td><strong>{r.number}</strong></td>
                       <td>
                         {r.partyName}
-                        <div className="muted" style={{ fontSize: 12 }}>{new Date(r.receivedAt).toLocaleDateString("es-AR")}</div>
+                        <div className="muted t-small">{new Date(r.receivedAt).toLocaleDateString("es-AR")}</div>
                       </td>
                       <td>{statusLabel(r.status)}</td>
                       <td style={{ color: r.isOverdue ? "#b91c1c" : undefined, fontWeight: r.isOverdue ? 700 : undefined }}>
@@ -356,10 +356,10 @@ export function QualityPg03R01Page() {
             <p className="muted">Seleccioná una queja para avanzar el workflow.</p>
           ) : (
             <>
-              <h3 style={{ marginTop: 0 }}>{selected.number}</h3>
-              <p style={{ marginTop: 0, color: "var(--lc-ink-3)", fontSize: 13 }}>
+              <h3>{selected.number}</h3>
+              <p className="muted t-small" style={{ marginTop: 0 }}>
                 {statusLabel(selected.status)} · {labelOf(COMPLAINT_CHANNEL, selected.channel)} · {selected.partyName}
-                {selected.isOverdue ? <span style={{ color: "var(--lc-danger)", fontWeight: 700 }}> · Fuera de plazo</span> : null}
+                {selected.isOverdue ? <span className="t-danger t-strong"> · Fuera de plazo</span> : null}
               </p>
               <p style={{ marginBottom: 12 }}>
                 <Link className="btn btn-outline compact" to={`/calidad/registros/quejas/${selected.id}/pdf`}>
@@ -429,15 +429,15 @@ export function QualityPg03R01Page() {
                     </button>
                   </div>
 
-                  <label style={{ display: "block", marginBottom: 8 }}>
+                  <label>
                     Notas de validación
                     <textarea value={validationNotes} onChange={(e) => setValidationNotes(e.target.value)} rows={2} style={{ width: "100%" }} disabled={!editable} />
                   </label>
-                  <label style={{ display: "block", marginBottom: 8 }}>
+                  <label>
                     Investigación
                     <textarea value={investigation} onChange={(e) => setInvestigation(e.target.value)} rows={3} style={{ width: "100%" }} disabled={!editable} />
                   </label>
-                  <label style={{ display: "block", marginBottom: 8 }}>
+                  <label>
                     Acciones
                     <textarea value={actions} onChange={(e) => setActions(e.target.value)} rows={3} style={{ width: "100%" }} disabled={!editable} />
                   </label>
@@ -455,7 +455,7 @@ export function QualityPg03R01Page() {
               )}
 
               {!editable && (
-                <div style={{ fontSize: 13, color: "var(--lc-ink-3)" }}>
+                <div className="muted t-small">
                   <div><strong>Validación:</strong> {selected.validationNotes || "—"}</div>
                   <div style={{ marginTop: 8 }}><strong>Investigación:</strong> {selected.investigation || "—"}</div>
                   <div style={{ marginTop: 8 }}><strong>Acciones:</strong> {selected.actions || "—"}</div>
@@ -470,7 +470,7 @@ export function QualityPg03R01Page() {
                 </p>
               )}
 
-              <div style={{ marginTop: 16, fontSize: 12, color: "var(--lc-ink-3)" }}>
+              <div className="muted t-small" style={{ marginTop: 16 }}>
                 SLA: registro {new Date(selected.registerDueAt).toLocaleDateString("es-AR")} ·
                 validación {new Date(selected.validateDueAt).toLocaleDateString("es-AR")} ·
                 investigación {new Date(selected.investigateDueAt).toLocaleDateString("es-AR")} ·

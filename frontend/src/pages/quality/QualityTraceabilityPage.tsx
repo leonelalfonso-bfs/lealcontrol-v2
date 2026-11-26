@@ -102,8 +102,8 @@ export function QualityTraceabilityPage() {
         <div className="card pad stack" style={{ gap: 6 }}>
           <strong>Certificados de equipos que todavía no están cargados acá</strong>
           {missing.map((m) => (
-            <div key={m.number} className="row" style={{ gap: 10, alignItems: "center", fontSize: "0.88rem" }}>
-              <span style={{ fontFamily: "monospace", fontWeight: 700 }}>{m.number}</span>
+            <div key={m.number} className="row" style={{ gap: 10, alignItems: "center" }}>
+              <span className="t-mono t-strong">{m.number}</span>
               <span className="muted">{m.assets} equipo(s) · vence {day(m.expirationDate)}</span>
               <button type="button" className="btn ghost compact" onClick={() => setForm({
                 number: m.number, laboratory: m.laboratory || "", notes: "",
@@ -125,7 +125,7 @@ export function QualityTraceabilityPage() {
             <label>Vencimiento<input type="date" value={form.expirationDate} onChange={(e) => setForm({ ...form, expirationDate: e.target.value })} /></label>
             <label>Notas<input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></label>
           </div>
-          <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}>
+          <p className="muted t-small" style={{ margin: 0 }}>
             Los equipos se vinculan solos: son las pesas y termómetros que tienen este número de certificado en su ficha.
           </p>
           <div className="row" style={{ gap: 10 }}>
@@ -141,18 +141,18 @@ export function QualityTraceabilityPage() {
           {selected && <button type="button" className="btn ghost compact" onClick={() => setParams({})}>Ver todos los certificados</button>}
         </div>
         <div className="table-wrap">
-          <table style={{ fontSize: "0.86rem" }}>
+          <table>
             <thead>
               <tr><th>Certificado</th><th>Laboratorio</th><th>Calibración</th><th>Vencimiento</th><th>Estado</th><th>Equipos (N.º interno · identificación)</th><th>PDF</th><th /></tr>
             </thead>
             <tbody>
               {visible.map((c) => (
                 <tr key={c.id}>
-                  <td style={{ fontFamily: "monospace", fontWeight: 700 }}>{c.number}</td>
+                  <td className="t-mono t-strong">{c.number}</td>
                   <td>{c.laboratory || "—"}</td>
                   <td>{day(c.calibrationDate)}</td>
                   <td>{day(c.expirationDate)}</td>
-                  <td><span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 12, fontWeight: 600, background: STATUS[c.status].bg, color: STATUS[c.status].color }}>{STATUS[c.status].label}</span></td>
+                  <td><span className="t-strong t-small" style={{ padding: "2px 8px", borderRadius: 4, background: STATUS[c.status].bg, color: STATUS[c.status].color }}>{STATUS[c.status].label}</span></td>
                   <td>
                     {c.assets.length === 0 ? <span className="muted">Ningún equipo tiene este certificado</span> : c.assets.map((a) => (
                       <div key={a.id}>
@@ -162,7 +162,7 @@ export function QualityTraceabilityPage() {
                     ))}
                   </td>
                   <td>{c.fileId ? <button type="button" className="btn ghost compact" onClick={() => void download(c)}>⬇️ PDF</button> : <span className="muted">Sin PDF</span>}</td>
-                  <td style={{ whiteSpace: "nowrap", textAlign: "right" }}>
+                  <td className="t-right" style={{ whiteSpace: "nowrap" }}>
                     <button type="button" className="btn ghost compact" onClick={() => setForm({
                       number: c.number, laboratory: c.laboratory || "", notes: c.notes || "",
                       calibrationDate: c.calibrationDate?.slice(0, 10) || "", expirationDate: c.expirationDate?.slice(0, 10) || ""
@@ -171,7 +171,7 @@ export function QualityTraceabilityPage() {
                   </td>
                 </tr>
               ))}
-              {visible.length === 0 && <tr><td colSpan={8} className="muted" style={{ padding: 16 }}>No hay certificados cargados.</td></tr>}
+              {visible.length === 0 && <tr><td colSpan={8} className="muted">No hay certificados cargados.</td></tr>}
             </tbody>
           </table>
         </div>

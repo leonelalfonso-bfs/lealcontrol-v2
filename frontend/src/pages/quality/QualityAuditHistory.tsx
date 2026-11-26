@@ -49,7 +49,7 @@ export function QualityAuditHistory({ entityType, entityId, title = "Historial d
       {open && (
         <div style={{ marginTop: 10 }}>
           {loading && <p className="muted">Cargando historial…</p>}
-          {error && <p style={{ color: "var(--lc-danger)" }}>{error}</p>}
+          {error && <p className="t-danger">{error}</p>}
           {!loading && !error && rows.length === 0 && (
             <p className="muted">Sin eventos registrados todavía.</p>
           )}
@@ -66,8 +66,8 @@ export function QualityAuditHistory({ entityType, entityId, title = "Historial d
                   }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-                    <strong style={{ fontSize: 13 }}>{r.summary || r.eventType}</strong>
-                    <span className="muted" style={{ fontSize: 12 }}>
+                    <strong className="t-small">{r.summary || r.eventType}</strong>
+                    <span className="muted t-small">
                       {new Date(r.occurredAtUtc).toLocaleString("es-AR")}
                       {r.performedByName ? ` · ${r.performedByName}` : ""}
                     </span>
@@ -75,7 +75,7 @@ export function QualityAuditHistory({ entityType, entityId, title = "Historial d
                   <button
                     type="button"
                     className="btn ghost compact"
-                    style={{ marginTop: 4, fontSize: 12 }}
+                    style={{ marginTop: 4 }}
                     onClick={() => setExpanded((id) => (id === r.id ? null : r.id))}
                   >
                     {expanded === r.id ? "Ocultar antes/después" : "Ver antes / después"}
@@ -90,14 +90,14 @@ export function QualityAuditHistory({ entityType, entityId, title = "Historial d
                       }}
                     >
                       <div>
-                        <div className="muted" style={{ fontSize: 11, marginBottom: 4 }}>Antes</div>
-                        <pre style={{ fontSize: 11, whiteSpace: "pre-wrap", margin: 0, maxHeight: 220, overflow: "auto" }}>
+                        <div className="muted t-small" style={{ marginBottom: 4 }}>Antes</div>
+                        <pre className="t-small" style={{ whiteSpace: "pre-wrap", margin: 0, maxHeight: 220, overflow: "auto" }}>
                           {tryPretty(r.beforeJson)}
                         </pre>
                       </div>
                       <div>
-                        <div className="muted" style={{ fontSize: 11, marginBottom: 4 }}>Después</div>
-                        <pre style={{ fontSize: 11, whiteSpace: "pre-wrap", margin: 0, maxHeight: 220, overflow: "auto" }}>
+                        <div className="muted t-small" style={{ marginBottom: 4 }}>Después</div>
+                        <pre className="t-small" style={{ whiteSpace: "pre-wrap", margin: 0, maxHeight: 220, overflow: "auto" }}>
                           {tryPretty(r.afterJson)}
                         </pre>
                       </div>

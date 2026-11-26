@@ -127,9 +127,9 @@ export function QualityConfidentialityRecordPage({ variant }: Props) {
     <div className="workspace-page pad">
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "flex-start" }}>
         <div>
-          <Link to={meta.templatePath} style={{ fontSize: 13 }}>← Plantilla {meta.code}</Link>
+          <Link className="t-small" to={meta.templatePath}>← Plantilla {meta.code}</Link>
           <h1 style={{ margin: "8px 0 0" }}>{meta.code} · {meta.title}</h1>
-          <p style={{ color: "var(--lc-ink-3)", marginTop: 6 }}>{meta.blurb}</p>
+          <p className="muted" style={{ marginTop: 6 }}>{meta.blurb}</p>
         </div>
         <button type="button" className="btn btn-primary" disabled={busy} onClick={() => setShowForm((v) => !v)}>
           {showForm ? "Cerrar alta" : "Nuevo compromiso"}
@@ -139,7 +139,7 @@ export function QualityConfidentialityRecordPage({ variant }: Props) {
       {(error || msg) && (
         <div
           className="card pad"
-          style={{ marginTop: 12, background: error ? "var(--lc-danger-bg)" : "var(--lc-ok-bg)", color: error ? "var(--lc-danger)" : "var(--lc-ok)" }}
+          style={{ marginTop: 12, color: error ? "var(--lc-danger)" : "var(--lc-ok)" }}
         >
           {error || msg}
         </div>
@@ -147,7 +147,7 @@ export function QualityConfidentialityRecordPage({ variant }: Props) {
 
       {showForm && (
         <form className="card pad" style={{ marginTop: 16 }} onSubmit={(e) => void onSubmit(e)}>
-          <h3 style={{ marginTop: 0 }}>Alta de compromiso firmado</h3>
+          <h3>Alta de compromiso firmado</h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
             <label>
               Persona *
@@ -180,7 +180,7 @@ export function QualityConfidentialityRecordPage({ variant }: Props) {
               />
             </label>
           </div>
-          <label style={{ display: "block", marginTop: 12 }}>
+          <label style={{ marginTop: 12 }}>
             Notas
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} style={{ width: "100%" }} />
           </label>
@@ -215,7 +215,7 @@ export function QualityConfidentialityRecordPage({ variant }: Props) {
                   <tr key={r.id}>
                     <td>
                       <strong>{r.personName}</strong>
-                      {r.personEmail ? <div className="muted" style={{ fontSize: 12 }}>{r.personEmail}</div> : null}
+                      {r.personEmail ? <div className="muted t-small">{r.personEmail}</div> : null}
                     </td>
                     {meta.showOrganization && <td>{r.organization || "—"}</td>}
                     <td>{r.personRole || "—"}</td>
@@ -234,7 +234,7 @@ export function QualityConfidentialityRecordPage({ variant }: Props) {
                       )}
                     </td>
                     <td>{labelOf(EQUIPMENT_STATUS, r.status)}</td>
-                    <td style={{ textAlign: "right" }}>
+                    <td className="t-right">
                       {r.status === "Active" && (
                         <button
                           type="button"

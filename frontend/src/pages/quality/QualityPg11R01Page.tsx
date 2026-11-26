@@ -103,9 +103,9 @@ export function QualityPg11R01Page() {
     <div className="workspace-page pad">
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "flex-start" }}>
         <div>
-          <Link to="/calidad/documentos/PG11-R01" style={{ fontSize: 13 }}>← Plantilla PG11-R01</Link>
+          <Link className="t-small" to="/calidad/documentos/PG11-R01">← Plantilla PG11-R01</Link>
           <h1 style={{ margin: "8px 0 0" }}>PG11-R01 · Validación del método</h1>
-          <p style={{ color: "var(--lc-ink-3)", marginTop: 6 }}>
+          <p className="muted" style={{ marginTop: 6 }}>
             Informes de validación por método/IT con PDF de evidencia.
           </p>
         </div>
@@ -120,7 +120,7 @@ export function QualityPg11R01Page() {
       {(error || msg) && (
         <div
           className="card pad"
-          style={{ marginTop: 12, background: error ? "var(--lc-danger-bg)" : "var(--lc-ok-bg)", color: error ? "var(--lc-danger)" : "var(--lc-ok)" }}
+          style={{ marginTop: 12, color: error ? "var(--lc-danger)" : "var(--lc-ok)" }}
         >
           {error || msg}
         </div>
@@ -128,7 +128,7 @@ export function QualityPg11R01Page() {
 
       {showForm && (
         <form className="card pad" style={{ marginTop: 16 }} onSubmit={(e) => void onSubmit(e)}>
-          <h3 style={{ marginTop: 0 }}>Alta de informe de validación</h3>
+          <h3>Alta de informe de validación</h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
             <label>
               Método / IT *
@@ -163,11 +163,11 @@ export function QualityPg11R01Page() {
               />
             </label>
           </div>
-          <label style={{ display: "block", marginTop: 12 }}>
+          <label style={{ marginTop: 12 }}>
             Resumen / alcance
             <textarea value={summary} onChange={(e) => setSummary(e.target.value)} rows={3} style={{ width: "100%" }} />
           </label>
-          <label style={{ display: "block", marginTop: 12 }}>
+          <label style={{ marginTop: 12 }}>
             Notas internas
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} style={{ width: "100%" }} />
           </label>
@@ -204,7 +204,7 @@ export function QualityPg11R01Page() {
                     <td><strong>{r.methodCode}</strong></td>
                     <td>
                       {r.title}
-                      {r.summary ? <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>{r.summary.slice(0, 120)}{r.summary.length > 120 ? "…" : ""}</div> : null}
+                      {r.summary ? <div className="muted t-small" style={{ marginTop: 4 }}>{r.summary.slice(0, 120)}{r.summary.length > 120 ? "…" : ""}</div> : null}
                     </td>
                     <td>{r.validatedBy || "—"}</td>
                     <td>{r.validatedAt ? new Date(r.validatedAt).toLocaleDateString("es-AR") : "—"}</td>
@@ -223,7 +223,7 @@ export function QualityPg11R01Page() {
                       )}
                     </td>
                     <td>{labelOf(EQUIPMENT_STATUS, r.status)}</td>
-                    <td style={{ textAlign: "right" }}>
+                    <td className="t-right">
                       {r.status === "Active" && (
                         <button
                           type="button"

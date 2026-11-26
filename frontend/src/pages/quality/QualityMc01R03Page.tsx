@@ -196,9 +196,9 @@ export function QualityMc01R03Page() {
     <div className="workspace-page pad">
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "flex-start" }}>
         <div>
-          <Link to="/calidad/documentos/MC01-R03" style={{ fontSize: 13 }}>← Plantilla MC01-R03</Link>
+          <Link className="t-small" to="/calidad/documentos/MC01-R03">← Plantilla MC01-R03</Link>
           <h1 style={{ margin: "8px 0 0" }}>MC01-R03 · Seguimiento de objetivos e indicadores</h1>
-          <p style={{ color: "var(--lc-ink-3)", marginTop: 6 }}>
+          <p className="muted" style={{ marginTop: 6 }}>
             Definí indicadores del SGC y cargá el valor real por período (cláusula ISO 8.2).
           </p>
         </div>
@@ -214,7 +214,7 @@ export function QualityMc01R03Page() {
       {(error || msg) && (
         <div
           className="card pad"
-          style={{ marginTop: 12, background: error ? "var(--lc-danger-bg)" : "var(--lc-ok-bg)", color: error ? "var(--lc-danger)" : "var(--lc-ok)" }}
+          style={{ marginTop: 12, color: error ? "var(--lc-danger)" : "var(--lc-ok)" }}
         >
           {error || msg}
         </div>
@@ -222,7 +222,7 @@ export function QualityMc01R03Page() {
 
       {showForm && (
         <form className="card pad" style={{ marginTop: 16 }} onSubmit={(e) => void onCreate(e)}>
-          <h3 style={{ marginTop: 0 }}>Alta de indicador</h3>
+          <h3>Alta de indicador</h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
             <label>
               Nombre *
@@ -257,11 +257,11 @@ export function QualityMc01R03Page() {
               <input value={responsible} onChange={(e) => setResponsible(e.target.value)} />
             </label>
           </div>
-          <label style={{ display: "block", marginTop: 12 }}>
+          <label style={{ marginTop: 12 }}>
             Objetivo
             <textarea value={objective} onChange={(e) => setObjective(e.target.value)} rows={2} style={{ width: "100%" }} />
           </label>
-          <label style={{ display: "block", marginTop: 12 }}>
+          <label style={{ marginTop: 12 }}>
             Fórmula / fuente
             <input
               value={formula}
@@ -270,11 +270,11 @@ export function QualityMc01R03Page() {
               placeholder={FORMULA_PLACEHOLDER}
             />
           </label>
-          <label style={{ display: "block", marginTop: 12 }}>
+          <label style={{ marginTop: 12 }}>
             Acciones
             <textarea value={actions} onChange={(e) => setActions(e.target.value)} rows={2} style={{ width: "100%" }} />
           </label>
-          <label style={{ display: "block", marginTop: 12 }}>
+          <label style={{ marginTop: 12 }}>
             Seguimiento
             <textarea value={followUp} onChange={(e) => setFollowUp(e.target.value)} rows={2} style={{ width: "100%" }} />
           </label>
@@ -287,7 +287,7 @@ export function QualityMc01R03Page() {
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(280px, 1fr) minmax(280px, 1fr)", gap: 16, marginTop: 16, alignItems: "start" }}>
         <div className="card pad">
-          <h3 style={{ marginTop: 0 }}>Indicadores</h3>
+          <h3>Indicadores</h3>
           {loading ? (
             <div className="muted">Cargando…</div>
           ) : rows.length === 0 ? (
@@ -324,7 +324,7 @@ export function QualityMc01R03Page() {
                       >
                         <td>
                           <strong>{r.name}</strong>
-                          <div className="muted" style={{ fontSize: 12 }}>
+                          <div className="muted t-small">
                             {r.responsible || "Sin responsable"} · {labelOf(INDICATOR_STATUS, r.status)}
                           </div>
                         </td>
@@ -332,8 +332,8 @@ export function QualityMc01R03Page() {
                           {r.latestPeriod != null && cumulative != null ? (
                             <>
                               <div>{cumulative}{r.targetUnit ? ` ${r.targetUnit}` : ""}</div>
-                              <div className="muted" style={{ fontSize: 12 }}>{r.latestPeriod}</div>
-                              <div style={{ fontSize: 12, color: c.color, fontWeight: 700 }}>{c.text}</div>
+                              <div className="muted t-small">{r.latestPeriod}</div>
+                              <div className="t-strong t-small" style={{ color: c.color }}>{c.text}</div>
                             </>
                           ) : (
                             <span className="muted">Sin datos</span>
@@ -342,7 +342,7 @@ export function QualityMc01R03Page() {
                         <td>
                           {r.targetValue != null ? `${r.targetValue}${r.targetUnit ? ` ${r.targetUnit}` : ""}` : "—"}
                         </td>
-                        <td style={{ textAlign: "right" }}>
+                        <td className="t-right">
                           {r.status === "Active" && (
                             <button
                               type="button"
@@ -371,12 +371,12 @@ export function QualityMc01R03Page() {
             <p className="muted">Seleccioná un indicador para cargar valores por período.</p>
           ) : (
             <>
-              <h3 style={{ marginTop: 0 }}>{selected.name}</h3>
-              <p style={{ color: "var(--lc-ink-3)", fontSize: 13, marginTop: 0 }}>
+              <h3>{selected.name}</h3>
+              <p className="muted t-small" style={{ marginTop: 0 }}>
                 {selected.objective || "Sin objetivo descripto."}
                 {selected.formula ? ` · Fórmula: ${selected.formula}` : ""}
               </p>
-              <div style={{ fontSize: 13, color: "var(--lc-ink-3)", marginBottom: 12 }}>
+              <div className="muted t-small" style={{ marginBottom: 12 }}>
                 <div>
                   <strong>Acciones:</strong> {selected.actions || "—"}
                 </div>
@@ -397,7 +397,7 @@ export function QualityMc01R03Page() {
                       <input type="number" step="any" value={value} onChange={(e) => setValue(e.target.value)} />
                     </label>
                   </div>
-                  <label style={{ display: "block", marginTop: 8 }}>
+                  <label style={{ marginTop: 8 }}>
                     Seguimiento
                     <input value={valueNotes} onChange={(e) => setValueNotes(e.target.value)} style={{ width: "100%" }} />
                   </label>
@@ -429,7 +429,7 @@ export function QualityMc01R03Page() {
                         <td>{v.value}{selected.targetUnit ? ` ${selected.targetUnit}` : ""}</td>
                         <td>{v.cumulativeYtd}{selected.targetUnit ? ` ${selected.targetUnit}` : ""}</td>
                         <td>{v.notes || "—"}</td>
-                        <td style={{ textAlign: "right" }}>
+                        <td className="t-right">
                           <button
                             type="button"
                             className="btn ghost compact"

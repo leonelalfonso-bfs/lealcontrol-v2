@@ -36,8 +36,8 @@ export function QualityPg01R01Page() {
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
         <div>
           <Link to="/calidad/documentos">← Documentos</Link>
-          <h1 style={{ marginTop: 8 }}>{title}</h1>
-          <p style={{ color: "var(--lc-ink-3)" }}>Registro generado automáticamente desde el árbol documental (PG01).</p>
+          <h1>{title}</h1>
+          <p className="muted">Registro generado automáticamente desde el árbol documental (PG01).</p>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Link className="btn btn-outline" to="/calidad/registros/pg01-r01/pdf">Exportar PDF</Link>
@@ -46,7 +46,7 @@ export function QualityPg01R01Page() {
           </button>
         </div>
       </div>
-      {error && <p style={{ color: "var(--lc-danger)" }}>{error}</p>}
+      {error && <p className="t-danger">{error}</p>}
       <div className="table-wrap card pad" style={{ marginTop: 12 }}>
         <table className="table">
           <thead>

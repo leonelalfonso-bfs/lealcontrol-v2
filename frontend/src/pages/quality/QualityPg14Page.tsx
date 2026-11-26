@@ -658,7 +658,7 @@ export function QualityPg14Page() {
       </select></label>
       <label>Patrón maestro (A) *<select value={cMaster} onChange={(e) => setCMaster(e.target.value)} disabled={disabled} required>
         <option value="">Seleccionar</option>{weights.filter((w) => w.id !== cTarget).map((w) => <option key={w.id} value={w.id}>{assetLabel(w)} · {w.extra || w.description}{w.extra && Math.abs(Number.parseFloat(w.extra) - 1000) <= 1 && w.extra.includes("kg") ? " ★" : ""}</option>)}
-      </select>{cMaster && !checkSchedule?.find((row) => row.weightId === cMaster)?.isReferenceMass && <small style={{ color: "var(--lc-warn)" }}>PG14 recomienda patrón maestro de 1000 kg.</small>}</label>
+      </select>{cMaster && !checkSchedule?.find((row) => row.weightId === cMaster)?.isReferenceMass && <small className="t-warn">PG14 recomienda patrón maestro de 1000 kg.</small>}</label>
       <label>Resolución comparador (g) *<input type="number" step="0.000001" min="0.000001" value={cResolution} onChange={(e) => setCResolution(e.target.value)} disabled={disabled} required /></label>
       {([['A1', cA1, setCA1], ['B1', cB1, setCB1], ['B2', cB2, setCB2], ['A2', cA2, setCA2]] as const).map(([name, value, setter]) =>
         <label key={name}>Lectura {name} (g) *<input type="number" step="0.000001" value={value} onChange={(e) => setter(e.target.value)} disabled={disabled} required /></label>)}
@@ -795,12 +795,12 @@ export function QualityPg14Page() {
         <div>
           <Link to="/calidad/registros">← Registros</Link>
           <h1 style={{ margin: "8px 0 4px" }}>PG14 · Equipamiento y calibraciones</h1>
-          <p style={{ margin: 0, color: "var(--lc-ink-3)" }}>
+          <p className="muted" style={{ margin: 0 }}>
             Listado (R04) · programa (R03) · hoja de vida (R01) · auxiliares · R05 · R06
           </p>
         </div>
         {summary && (
-          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 13 }}>
+          <div className="t-small" style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
             {summary.weightsCount != null && <span>Pesas: <strong>{summary.weightsCount}</strong></span>}
             {summary.instrumentsCount != null && <span>Instrumentos: <strong>{summary.instrumentsCount}</strong></span>}
             <span>Aux. activos: <strong>{summary.equipmentActive}</strong></span>
@@ -831,7 +831,7 @@ export function QualityPg14Page() {
       {tab === "r04" && (
         <>
           <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
-            <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 14 }}>
+            <label style={{ gap: 8, alignItems: "center" }}>
               Origen
               <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)}>
                 <option value="all">Todos</option>
@@ -845,13 +845,13 @@ export function QualityPg14Page() {
             </button>
             <Link className="btn btn-outline" to={`/calidad/registros/equipos/r04/pdf${sourceFilter === "all" ? "" : `?source=${sourceFilter}`}`}>PDF</Link>
             {inventoryCounts && (
-              <span style={{ fontSize: 13, color: "var(--lc-ink-3)" }}>
+              <span className="muted t-small">
                 Pesas {inventoryCounts.weights} · Instrumentos {inventoryCounts.instruments} · Auxiliares {inventoryCounts.auxiliaries} · Total {inventoryCounts.total}
               </span>
             )}
           </div>
           <div className="card" style={{ overflowX: "auto" }}>
-            <table className="data-table" style={{ width: "100%", fontSize: 13 }}>
+            <table className="data-table">
               <thead>
                 <tr>
                   <th>Origen</th>
@@ -873,22 +873,14 @@ export function QualityPg14Page() {
                   return (
                     <tr key={`${r.source}-${r.id}`} style={r.isExpired ? { background: "var(--lc-danger-bg)" } : undefined}>
                       <td>
-                        <span style={{
-                          display: "inline-block",
-                          padding: "2px 8px",
-                          borderRadius: 4,
-                          background: badge.bg,
-                          color: badge.color,
-                          fontSize: 12,
-                          fontWeight: 600
-                        }}>
+                        <span className="t-strong t-small" style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, background: badge.bg, color: badge.color }}>
                           {SOURCE_LABEL[r.source] || r.source}
                         </span>
                       </td>
                       <td><strong>{r.internalCode || "—"}</strong></td>
                       <td>{r.source === "QualityEquipment" ? (r.serialNumber || r.extra || "—") : r.code}</td>
                       <td>{KIND_LABEL[r.kind] || r.kind}</td>
-                      <td>{r.description || "—"}{r.extra ? <div style={{ color: "var(--lc-ink-3)", fontSize: 12 }}>{r.extra}</div> : null}</td>
+                      <td>{r.description || "—"}{r.extra ? <div className="muted t-small">{r.extra}</div> : null}</td>
                       <td>{r.brandOrManufacturer || "—"}</td>
                       <td>{r.serialNumber || "—"}</td>
                       <td>{r.certificateNumber ? <Link to={`/calidad/trazabilidad?cert=${encodeURIComponent(r.certificateNumber)}`}>{r.certificateNumber}</Link> : "—"}</td>
@@ -906,7 +898,7 @@ export function QualityPg14Page() {
                   );
                 })}
                 {filteredInventory.length === 0 && (
-                  <tr><td colSpan={12} style={{ textAlign: "center", color: "var(--lc-ink-3)" }}>Sin equipos en el listado.</td></tr>
+                  <tr><td className="t-center muted" colSpan={12}>Sin equipos en el listado.</td></tr>
                 )}
               </tbody>
             </table>
@@ -916,11 +908,11 @@ export function QualityPg14Page() {
 
       {tab === "r02" && (
         <>
-          <p style={{ margin: "0 0 12px", color: "var(--lc-ink-3)", fontSize: 13 }}>
+          <p className="muted t-small" style={{ margin: "0 0 12px" }}>
             PG14-R02 · Imprimí la etiqueta de equipo calibrado para pesas e instrumentos con datos de calibración.
           </p>
           <div className="card" style={{ overflowX: "auto" }}>
-            <table className="data-table" style={{ width: "100%", fontSize: 13 }}>
+            <table className="data-table">
               <thead>
                 <tr>
                   <th>Origen</th>
@@ -953,7 +945,7 @@ export function QualityPg14Page() {
                     </tr>
                   ))}
                 {inventory.filter((r) => r.source === "StandardWeight" || r.source === "Instrument").length === 0 && (
-                  <tr><td colSpan={7} style={{ textAlign: "center", color: "var(--lc-ink-3)" }}>No hay pesas ni instrumentos para etiquetar. Cargalos en Metrología.</td></tr>
+                  <tr><td className="t-center muted" colSpan={7}>No hay pesas ni instrumentos para etiquetar. Cargalos en Metrología.</td></tr>
                 )}
               </tbody>
             </table>
@@ -969,7 +961,7 @@ export function QualityPg14Page() {
             </button>
             <Link className="btn btn-outline" to="/calidad/registros/equipos/r03/pdf">PDF</Link>
             {calSummary && (
-              <span style={{ fontSize: 13, color: "var(--lc-ink-3)" }}>
+              <span className="muted t-small">
                 Vencidos <strong style={{ color: calSummary.expired ? "#b91c1c" : undefined }}>{calSummary.expired}</strong>
                 {" · "}Próximos ≤60d <strong style={{ color: calSummary.dueSoon ? "#b45309" : undefined }}>{calSummary.dueSoon}</strong>
                 {" · "}OK <strong>{calSummary.ok}</strong>
@@ -978,7 +970,7 @@ export function QualityPg14Page() {
             )}
           </div>
           <div className="card" style={{ overflowX: "auto" }}>
-            <table className="data-table" style={{ width: "100%", fontSize: 13 }}>
+            <table className="data-table">
               <thead>
                 <tr>
                   <th>Origen</th>
@@ -1000,15 +992,7 @@ export function QualityPg14Page() {
                   return (
                     <tr key={`cal-${r.source}-${r.id}`} style={rowBg ? { background: rowBg } : undefined}>
                       <td>
-                        <span style={{
-                          display: "inline-block",
-                          padding: "2px 8px",
-                          borderRadius: 4,
-                          background: badge.bg,
-                          color: badge.color,
-                          fontSize: 12,
-                          fontWeight: 600
-                        }}>
+                        <span className="t-strong t-small" style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, background: badge.bg, color: badge.color }}>
                           {SOURCE_LABEL[r.source] || r.source}
                         </span>
                       </td>
@@ -1039,7 +1023,7 @@ export function QualityPg14Page() {
                   );
                 })}
                 {calProgram.length === 0 && (
-                  <tr><td colSpan={9} style={{ textAlign: "center", color: "var(--lc-ink-3)" }}>Sin activos con fechas de calibración.</td></tr>
+                  <tr><td className="t-center muted" colSpan={9}>Sin activos con fechas de calibración.</td></tr>
                 )}
               </tbody>
             </table>
@@ -1050,7 +1034,7 @@ export function QualityPg14Page() {
       {tab === "r01" && (
         <>
           <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
-            <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 14 }}>
+            <label style={{ gap: 8, alignItems: "center" }}>
               Activo
               <select value={logAssetKey} onChange={(e) => setLogAssetKey(e.target.value)}>
                 <option value="">Todos</option>
@@ -1095,7 +1079,7 @@ export function QualityPg14Page() {
               );
             })()}
             {logCounts && (
-              <span style={{ fontSize: 13, color: "var(--lc-ink-3)" }}>
+              <span className="muted t-small">
                 C {logCounts.C} · V {logCounts.V} · MP {logCounts.MP} · MC {logCounts.MC} · Baja {logCounts.Baja}
               </span>
             )}
@@ -1103,7 +1087,7 @@ export function QualityPg14Page() {
 
           {showForm && !selectedId && (
             <form onSubmit={createLog} className="card" style={{ padding: 16, marginBottom: 16 }}>
-              <h3 style={{ marginTop: 0 }}>PG14-R01 · Evento de hoja de vida</h3>
+              <h3>PG14-R01 · Evento de hoja de vida</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: 12 }}>
                 <label>
                   Origen
@@ -1158,16 +1142,16 @@ export function QualityPg14Page() {
                   Responsable
                   <input value={lResponsible} onChange={(e) => setLResponsible(e.target.value)} />
                 </label>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 22 }}>
+                <label style={{ alignItems: "center", gap: 8, marginTop: 22 }}>
                   <input type="checkbox" checked={lDt} onChange={(e) => setLDt(e.target.checked)} />
                   Aprobado por DT
                 </label>
               </div>
-              <label style={{ display: "block", marginTop: 12 }}>
+              <label style={{ marginTop: 12 }}>
                 Descripción
                 <textarea value={lDescription} onChange={(e) => setLDescription(e.target.value)} rows={2} style={{ width: "100%" }} />
               </label>
-              <label style={{ display: "block", marginTop: 8 }}>
+              <label style={{ marginTop: 8 }}>
                 Notas
                 <textarea value={lNotes} onChange={(e) => setLNotes(e.target.value)} rows={2} style={{ width: "100%" }} />
               </label>
@@ -1180,7 +1164,7 @@ export function QualityPg14Page() {
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <div className="card" style={{ padding: 0, overflow: "auto" }}>
-              <table className="table" style={{ width: "100%" }}>
+              <table className="table">
                 <thead>
                   <tr>
                     <th>Número</th>
@@ -1197,7 +1181,7 @@ export function QualityPg14Page() {
                       onClick={() => setSelectedId(r.id)}
                       style={{
                         cursor: "pointer",
-                        background: selectedId === r.id ? "#e0f2fe" : undefined,
+                        background: selectedId === r.id ? "var(--lc-accent-soft)" : undefined,
                         opacity: r.status === "Cancelled" ? 0.55 : 1
                       }}
                     >
@@ -1209,7 +1193,7 @@ export function QualityPg14Page() {
                     </tr>
                   ))}
                   {filteredLogs.length === 0 && (
-                    <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--lc-ink-3)" }}>Sin eventos.</td></tr>
+                    <tr><td className="t-center muted" colSpan={5}>Sin eventos.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -1217,8 +1201,8 @@ export function QualityPg14Page() {
 
             {selectedLog && (
               <div className="card" style={{ padding: 16 }}>
-                <h3 style={{ marginTop: 0 }}>{selectedLog.number}</h3>
-                <p style={{ marginTop: 0, color: "var(--lc-ink-3)", fontSize: 13 }}>
+                <h3>{selectedLog.number}</h3>
+                <p className="muted t-small" style={{ marginTop: 0 }}>
                   {SOURCE_LABEL[selectedLog.assetSource] || selectedLog.assetSource} · {selectedLog.assetCode} · {selectedLog.assetDescription || "—"}
                 </p>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -1251,16 +1235,16 @@ export function QualityPg14Page() {
                     Responsable
                     <input value={lResponsible} onChange={(e) => setLResponsible(e.target.value)} disabled={selectedLog.status === "Cancelled"} />
                   </label>
-                  <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 22 }}>
+                  <label style={{ alignItems: "center", gap: 8, marginTop: 22 }}>
                     <input type="checkbox" checked={lDt} onChange={(e) => setLDt(e.target.checked)} disabled={selectedLog.status === "Cancelled"} />
                     Aprobado por DT
                   </label>
                 </div>
-                <label style={{ display: "block", marginTop: 12 }}>
+                <label style={{ marginTop: 12 }}>
                   Descripción
                   <textarea value={lDescription} onChange={(e) => setLDescription(e.target.value)} rows={2} style={{ width: "100%" }} disabled={selectedLog.status === "Cancelled"} />
                 </label>
-                <label style={{ display: "block", marginTop: 8 }}>
+                <label style={{ marginTop: 8 }}>
                   Notas
                   <textarea value={lNotes} onChange={(e) => setLNotes(e.target.value)} rows={2} style={{ width: "100%" }} disabled={selectedLog.status === "Cancelled"} />
                 </label>
@@ -1309,7 +1293,7 @@ export function QualityPg14Page() {
 
           {showForm && !selectedId && (
             <form onSubmit={createEquipment} className="card" style={{ padding: 16, marginBottom: 16 }}>
-              <h3 style={{ marginTop: 0 }}>Alta de equipo auxiliar</h3>
+              <h3>Alta de equipo auxiliar</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: 12 }}>
                 <label>
                   Tipo
@@ -1353,7 +1337,7 @@ export function QualityPg14Page() {
                   <input value={eqLocation} onChange={(e) => setEqLocation(e.target.value)} />
                 </label>
               </div>
-              <label style={{ display: "block", marginTop: 12 }}>
+              <label style={{ marginTop: 12 }}>
                 Notas
                 <textarea value={eqNotes} onChange={(e) => setEqNotes(e.target.value)} rows={2} style={{ width: "100%" }} />
               </label>
@@ -1361,13 +1345,13 @@ export function QualityPg14Page() {
                 <button type="submit" className="btn btn-primary" disabled={busy}>Guardar</button>
                 <button type="button" className="btn btn-outline" onClick={() => setShowForm(false)}>Cancelar</button>
               </div>
-              <p style={{ fontSize: 12, color: "var(--lc-ink-3)" }}>El código se asigna automáticamente (EQ 001, EQ 002…).</p>
+              <p className="muted t-small">El código se asigna automáticamente (EQ 001, EQ 002…).</p>
             </form>
           )}
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <div className="card" style={{ padding: 0, overflow: "auto" }}>
-              <table className="table" style={{ width: "100%" }}>
+              <table className="table">
                 <thead>
                   <tr>
                     <th>Código</th>
@@ -1381,7 +1365,7 @@ export function QualityPg14Page() {
                     <tr
                       key={r.id}
                       onClick={() => { setSelectedId(r.id); setShowForm(false); }}
-                      style={{ cursor: "pointer", background: selectedId === r.id ? "#e0f2fe" : undefined }}
+                      style={{ cursor: "pointer", background: selectedId === r.id ? "var(--lc-accent-soft)" : undefined }}
                     >
                       <td>{r.code}</td>
                       <td>{KIND_LABEL[r.kind] || r.kind}</td>
@@ -1390,7 +1374,7 @@ export function QualityPg14Page() {
                     </tr>
                   ))}
                   {equipment.length === 0 && (
-                    <tr><td colSpan={4} style={{ padding: 16, color: "var(--lc-ink-3)" }}>Sin equipos.</td></tr>
+                    <tr><td className="muted" colSpan={4}>Sin equipos.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -1398,7 +1382,7 @@ export function QualityPg14Page() {
 
             {selectedEq && (
               <div className="card" style={{ padding: 16 }}>
-                <h3 style={{ marginTop: 0 }}>{selectedEq.code}</h3>
+                <h3>{selectedEq.code}</h3>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   <label>
                     Tipo
@@ -1491,7 +1475,7 @@ export function QualityPg14Page() {
 
           {showForm && !selectedId && (
             <form onSubmit={createCheck} className="card" style={{ padding: 16, marginBottom: 16 }}>
-              <h3 style={{ marginTop: 0 }}>PG14-R05 · Verificación intermedia (ABBA)</h3>
+              <h3>PG14-R05 · Verificación intermedia (ABBA)</h3>
               <p className="muted">Control semestral. Preferir patrón maestro de 1000 kg. {weights.length < 2 ? "Cargá al menos dos pesas en Metrología antes de registrar la comprobación." : ""}</p>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: 12 }}>
                 <label>
@@ -1508,7 +1492,7 @@ export function QualityPg14Page() {
                 </label>
               </div>
               {abbaFields(false)}
-              <label style={{ display: "block", marginTop: 8 }}>
+              <label style={{ marginTop: 8 }}>
                 Notas
                 <textarea value={cNotes} onChange={(e) => setCNotes(e.target.value)} rows={2} style={{ width: "100%" }} />
               </label>
@@ -1520,15 +1504,15 @@ export function QualityPg14Page() {
           )}
 
           <div className="card" style={{ padding: 16, marginBottom: 16, overflowX: "auto" }}>
-            <h3 style={{ marginTop: 0 }}>Calendario semestral de pesas</h3>
-            <table className="data-table" style={{ width: "100%" }}><thead><tr><th>Pesa</th><th>Masa</th><th>Última V</th><th>Próxima</th><th>Estado</th></tr></thead>
+            <h3>Calendario semestral de pesas</h3>
+            <table className="data-table"><thead><tr><th>Pesa</th><th>Masa</th><th>Última V</th><th>Próxima</th><th>Estado</th></tr></thead>
               <tbody>{(checkSchedule || []).map((item) => <tr key={item.weightId}><td>{item.code}{item.isReferenceMass ? " ★" : ""}</td><td>{item.mass || "—"}</td><td>{fmtDate(item.lastDate)}</td><td>{fmtDate(item.nextDate)}</td><td>{item.status === "overdue" ? "Vencida" : item.status === "due_soon" ? "Próxima / sin registro" : "Al día"}</td></tr>)}
               {!checkSchedule?.length && <tr><td colSpan={5}>Sin pesas en Metrología.</td></tr>}</tbody></table>
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <div className="card" style={{ padding: 0, overflow: "auto" }}>
-              <table className="table" style={{ width: "100%" }}>
+              <table className="table">
                 <thead>
                   <tr>
                     <th>Número</th>
@@ -1544,7 +1528,7 @@ export function QualityPg14Page() {
                     <tr
                       key={r.id}
                       onClick={() => { setSelectedId(r.id); setShowForm(false); }}
-                      style={{ cursor: "pointer", background: selectedId === r.id ? "#e0f2fe" : undefined }}
+                      style={{ cursor: "pointer", background: selectedId === r.id ? "var(--lc-accent-soft)" : undefined }}
                     >
                       <td>{r.number}</td>
                       <td>{fmtDate(r.checkDate)}</td>
@@ -1555,7 +1539,7 @@ export function QualityPg14Page() {
                     </tr>
                   ))}
                   {checks.length === 0 && (
-                    <tr><td colSpan={6} style={{ padding: 16, color: "var(--lc-ink-3)" }}>Sin verificaciones.</td></tr>
+                    <tr><td className="muted" colSpan={6}>Sin verificaciones.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -1563,7 +1547,7 @@ export function QualityPg14Page() {
 
             {selectedCheck && (
               <div className="card" style={{ padding: 16 }}>
-                <h3 style={{ marginTop: 0 }}>{selectedCheck.number}</h3>
+                <h3>{selectedCheck.number}</h3>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   <label>
                     Fecha
@@ -1639,12 +1623,12 @@ export function QualityPg14Page() {
               {[new Date().getFullYear() - 1, new Date().getFullYear(), new Date().getFullYear() + 1, programYearFilter, ...plans.flatMap((p) => (p.schedule || []).map((m) => m.year))].filter((y, i, all) => all.indexOf(y) === i).sort().map((year) => <option key={year} value={year}>{year}</option>)}
             </select></label>
             <Link className="btn btn-outline" to={`/calidad/registros/equipos/r06/pdf?year=${programYearFilter}`}>PDF programa</Link>
-            <span className="muted" style={{ fontSize: "0.82rem" }}>P = Programado · R = Realizado · tocá el mes para cambiarlo</span>
+            <span className="muted t-small">P = Programado · R = Realizado · tocá el mes para cambiarlo</span>
           </div>
 
           {showForm && !selectedId && (
             <form onSubmit={createPlan} className="card" style={{ padding: 16, marginBottom: 16 }}>
-              <h3 style={{ marginTop: 0 }}>PG14-R06 · Mantenimiento preventivo</h3>
+              <h3>PG14-R06 · Mantenimiento preventivo</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: 12 }}>
                 <label>
                   Tipo de activo *
@@ -1681,10 +1665,10 @@ export function QualityPg14Page() {
                   <input value={mActivity} onChange={(e) => setMActivity(e.target.value)} required />
                 </label>
               </div>
-              <p className="muted" style={{ margin: "10px 0 0", fontSize: "0.82rem" }}>
+              <p className="muted t-small" style={{ margin: "10px 0 0" }}>
                 Se programan los próximos 24 meses desde la primera ejecución según la frecuencia, aunque crucen de año. Después se ajusta mes a mes en la grilla.
               </p>
-              <label style={{ display: "block", marginTop: 12 }}>
+              <label style={{ marginTop: 12 }}>
                 Notas
                 <textarea value={mNotes} onChange={(e) => setMNotes(e.target.value)} rows={2} style={{ width: "100%" }} />
               </label>
@@ -1697,7 +1681,7 @@ export function QualityPg14Page() {
 
           <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 16 }}>
             <div className="card" style={{ padding: 0, overflow: "auto" }}>
-              <table className="table" style={{ width: "100%" }}>
+              <table className="table">
                 <thead>
                   <tr>
                     <th>Número</th>
@@ -1721,13 +1705,13 @@ export function QualityPg14Page() {
                       <td>{r.number}</td>
                       <td>{SOURCE_LABEL[r.assetSource] || r.assetSource} · {r.equipmentCode}</td>
                       <td>{r.activity}</td>
-                      {MONTHS.map((month, index) => <td key={month}><button type="button" className="btn btn-outline compact" disabled={busy || r.status === "Cancelled"} style={{ minWidth: 30, padding: "2px 5px", color: r.months?.[index] === "R" ? "#166534" : r.months?.[index] === "P" ? "#b45309" : "#94a3b8" }} title={`${month} ${programYearFilter}: ${MONTH_STATUS[r.months?.[index] || "-"]}`} onClick={(event) => { event.stopPropagation(); void setMonth(r, index + 1); }}>{r.months?.[index] === "-" ? "·" : r.months?.[index] || "·"}</button></td>)}
+                      {MONTHS.map((month, index) => <td key={month}><button type="button" className="btn btn-outline compact" disabled={busy || r.status === "Cancelled"} style={{ minWidth: 30 }} title={`${month} ${programYearFilter}: ${MONTH_STATUS[r.months?.[index] || "-"]}`} onClick={(event) => { event.stopPropagation(); void setMonth(r, index + 1); }}>{r.months?.[index] === "-" ? "·" : r.months?.[index] || "·"}</button></td>)}
                       <td>{fmtDate(r.nextDue)}{r.isOverdue ? " ⚠" : ""}</td>
                       <td>{MP_STATUS[r.status] || r.status}</td>
                     </tr>
                   ))}
                   {plans.filter((r) => r.programYear === programYearFilter).length === 0 && (
-                    <tr><td colSpan={17} style={{ padding: 16, color: "var(--lc-ink-3)" }}>Sin ítems para {programYearFilter}.</td></tr>
+                    <tr><td className="muted" colSpan={17}>Sin ítems para {programYearFilter}.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -1735,8 +1719,8 @@ export function QualityPg14Page() {
 
             {selectedPlan && (
               <div className="card" style={{ padding: 16 }}>
-                <h3 style={{ marginTop: 0 }}>{selectedPlan.number}</h3>
-                <p style={{ marginTop: 0, color: "var(--lc-ink-3)" }}>
+                <h3>{selectedPlan.number}</h3>
+                <p className="muted" style={{ marginTop: 0 }}>
                   {SOURCE_LABEL[selectedPlan.assetSource] || selectedPlan.assetSource} · {selectedPlan.equipmentCode} · {selectedPlan.equipmentDescription}
                   {selectedPlan.isOverdue ? " · Vencido" : ""}
                 </p>

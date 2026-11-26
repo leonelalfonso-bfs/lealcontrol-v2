@@ -52,11 +52,11 @@ export function MetrologyScopePage() {
   return (
     <div className="page-wide">
       <div className="page-head" style={{ marginBottom: 20 }}>
-        <span className="eyebrow" style={{ color: "var(--lc-accent-strong)", fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.08em" }}>
+        <span className="eyebrow t-accent t-strong t-caps t-small" style={{ letterSpacing: "0.08em" }}>
           Metrología Legal
         </span>
-        <h1 style={{ margin: "2px 0 0", fontSize: "1.75rem", fontWeight: 800 }}>Alcance</h1>
-        <p className="muted" style={{ margin: "6px 0 0", fontSize: "0.9rem" }}>
+        <h1 style={{ margin: "2px 0 0" }}>Alcance</h1>
+        <p className="muted" style={{ margin: "6px 0 0" }}>
           Elegí si la empresa es laboratorio de ensayos o reparador. El alta de ensayos solo muestra lo que corresponde.
         </p>
       </div>
@@ -74,16 +74,11 @@ export function MetrologyScopePage() {
                 disabled={saving}
                 onClick={() => choose(opt.value)}
                 className="card pad"
-                style={{
-                  textAlign: "left",
-                  cursor: saving ? "wait" : "pointer",
-                  border: selected ? "2px solid #0d9488" : "1px solid var(--surface-border, #e5e7eb)",
-                  background: selected ? "rgba(13, 148, 136, 0.06)" : undefined
-                }}
+                style={{ cursor: saving ? "wait" : "pointer" }}
               >
                 <strong style={{ display: "block", fontSize: "1.05rem" }}>{opt.title}</strong>
-                <span className="muted" style={{ display: "block", marginTop: 6, fontSize: "0.86rem" }}>{opt.detail}</span>
-                <ul style={{ margin: "12px 0 0", paddingLeft: 18, fontSize: "0.86rem" }}>
+                <span className="muted" style={{ display: "block", marginTop: 6 }}>{opt.detail}</span>
+                <ul style={{ margin: "12px 0 0", paddingLeft: 18 }}>
                   {assaysForMode(opt.value).map((a) => (
                     <li key={a.code}>{a.label}</li>
                   ))}
@@ -97,19 +92,19 @@ export function MetrologyScopePage() {
       {!loading && (
         <div className="card pad" style={{ marginTop: 18, maxWidth: 860 }}>
           <strong>Ensayos que aparecen ahora ({scopeTitle(mode)})</strong>
-          <div className="muted" style={{ marginTop: 6, fontSize: "0.88rem" }}>
+          <div className="muted" style={{ marginTop: 6 }}>
             {visible.map((a) => a.label).join(" · ")}
           </div>
           <div style={{ marginTop: 14 }}>
-            <Link to="/metrologia/ensayos/nuevo" className="btn" style={{ background: "linear-gradient(135deg, var(--lc-accent), var(--lc-accent))", color: "#fff" }}>
+            <Link to="/metrologia/ensayos/nuevo" className="btn">
               Nuevo ensayo
             </Link>
           </div>
         </div>
       )}
 
-      {message && <p style={{ color: "var(--lc-accent-strong)", marginTop: 12 }}>{message}</p>}
-      {error && <p style={{ color: "var(--lc-danger)", marginTop: 12 }}>{error}</p>}
+      {message && <p className="t-accent" style={{ marginTop: 12 }}>{message}</p>}
+      {error && <p className="t-danger" style={{ marginTop: 12 }}>{error}</p>}
     </div>
   );
 }

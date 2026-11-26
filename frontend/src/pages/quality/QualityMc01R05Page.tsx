@@ -91,9 +91,9 @@ export function QualityMc01R05Page() {
     <div className="workspace-page pad">
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "flex-start" }}>
         <div>
-          <Link to="/calidad/documentos/MC01-R05" style={{ fontSize: 13 }}>← Plantilla MC01-R05</Link>
+          <Link className="t-small" to="/calidad/documentos/MC01-R05">← Plantilla MC01-R05</Link>
           <h1 style={{ margin: "8px 0 0" }}>MC01-R05 · Nota institucional</h1>
-          <p style={{ color: "var(--lc-ink-3)", marginTop: 6 }}>
+          <p className="muted" style={{ marginTop: 6 }}>
             Comunicaciones formales de la dirección al personal / partes interesadas.
           </p>
         </div>
@@ -108,7 +108,7 @@ export function QualityMc01R05Page() {
       {(error || msg) && (
         <div
           className="card pad"
-          style={{ marginTop: 12, background: error ? "var(--lc-danger-bg)" : "var(--lc-ok-bg)", color: error ? "var(--lc-danger)" : "var(--lc-ok)" }}
+          style={{ marginTop: 12, color: error ? "var(--lc-danger)" : "var(--lc-ok)" }}
         >
           {error || msg}
         </div>
@@ -116,7 +116,7 @@ export function QualityMc01R05Page() {
 
       {showForm && (
         <form className="card pad" style={{ marginTop: 16 }} onSubmit={(e) => void onSubmit(e)}>
-          <h3 style={{ marginTop: 0 }}>Alta de nota institucional</h3>
+          <h3>Alta de nota institucional</h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
             <label style={{ gridColumn: "1 / -1" }}>
               Asunto *
@@ -143,11 +143,11 @@ export function QualityMc01R05Page() {
               />
             </label>
           </div>
-          <label style={{ display: "block", marginTop: 12 }}>
+          <label style={{ marginTop: 12 }}>
             Texto / resumen
             <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={3} style={{ width: "100%" }} />
           </label>
-          <label style={{ display: "block", marginTop: 12 }}>
+          <label style={{ marginTop: 12 }}>
             Notas internas
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} style={{ width: "100%" }} />
           </label>
@@ -182,7 +182,7 @@ export function QualityMc01R05Page() {
                   <tr key={r.id} style={{ opacity: r.status === "Cancelled" ? 0.55 : 1 }}>
                     <td>
                       <strong>{r.subject}</strong>
-                      {r.body ? <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>{r.body.slice(0, 120)}{r.body.length > 120 ? "…" : ""}</div> : null}
+                      {r.body ? <div className="muted t-small" style={{ marginTop: 4 }}>{r.body.slice(0, 120)}{r.body.length > 120 ? "…" : ""}</div> : null}
                     </td>
                     <td>{r.issuedBy || "—"}</td>
                     <td>{r.audience || "—"}</td>
@@ -201,7 +201,7 @@ export function QualityMc01R05Page() {
                       )}
                     </td>
                     <td>{labelOf(EQUIPMENT_STATUS, r.status)}</td>
-                    <td style={{ textAlign: "right" }}>
+                    <td className="t-right">
                       {r.status === "Active" && (
                         <button
                           type="button"
