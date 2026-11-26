@@ -47,15 +47,15 @@ public sealed class PersonalNoticesApiTests : IAsyncLifetime
     public async Task Each_user_only_gets_the_notices_their_profile_allows()
     {
         using var admin = _factory.CreateAuthenticatedClient();
-        Assert.Equal(["communications.unattended", "finance.cheques-to-deposit", "fleet.expirations", "fleet.people-credentials", "fleet.service-orders", "fleet.services", "hr.company-documents", "sales.overdue-invoices", "sales.quotes-expiring"],
+        Assert.Equal(["communications.unattended", "crm.activities-due", "crm.stale-opportunities", "finance.cheques-to-deposit", "fleet.expirations", "fleet.people-credentials", "fleet.service-orders", "fleet.services", "hr.company-documents", "sales.overdue-invoices", "sales.quotes-expiring", "sales.quotes-unanswered"],
             Codes(await Json(await admin.GetAsync("/api/v1/notices/settings"))));
 
         using var seller = await UserAsync(admin, "Vendedor", new Dictionary<string, string> { ["sales"] = "Edit" }, amounts: true);
-        Assert.Equal(["sales.overdue-invoices", "sales.quotes-expiring"], Codes(await Json(await seller.GetAsync("/api/v1/notices/settings"))));
+        Assert.Equal(["crm.activities-due", "crm.stale-opportunities", "sales.overdue-invoices", "sales.quotes-expiring", "sales.quotes-unanswered"], Codes(await Json(await seller.GetAsync("/api/v1/notices/settings"))));
 
         // Sin "importes", tampoco las facturas vencidas (muestran saldos).
         using var clerk = await UserAsync(admin, "Recepcion", new Dictionary<string, string> { ["sales"] = "View" }, amounts: false);
-        Assert.Equal(["sales.quotes-expiring"], Codes(await Json(await clerk.GetAsync("/api/v1/notices/settings"))));
+        Assert.Equal(["crm.activities-due", "crm.stale-opportunities", "sales.quotes-expiring"], Codes(await Json(await clerk.GetAsync("/api/v1/notices/settings"))));
         using (var forbidden = await clerk.PutAsJsonAsync("/api/v1/notices/settings", new { code = "fleet.expirations", enabled = true }))
             Assert.Equal(HttpStatusCode.BadRequest, forbidden.StatusCode);
     }
