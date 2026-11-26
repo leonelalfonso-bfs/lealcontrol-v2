@@ -12,6 +12,7 @@ export function AiSettingsCard() {
   const [budget, setBudget] = useState("10");
   const [reading, setReading] = useState(false);
   const [autoOpportunities, setAutoOpportunities] = useState(true);
+  const [webCuitLookup, setWebCuitLookup] = useState(true);
   const [supervisor, setSupervisor] = useState(false);
   const [business, setBusiness] = useState("");
   const [busy, setBusy] = useState(false);
@@ -23,6 +24,7 @@ export function AiSettingsCard() {
     setBudget(String(s.monthlyBudgetUsd));
     setReading(s.mailReadingEnabled);
     setAutoOpportunities(s.autoOpportunities);
+    setWebCuitLookup(s.webCuitLookupEnabled ?? true);
     setSupervisor(s.supervisorEnabled);
     setBusiness(s.businessDescription);
   }).catch((err) => setError(err instanceof Error ? err.message : "No se pudo leer la configuración."));
@@ -39,6 +41,7 @@ export function AiSettingsCard() {
         monthlyBudgetUsd: Number(budget.replace(",", ".")) || 0,
         mailReadingEnabled: removeKey ? false : reading,
         autoOpportunities,
+        webCuitLookupEnabled: webCuitLookup,
         supervisorEnabled: removeKey ? false : supervisor,
         businessDescription: business,
       });
@@ -115,6 +118,10 @@ export function AiSettingsCard() {
       <label className="check-label">
         <input type="checkbox" checked={autoOpportunities} onChange={(e) => setAutoOpportunities(e.target.checked)} />
         Abrir la oportunidad automáticamente en los pedidos comerciales (etiqueta “IA”)
+      </label>
+      <label className="check-label">
+        <input type="checkbox" checked={webCuitLookup} onChange={(e) => setWebCuitLookup(e.target.checked)} disabled={!autoOpportunities} />
+        Buscar el CUIT en internet para empresas nuevas y validar en ARCA antes de crear el cliente (queda marcado “A revisar”; ~USD 0,01 por búsqueda)
       </label>
 
       <label className="check-label">

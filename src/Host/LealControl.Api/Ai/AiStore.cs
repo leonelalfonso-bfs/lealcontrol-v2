@@ -20,6 +20,8 @@ public sealed class AiSettings
     public decimal MonthlyBudgetUsd { get; private set; } = DefaultMonthlyBudgetUsd;
     public bool MailReadingEnabled { get; private set; }
     public bool AutoOpportunities { get; private set; } = true;
+    /// <summary>Buscar en internet el CUIT de empresas nuevas sin CUIT para validarlas en ARCA.</summary>
+    public bool WebCuitLookupEnabled { get; private set; } = true;
     /// <summary>Informe diario del supervisor comercial (arriba de "Mis avisos" y del resumen diario).</summary>
     public bool SupervisorEnabled { get; private set; }
     /// <summary>Qué hace la empresa y qué vende: le da contexto a la IA para distinguir un pedido comercial.</summary>
@@ -42,12 +44,13 @@ public sealed class AiSettings
         UpdatedAtUtc = nowUtc;
     }
 
-    public void Update(decimal budgetUsd, bool mailReading, bool autoOpportunities, bool supervisor, string? businessDescription, DateTime nowUtc)
+    public void Update(decimal budgetUsd, bool mailReading, bool autoOpportunities, bool supervisor, string? businessDescription, DateTime nowUtc, bool webCuitLookup = true)
     {
         MonthlyBudgetUsd = Math.Clamp(Math.Round(budgetUsd, 2), 0m, 1000m);
         if (mailReading && !MailReadingEnabled) EnabledAtUtc = nowUtc;
         MailReadingEnabled = mailReading;
         AutoOpportunities = autoOpportunities;
+        WebCuitLookupEnabled = webCuitLookup;
         SupervisorEnabled = supervisor;
         var text = (businessDescription ?? "").Trim();
         BusinessDescription = text.Length > 1000 ? text[..1000] : text;
@@ -139,6 +142,7 @@ public sealed class AiDbContext(DbContextOptions<AiDbContext> options) : DbConte
                 "Error" text);
             CREATE INDEX IF NOT EXISTS "IX_usage_TenantId_AtUtc" ON ai.usage ("TenantId", "AtUtc");
             ALTER TABLE ai.settings ADD COLUMN IF NOT EXISTS "SupervisorEnabled" boolean NOT NULL DEFAULT false;
+            ALTER TABLE ai.settings ADD COLUMN IF NOT EXISTS "WebCuitLookupEnabled" boolean NOT NULL DEFAULT true;
             CREATE TABLE IF NOT EXISTS ai.briefings (
                 "TenantId" uuid NOT NULL,
                 "Day" date NOT NULL,

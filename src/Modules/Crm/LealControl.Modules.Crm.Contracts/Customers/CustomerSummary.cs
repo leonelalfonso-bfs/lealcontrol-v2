@@ -11,4 +11,5 @@ public sealed record CustomerSummary(
     bool IsCustomer,
     bool IsSupplier,
     string? Email,
-    string? Phone);
+    string? Phone,
+    bool AddedAutomatically = false);

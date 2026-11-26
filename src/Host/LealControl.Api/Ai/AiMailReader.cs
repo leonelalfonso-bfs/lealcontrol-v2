@@ -7,9 +7,12 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using LealControl.BuildingBlocks.Results;
 using LealControl.BuildingBlocks.Tenancy;
 using LealControl.Modules.Communications.Infrastructure.Domain;
 using LealControl.Modules.Communications.Infrastructure.Persistence;
+using LealControl.Modules.Crm.Application.Abstractions;
+using LealControl.Modules.Crm.Application.Customers;
 using LealControl.Modules.Crm.Domain.Activities;
 using LealControl.Modules.Crm.Domain.Customers;
 using LealControl.Modules.Crm.Domain.Leads;
@@ -18,9 +21,26 @@ using LealControl.Modules.Crm.Domain.Shared;
 using LealControl.Modules.Crm.Domain.ValueObjects;
 using LealControl.Modules.Crm.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace LealControl.Api.Ai;
+
+/// <summary>Consulta al padrón de ARCA para validar un CUIT desde los procesos de IA (en tests se reemplaza por un doble).</summary>
+public interface IAiArcaCuitLookup
+{
+    Task<Result<ArcaCuitLookupResult>> LookupCuitAsync(string connectionString, Guid tenantId, string cuit, CancellationToken ct);
+}
+
+internal sealed class ScopedAiArcaCuitLookup(IServiceScopeFactory scopes) : IAiArcaCuitLookup
+{
+    public async Task<Result<ArcaCuitLookupResult>> LookupCuitAsync(string connectionString, Guid tenantId, string cuit, CancellationToken ct)
+    {
+        using var scope = scopes.CreateScope();
+        var arca = scope.ServiceProvider.GetRequiredService<IArcaIntegration>();
+        return await arca.LookupCuitForTenantAsync(connectionString, tenantId, cuit, ct);
+    }
+}
 
 /// <summary>Lo que la IA lee de un mail.</summary>
 public sealed record MailReading(
@@ -30,12 +50,13 @@ public sealed record MailReading(
 /// <summary>
 /// Lectura de mails con IA: a cada conversación con un mail nuevo del contacto le pone categoría, urgencia y resumen.
 /// Identifica clientes existentes con certeza (CUIT, mail exacto de empresa o contacto, dominio corporativo único o
-/// nombre único sin conflicto), guarda contactos nuevos de personas reales, y si es un pedido comercial nuevo y la
-/// empresa lo permite, abre la oportunidad en el CRM y vincula la conversación.
+/// nombre único sin conflicto), guarda contactos nuevos de personas reales, valida empresas nuevas en ARCA (buscando
+/// el CUIT en internet si falta) y abre oportunidades en el CRM.
 /// </summary>
-public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILogger<AiMailReader> logger)
+public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILogger<AiMailReader> logger, IAiArcaCuitLookup? arcaLookup = null)
 {
     public const string Feature = "mail-reading";
+    public const string WebCuitFeature = "cuit-web-lookup";
     public const int BatchSize = 20;
     /// <summary>Al activar la lectura, también se leen los mails de los 2 días anteriores.</summary>
     public static readonly TimeSpan Lookback = TimeSpan.FromDays(2);
@@ -149,7 +170,17 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
             CustomerId? matchedCustomerId = null;
             if (!IgnoredForCustomerSync.Contains(reading.Category))
             {
-                matchedCustomerId = ResolveCustomerWithCertainty(conversation, reading, customerCandidates);
+                var resolution = ResolveCustomerWithCertainty(conversation, reading, customerCandidates);
+                matchedCustomerId = resolution.CustomerId;
+
+                if (matchedCustomerId is null && !resolution.HasAmbiguityOrConflict
+                    && settings.AutoOpportunities && Commercial.Contains(reading.Category) && reading.IsNewBusiness
+                    && conversation.RelatedOpportunityId is null && arcaLookup is not null)
+                {
+                    matchedCustomerId = await TryCreateOrLinkCustomerFromArcaAsync(
+                        connectionString, tenantId, crm, aiDb, settings, apiKey, conversation, reading, customerCandidates, nowUtc, ct);
+                }
+
                 if (matchedCustomerId is { } cid)
                 {
                     if (conversation.RelatedCustomerId is null) conversation.LinkCustomer(cid.Value);
@@ -187,18 +218,20 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
         )).ToList();
     }
 
+    private sealed record CustomerResolution(CustomerId? CustomerId, bool HasAmbiguityOrConflict);
+
     /// <summary>
     /// Vincula un cliente existente solo con certeza:
     /// 1) Ya vinculado en la conversación.
     /// 2) CUIT exacto o mail exacto (del cliente o de un contacto), verificando que no haya conflicto entre CUIT y mail/dominio.
     /// 3) Dominio corporativo (no genérico) solo si hay un único cliente con ese dominio.
     /// 4) Nombre normalizado de empresa solo si hay un único cliente coincidente.
-    /// En casos dudosos o en conflicto devuelve null para que la bandeja sugiera candidatos.
+    /// En casos dudosos o en conflicto devuelve null con HasAmbiguityOrConflict = true para que la bandeja sugiera candidatos.
     /// </summary>
-    private static CustomerId? ResolveCustomerWithCertainty(Conversation conversation, MailReading reading, List<CustomerCandidate> candidates)
+    private static CustomerResolution ResolveCustomerWithCertainty(Conversation conversation, MailReading reading, List<CustomerCandidate> candidates)
     {
-        if (conversation.RelatedCustomerId is { } linked) return new CustomerId(linked);
-        if (candidates.Count == 0) return null;
+        if (conversation.RelatedCustomerId is { } linked) return new(new CustomerId(linked), false);
+        if (candidates.Count == 0) return new(null, false);
 
         var senderEmail = (conversation.ParticipantEmail ?? "").Trim().ToLowerInvariant();
         var cuit = new string(reading.Cuit.Where(char.IsDigit).ToArray());
@@ -220,16 +253,16 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
         // Candado de conflicto: si el CUIT del mail y el mail/dominio del remitente apuntan a clientes distintos, no vincular.
         if (cuitMatches.Count > 0)
         {
-            if (emailMatches.Count > 0 && !emailMatches.Any(id => cuitMatches.Contains(id))) return null;
-            if (domainMatches.Count > 0 && !domainMatches.Any(id => cuitMatches.Contains(id))) return null;
-            return cuitMatches.Count == 1 ? cuitMatches[0] : null;
+            if (emailMatches.Count > 0 && !emailMatches.Any(id => cuitMatches.Contains(id))) return new(null, true);
+            if (domainMatches.Count > 0 && !domainMatches.Any(id => cuitMatches.Contains(id))) return new(null, true);
+            return cuitMatches.Count == 1 ? new(cuitMatches[0], false) : new(null, true);
         }
 
-        if (emailMatches.Count == 1) return emailMatches[0];
-        if (emailMatches.Count > 1) return null;
+        if (emailMatches.Count == 1) return new(emailMatches[0], false);
+        if (emailMatches.Count > 1) return new(null, true);
 
-        if (domainMatches.Count == 1) return domainMatches[0];
-        if (domainMatches.Count > 1) return null;
+        if (domainMatches.Count == 1) return new(domainMatches[0], false);
+        if (domainMatches.Count > 1) return new(null, true);
 
         var normalizedCompany = NormalizeCompanyName(reading.Company);
         if (normalizedCompany.Length >= 3)
@@ -238,8 +271,8 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
                 .Where(c => NormalizeCompanyName(c.LegalName) == normalizedCompany
                     || (c.TradeName is not null && NormalizeCompanyName(c.TradeName) == normalizedCompany))
                 .Select(c => c.Id).Distinct().ToList();
-            if (exactNameMatches.Count == 1) return exactNameMatches[0];
-            if (exactNameMatches.Count > 1) return null;
+            if (exactNameMatches.Count == 1) return new(exactNameMatches[0], false);
+            if (exactNameMatches.Count > 1) return new(null, true);
 
             if (normalizedCompany.Length >= 5)
             {
@@ -247,12 +280,237 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
                     .Where(c => NameContainsWholeWords(NormalizeCompanyName(c.LegalName), normalizedCompany)
                         || (c.TradeName is not null && NameContainsWholeWords(NormalizeCompanyName(c.TradeName), normalizedCompany)))
                     .Select(c => c.Id).Distinct().ToList();
-                if (containsNameMatches.Count == 1) return containsNameMatches[0];
+                if (containsNameMatches.Count == 1) return new(containsNameMatches[0], false);
+                if (containsNameMatches.Count > 1) return new(null, true);
             }
         }
 
-        return null;
+        return new(null, false);
     }
+
+    /// <summary>
+    /// Para un pedido comercial de una empresa nueva: usa el CUIT del mail o intenta conseguirlo con búsqueda web,
+    /// lo valida contra ARCA y crea el cliente marcado "Cargado automáticamente" (siempre con condición fiscal válida
+    /// y razón social coherente). Si ya existía en la base por ese CUIT, lo vincula en vez de duplicarlo.
+    /// </summary>
+    private async Task<CustomerId?> TryCreateOrLinkCustomerFromArcaAsync(
+        string connectionString, Guid tenantId, CrmDbContext crm, AiDbContext aiDb, AiSettings settings, string apiKey,
+        Conversation conversation, MailReading reading, List<CustomerCandidate> candidates, DateTime nowUtc, CancellationToken ct)
+    {
+        var cuit = new string(reading.Cuit.Where(char.IsDigit).ToArray());
+        var cuitFromWeb = false;
+        if (Cuit.Create(cuit).IsFailure)
+        {
+            cuit = "";
+            if (settings.WebCuitLookupEnabled && NormalizeCompanyName(reading.Company).Length >= 3)
+            {
+                var (spent, _) = await aiDb.MonthAsync(tenantId, nowUtc, ct);
+                if (spent < settings.MonthlyBudgetUsd)
+                {
+                    cuit = await SearchCuitOnWebAsync(aiDb, tenantId, apiKey, conversation, reading, nowUtc, ct);
+                    cuitFromWeb = cuit.Length == 11;
+                }
+            }
+        }
+
+        if (cuit.Length != 11 || Cuit.Create(cuit).IsFailure) return null;
+
+        // Si el CUIT encontrado en la web ya existe en nuestros clientes, vinculamos ese cliente en vez de duplicar.
+        var existingByCuit = candidates.FirstOrDefault(c => c.DocumentNumber == cuit);
+        if (existingByCuit is not null) return existingByCuit.Id;
+
+        Result<ArcaCuitLookupResult> lookup;
+        try
+        {
+            lookup = await arcaLookup!.LookupCuitAsync(connectionString, tenantId, cuit, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "IA: falló la consulta a ARCA para el CUIT {Cuit}", cuit);
+            return null;
+        }
+
+        if (lookup.IsFailure || !lookup.Value.IsActive || string.IsNullOrWhiteSpace(lookup.Value.LegalName)) return null;
+
+        // Regla fiscal estricta: nunca dar de alta un cliente con condición fiscal desconocida o pendiente.
+        if (!TryParseKnownTaxCondition(lookup.Value.TaxCondition, out var taxCondition)) return null;
+
+        // Candado de identidad: verificar que la razón social de ARCA coincida con la empresa del mail.
+        if (cuitFromWeb && !ArcaNameMatchesCompany(reading.Company, lookup.Value.LegalName, lookup.Value.TradeName))
+            return null;
+        if (!cuitFromWeb && NormalizeCompanyName(reading.Company).Length >= 3
+            && !ArcaNameMatchesCompany(reading.Company, lookup.Value.LegalName, lookup.Value.TradeName))
+            return null;
+
+        var document = PartyDocument.ForTaxCondition(taxCondition, DocumentType.Cuit, lookup.Value.Cuit);
+        if (document.IsFailure) return null;
+
+        PostalAddress? address = null;
+        if (!string.IsNullOrWhiteSpace(lookup.Value.FiscalStreet)
+            && !string.IsNullOrWhiteSpace(lookup.Value.FiscalCity)
+            && !string.IsNullOrWhiteSpace(lookup.Value.FiscalPostalCode)
+            && TryParseProvince(lookup.Value.FiscalProvince, out var province))
+        {
+            var createdAddress = PostalAddress.Create(lookup.Value.FiscalStreet, lookup.Value.FiscalCity, province, lookup.Value.FiscalPostalCode);
+            if (createdAddress.IsSuccess) address = createdAddress.Value;
+        }
+
+        var tradeName = !string.IsNullOrWhiteSpace(lookup.Value.TradeName)
+            ? lookup.Value.TradeName.Trim()
+            : (!string.IsNullOrWhiteSpace(reading.Company)
+               && !string.Equals(NormalizeCompanyName(reading.Company), NormalizeCompanyName(lookup.Value.LegalName), StringComparison.Ordinal)
+                ? reading.Company.Trim()
+                : null);
+
+        var registered = Customer.Register(new CustomerRegistration(
+            new TenantId(tenantId),
+            lookup.Value.LegalName.Trim(),
+            tradeName,
+            document.Value,
+            taxCondition,
+            IibbRegime.Local,
+            IsCustomer: true,
+            IsSupplier: false,
+            Email: null,
+            Phone: null,
+            WhatsApp: null,
+            FiscalAddress: address,
+            CreditLimit: null,
+            PaymentTermsDays: null,
+            SellerId: null,
+            Notes: null,
+            UtcNow: nowUtc,
+            AddedAutomatically: true));
+
+        if (registered.IsFailure) return null;
+
+        crm.Customers.Add(registered.Value);
+        await crm.SaveChangesAsync(ct);
+
+        candidates.Add(new CustomerCandidate(
+            registered.Value.Id,
+            registered.Value.Document.Number,
+            registered.Value.LegalName,
+            registered.Value.TradeName,
+            null,
+            []));
+
+        return registered.Value.Id;
+    }
+
+    private async Task<string> SearchCuitOnWebAsync(
+        AiDbContext aiDb, Guid tenantId, string apiKey, Conversation conversation, MailReading reading, DateTime nowUtc, CancellationToken ct)
+    {
+        var domain = ExtractCorporateDomain(conversation.ParticipantEmail);
+        var userPrompt = new StringBuilder();
+        userPrompt.AppendLine($"Empresa: {reading.Company}");
+        if (domain is not null) userPrompt.AppendLine($"Dominio del correo: {domain}");
+        if (!string.IsNullOrWhiteSpace(reading.Location)) userPrompt.AppendLine($"Localidad/ubicación: {reading.Location}");
+        if (!string.IsNullOrWhiteSpace(reading.Product)) userPrompt.AppendLine($"Rubro/consulta: {reading.Product}");
+
+        try
+        {
+            var completion = await ai.CompleteJsonAsync(
+                apiKey, AiModels.Reader, WebCuitSystemPrompt, userPrompt.ToString(), WebCuitSchema, 600, ct, webSearch: true);
+            aiDb.Usage.Add(AiUsage.Record(tenantId, WebCuitFeature, AiModels.Reader, completion.InputTokens, completion.OutputTokens,
+                AiModels.Cost(AiModels.Reader, completion.InputTokens, completion.OutputTokens, completion.WebSearchRequests),
+                completion.StopReason is "end_turn" ? null : $"La IA terminó por {completion.StopReason}", nowUtc));
+            if (completion.StopReason is not "end_turn") return "";
+
+            using var doc = JsonDocument.Parse(completion.Json);
+            var root = doc.RootElement;
+            var raw = root.TryGetProperty("cuit", out var c) && c.ValueKind == JsonValueKind.String ? c.GetString() ?? "" : "";
+            var confident = root.TryGetProperty("confident", out var cf) && cf.ValueKind == JsonValueKind.True;
+            var digits = new string(raw.Where(char.IsDigit).ToArray());
+            return confident && digits.Length == 11 && Cuit.Create(digits).IsSuccess ? digits : "";
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "IA: búsqueda web de CUIT falló para {Company}", reading.Company);
+            aiDb.Usage.Add(AiUsage.Record(tenantId, WebCuitFeature, AiModels.Reader, 0, 0, 0m, ex.Message, nowUtc));
+            return "";
+        }
+    }
+
+    public static bool TryParseKnownTaxCondition(string? raw, out TaxCondition taxCondition)
+    {
+        taxCondition = default;
+        if (string.IsNullOrWhiteSpace(raw)) return false;
+        var norm = NormalizeCompanyName(raw).Replace(" ", "");
+        if (norm is "responsableinscripto" or "ivainscripto") { taxCondition = TaxCondition.ResponsableInscripto; return true; }
+        if (norm is "monotributo" or "responsablemonotributo") { taxCondition = TaxCondition.Monotributo; return true; }
+        if (norm is "exento" or "ivaexento" or "sujetoexento") { taxCondition = TaxCondition.Exento; return true; }
+        if (norm is "consumidorfinal") { taxCondition = TaxCondition.ConsumidorFinal; return true; }
+        return false;
+    }
+
+    public static bool ArcaNameMatchesCompany(string? emailCompany, string? arcaLegalName, string? arcaTradeName)
+    {
+        var query = NormalizeCompanyName(emailCompany);
+        if (query.Length < 3) return false;
+
+        foreach (var targetRaw in new[] { arcaLegalName, arcaTradeName })
+        {
+            var target = NormalizeCompanyName(targetRaw);
+            if (target.Length < 3) continue;
+            if (target == query || NameContainsWholeWords(target, query)) return true;
+
+            var qTokens = SignificantTokens(query);
+            var tTokens = SignificantTokens(target);
+            if (qTokens.Count == 0 || tTokens.Count == 0) continue;
+            var overlap = qTokens.Count(t => tTokens.Contains(t));
+            if (overlap >= 1 && (qTokens.Count == 1 || overlap * 2 >= Math.Min(qTokens.Count, tTokens.Count)))
+                return true;
+        }
+        return false;
+    }
+
+    private static readonly HashSet<string> StopWords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "del", "las", "los", "con", "para", "por", "una", "uno", "san", "santa", "argentina", "grupo", "hermanos", "hnos", "cia"
+    };
+
+    private static List<string> SignificantTokens(string normalized) =>
+        normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(t => t.Length >= 3 && !StopWords.Contains(t))
+            .Distinct()
+            .ToList();
+
+    private static bool TryParseProvince(string? raw, out ArgentineProvince province)
+    {
+        province = default;
+        if (string.IsNullOrWhiteSpace(raw)) return false;
+        if (Enum.TryParse<ArgentineProvince>(raw.Trim(), ignoreCase: true, out province)) return true;
+        var norm = NormalizeCompanyName(raw).Replace(" ", "");
+        foreach (var value in Enum.GetValues<ArgentineProvince>())
+        {
+            if (NormalizeCompanyName(value.ToString()).Replace(" ", "") == norm)
+            {
+                province = value;
+                return true;
+            }
+        }
+        if (norm.Contains("capitalfederal") || norm.Contains("autonomadebuenosaires")) { province = ArgentineProvince.Caba; return true; }
+        return false;
+    }
+
+    private const string WebCuitSystemPrompt = """
+        Buscás el CUIT oficial (11 dígitos) de una empresa argentina usando búsqueda web.
+        Devolvé confident = true y los 11 dígitos en cuit SOLO si encontrás una fuente pública clara que coincida con la empresa (nombre, dominio o localidad).
+        Si hay varios homónimos dudosos o no estás seguro, devolvé cuit = "" y confident = false. Nunca inventes un CUIT.
+        """;
+
+    private static readonly IReadOnlyDictionary<string, JsonElement> WebCuitSchema = new Dictionary<string, JsonElement>
+    {
+        ["type"] = JsonSerializer.SerializeToElement("object"),
+        ["properties"] = JsonSerializer.SerializeToElement(new Dictionary<string, object>
+        {
+            ["cuit"] = new { type = "string" },
+            ["confident"] = new { type = "boolean" },
+        }),
+        ["required"] = JsonSerializer.SerializeToElement(new[] { "cuit", "confident" }),
+        ["additionalProperties"] = JsonSerializer.SerializeToElement(false),
+    };
 
     /// <summary>Guarda el contacto en el cliente existente si es una persona real con dirección no genérica y aún no existe.</summary>
     private static async Task EnsureContactSavedAsync(

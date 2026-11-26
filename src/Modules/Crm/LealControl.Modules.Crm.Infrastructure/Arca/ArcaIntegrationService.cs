@@ -112,15 +112,35 @@ internal sealed class ArcaIntegrationService : IArcaIntegration
         string cuit,
         CancellationToken cancellationToken = default)
     {
+        var settings = await _db.CompanySettings.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.TenantId == _tenant.TenantId, cancellationToken);
+        return await LookupCuitWithSettingsAsync(settings, cuit, cancellationToken);
+    }
+
+    public async Task<Result<ArcaCuitLookupResult>> LookupCuitForTenantAsync(
+        string connectionString,
+        Guid tenantId,
+        string cuit,
+        CancellationToken cancellationToken = default)
+    {
+        await using var crm = new CrmDbContext(new DbContextOptionsBuilder<CrmDbContext>().UseNpgsql(connectionString).Options);
+        var tid = new TenantId(tenantId);
+        var settings = await crm.CompanySettings.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.TenantId == tid, cancellationToken);
+        return await LookupCuitWithSettingsAsync(settings, cuit, cancellationToken);
+    }
+
+    private async Task<Result<ArcaCuitLookupResult>> LookupCuitWithSettingsAsync(
+        LealControl.Modules.Crm.Domain.Settings.CompanySettings? settings,
+        string cuit,
+        CancellationToken cancellationToken)
+    {
         var cleanCuit = Digits(cuit);
         if (cleanCuit.Length != 11)
         {
             return Result<ArcaCuitLookupResult>.Failure(
                 Error.Validation("Crm.Arca.InvalidCuit", "El CUIT debe contener 11 dígitos numéricos."));
         }
-
-        var settings = await _db.CompanySettings.AsNoTracking()
-            .FirstOrDefaultAsync(x => x.TenantId == _tenant.TenantId, cancellationToken);
 
         string? loadError = null;
         if (settings is null

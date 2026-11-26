@@ -202,6 +202,21 @@ export function CustomerDetailPage() {
             <span style={{ padding: "4px 10px", borderRadius: "12px", background: customer.status === "Active" ? "#f0fdf4" : "#fef2f2", color: customer.status === "Active" ? "#166534" : "#991b1b", fontSize: "0.82rem", fontWeight: "bold", border: `1px solid ${customer.status === "Active" ? "#bbf7d0" : "#fecaca"}` }}>
               {customer.status === "Active" ? "● Activo" : "● Inactivo"}
             </span>
+            {customer.addedAutomatically && (
+              <>
+                <span className="badge warn">Cargado automáticamente</span>
+                <button
+                  type="button"
+                  className="btn ghost compact"
+                  onClick={async () => {
+                    await api.markCustomerReviewed(customer.id);
+                    refresh();
+                  }}
+                >
+                  Marcar como revisado
+                </button>
+              </>
+            )}
           </div>
 
           <div className="hero-meta">

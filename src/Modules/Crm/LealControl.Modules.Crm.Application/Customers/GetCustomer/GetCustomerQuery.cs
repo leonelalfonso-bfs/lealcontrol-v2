@@ -81,7 +81,8 @@ internal sealed class ListCustomersQueryHandler
             c.IsCustomer,
             c.IsSupplier,
             c.Email?.Value,
-            c.Phone?.Value)).ToList();
+            c.Phone?.Value,
+            c.AddedAutomatically)).ToList();
 
         return Result<PagedResult<CustomerSummary>>.Success(
             new PagedResult<CustomerSummary>(summaries, total, request.All ? 1 : page.NormalizedPage, request.All ? summaries.Count : page.Take));
@@ -127,6 +128,41 @@ internal sealed class ChangeCustomerStatusCommandHandler
             return Result<CustomerDetailDto>.Failure(result.Error);
         }
 
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return Result<CustomerDetailDto>.Success(CustomerMappings.ToDetail(customer));
+    }
+}
+
+public sealed record MarkCustomerReviewedCommand(Guid CustomerId) : IRequest<Result<CustomerDetailDto>>;
+
+internal sealed class MarkCustomerReviewedCommandHandler
+    : IRequestHandler<MarkCustomerReviewedCommand, Result<CustomerDetailDto>>
+{
+    private readonly ICustomerRepository _customers;
+    private readonly LealControl.BuildingBlocks.Persistence.IUnitOfWork _unitOfWork;
+    private readonly LealControl.BuildingBlocks.Time.IClock _clock;
+
+    public MarkCustomerReviewedCommandHandler(
+        ICustomerRepository customers,
+        LealControl.BuildingBlocks.Persistence.IUnitOfWork unitOfWork,
+        LealControl.BuildingBlocks.Time.IClock clock)
+    {
+        _customers = customers;
+        _unitOfWork = unitOfWork;
+        _clock = clock;
+    }
+
+    public async Task<Result<CustomerDetailDto>> Handle(
+        MarkCustomerReviewedCommand request,
+        CancellationToken cancellationToken)
+    {
+        var customer = await _customers.GetByIdAsync(new CustomerId(request.CustomerId), cancellationToken);
+        if (customer is null || customer.IsDeleted)
+        {
+            return Result<CustomerDetailDto>.Failure(CrmErrors.CustomerNotFound);
+        }
+
+        customer.MarkReviewed(_clock.UtcNow);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return Result<CustomerDetailDto>.Success(CustomerMappings.ToDetail(customer));
     }

@@ -101,6 +101,8 @@ public sealed class Customer : AggregateRoot<CustomerId>
 
     public DateTime? DeletedAtUtc { get; private set; }
 
+    public bool AddedAutomatically { get; private set; }
+
     public bool IsDeleted => DeletedAtUtc is not null;
 
     public void UpdateBcraCreditReport(
@@ -160,6 +162,7 @@ public sealed class Customer : AggregateRoot<CustomerId>
         customer.PaymentTermsDays = registration.PaymentTermsDays;
         customer.SellerId = registration.SellerId;
         customer.Notes = NormalizeOptional(registration.Notes);
+        customer.AddedAutomatically = registration.AddedAutomatically;
 
         customer.Raise(new CustomerRegisteredDomainEvent(
             customer.Id,
@@ -199,7 +202,15 @@ public sealed class Customer : AggregateRoot<CustomerId>
         PaymentTermsDays = update.PaymentTermsDays;
         SellerId = update.SellerId;
         Notes = NormalizeOptional(update.Notes);
+        AddedAutomatically = false;
         Touch(update.UtcNow);
+        return Result.Success();
+    }
+
+    public Result MarkReviewed(DateTime utcNow)
+    {
+        AddedAutomatically = false;
+        Touch(utcNow);
         return Result.Success();
     }
 
@@ -582,7 +593,8 @@ public sealed record CustomerRegistration(
     int? PaymentTermsDays,
     Guid? SellerId,
     string? Notes,
-    DateTime UtcNow);
+    DateTime UtcNow,
+    bool AddedAutomatically = false);
 
 public sealed record CustomerProfileUpdate(
     string LegalName,
@@ -600,4 +612,5 @@ public sealed record CustomerProfileUpdate(
     int? PaymentTermsDays,
     Guid? SellerId,
     string? Notes,
-    DateTime UtcNow);
+    DateTime UtcNow,
+    bool AddedAutomatically = false);

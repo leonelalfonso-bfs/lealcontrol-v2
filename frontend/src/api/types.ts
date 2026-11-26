@@ -10,6 +10,7 @@ export type CustomerSummary = {
   isSupplier: boolean;
   email?: string | null;
   phone?: string | null;
+  addedAutomatically?: boolean;
 };
 
 export type Address = {
@@ -94,6 +95,7 @@ export type CustomerDetail = {
   documentType: string;
   documentNumber: string;
   taxCondition: string;
+  addedAutomatically?: boolean;
   iibbRegime: string;
   iibbNumber?: string | null;
   status: string;
@@ -2753,6 +2755,7 @@ export type AiSettings = {
   monthlyBudgetUsd: number;
   mailReadingEnabled: boolean;
   autoOpportunities: boolean;
+  webCuitLookupEnabled?: boolean;
   supervisorEnabled: boolean;
   supervisorModel: string;
   businessDescription: string;

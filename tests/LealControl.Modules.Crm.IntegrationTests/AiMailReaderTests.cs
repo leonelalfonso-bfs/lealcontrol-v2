@@ -1,8 +1,10 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using LealControl.Api.Ai;
+using LealControl.BuildingBlocks.Results;
 using LealControl.Modules.Communications.Infrastructure.Domain;
 using LealControl.Modules.Communications.Infrastructure.Persistence;
+using LealControl.Modules.Crm.Application.Customers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -26,7 +28,7 @@ public sealed class AiMailReaderTests : IAsyncLifetime
     {
         public int Calls;
         public Task<AiCompletion> CompleteJsonAsync(string apiKey, string model, string system, string user,
-            IReadOnlyDictionary<string, JsonElement> schema, int maxTokens, CancellationToken ct, bool deeper = false)
+            IReadOnlyDictionary<string, JsonElement> schema, int maxTokens, CancellationToken ct, bool deeper = false, bool webSearch = false)
         {
             Calls++;
             Assert.Equal("sk-ant-prueba-1234", apiKey);
@@ -152,7 +154,7 @@ public sealed class AiMailReaderTests : IAsyncLifetime
     private sealed class ScenarioAi : IAiClient
     {
         public Task<AiCompletion> CompleteJsonAsync(string apiKey, string model, string system, string user,
-            IReadOnlyDictionary<string, JsonElement> schema, int maxTokens, CancellationToken ct, bool deeper = false)
+            IReadOnlyDictionary<string, JsonElement> schema, int maxTokens, CancellationToken ct, bool deeper = false, bool webSearch = false)
         {
             object reading = user switch
             {
@@ -325,5 +327,165 @@ public sealed class AiMailReaderTests : IAsyncLifetime
         var suggestedIds = suggestions.Select(s => s.GetProperty("id").GetGuid()).ToHashSet();
         Assert.Contains(grupoA, suggestedIds);
         Assert.Contains(grupoB, suggestedIds);
+    }
+
+    private sealed class WebAndArcaAi : IAiClient
+    {
+        public int WebSearchCalls;
+        public Task<AiCompletion> CompleteJsonAsync(string apiKey, string model, string system, string user,
+            IReadOnlyDictionary<string, JsonElement> schema, int maxTokens, CancellationToken ct, bool deeper = false, bool webSearch = false)
+        {
+            if (webSearch)
+            {
+                WebSearchCalls++;
+                if (user.Contains("Agropecuaria Pampa"))
+                    return Task.FromResult(new AiCompletion("""{"cuit":"30654321090","confident":true}""", 800, 100, "end_turn", WebSearchRequests: 1));
+                if (user.Contains("Homonimo Falso"))
+                    return Task.FromResult(new AiCompletion("""{"cuit":"30555555578","confident":true}""", 800, 100, "end_turn", WebSearchRequests: 1));
+                return Task.FromResult(new AiCompletion("""{"cuit":"","confident":false}""", 500, 50, "end_turn", WebSearchRequests: 1));
+            }
+
+            object reading = user switch
+            {
+                _ when user.Contains("cuitdirecto@acopio.com.ar") => new
+                {
+                    category = "pedido_cotizacion", urgency = 2, summary = "Acopio Sur pide cotizar báscula.",
+                    is_new_business = true, opportunity_title = "Báscula Acopio Sur", company = "Acopio Sur SA",
+                    contact_name = "Luciano Paz", position = "Gerente Operativo", cuit = "30709876542", phone = "3415550001", email = "", location = "Rosario", product = "Báscula"
+                },
+                _ when user.Contains("web@agropampa.com.ar") => new
+                {
+                    category = "pedido_cotizacion", urgency = 2, summary = "Agropecuaria Pampa pide cotizar balanza.",
+                    is_new_business = true, opportunity_title = "Balanza Agropecuaria Pampa", company = "Agropecuaria Pampa SRL",
+                    contact_name = "Valeria Rossi", position = "Compradora", cuit = "", phone = "", email = "", location = "Pergamino", product = "Balanza"
+                },
+                _ when user.Contains("pendiente@siniva.com.ar") => new
+                {
+                    category = "pedido_cotizacion", urgency = 2, summary = "Empresa con IVA desconocido.",
+                    is_new_business = true, opportunity_title = "Consulta Sin IVA", company = "Sin IVA SA",
+                    contact_name = "Diego", position = "", cuit = "30711111138", phone = "", email = "", location = "", product = "Balanza"
+                },
+                _ => new
+                {
+                    category = "pedido_cotizacion", urgency = 2, summary = "Homonimo Falso pide precio.",
+                    is_new_business = true, opportunity_title = "Consulta Homonimo", company = "Homonimo Falso SA",
+                    contact_name = "Esteban", position = "", cuit = "", phone = "", email = "", location = "", product = "Balanza"
+                }
+            };
+            return Task.FromResult(new AiCompletion(JsonSerializer.Serialize(reading), 1000, 150, "end_turn"));
+        }
+    }
+
+    private sealed class FakeArcaLookup : IAiArcaCuitLookup
+    {
+        public Task<Result<ArcaCuitLookupResult>> LookupCuitAsync(string connectionString, Guid tenantId, string cuit, CancellationToken ct) =>
+            Task.FromResult(cuit switch
+            {
+                "30709876542" => Result<ArcaCuitLookupResult>.Success(new ArcaCuitLookupResult(
+                    "30709876542", "ACOPIO SUR S.A.", "Acopio Sur", "ResponsableInscripto",
+                    "Av. Pellegrini 1234", "Rosario", "SantaFe", "2000", true)),
+                "30654321090" => Result<ArcaCuitLookupResult>.Success(new ArcaCuitLookupResult(
+                    "30654321090", "AGROPECUARIA PAMPA S.R.L.", null, "ResponsableInscripto",
+                    "Ruta 8 Km 220", "Pergamino", "BuenosAires", "2700", true)),
+                "30711111138" => Result<ArcaCuitLookupResult>.Success(new ArcaCuitLookupResult(
+                    "30711111138", "SIN IVA S.A.", null, "Pendiente",
+                    null, null, null, null, true)),
+                "30555555578" => Result<ArcaCuitLookupResult>.Success(new ArcaCuitLookupResult(
+                    "30555555578", "CONSTRUCTORA COMPLETAMENTE DISTINTA S.A.", null, "ResponsableInscripto",
+                    null, null, null, null, true)),
+                _ => Result<ArcaCuitLookupResult>.Failure(Error.NotFound("Arca.NotFound", "No encontrado"))
+            });
+    }
+
+    [Fact]
+    public async Task Creates_customer_from_arca_with_review_flag_uses_web_cuit_search_and_blocks_invalid_cases()
+    {
+        var tenantId = CrmWebApplicationFactory.DemoTenantId;
+        var cs = _factory.DatabaseConnectionString;
+        var now = _factory.Services.GetRequiredService<TimeProvider>().GetUtcNow().UtcDateTime;
+        using (var scope = _factory.Services.CreateScope())
+            await scope.ServiceProvider.GetRequiredService<LealControl.Api.SuperAdmin.ICommunicationsInboxSettings>().SetEnabledAsync(true);
+        using var admin = _factory.CreateAuthenticatedClient();
+        using var inbox = _factory.CreateClientForUser(Guid.NewGuid(), "it3@lealcontrol.com", "Admin", "[\"communications\"]");
+
+        await Ok(await inbox.PutAsJsonAsync("/api/v1/communications/ai/settings", new
+        {
+            apiKey = "sk-ant-prueba-9999", monthlyBudgetUsd = 10m, mailReadingEnabled = true,
+            autoOpportunities = true, webCuitLookupEnabled = true, businessDescription = "Básculas"
+        }));
+
+        Conversation Mail(string from, string body, DateTime at) =>
+            Conversation.Create(tenantId, "email", Guid.NewGuid().ToString("N"), from, from, from, null, body, at, EmailDirection.Incoming);
+
+        var cDirectCuit = Mail("cuitdirecto@acopio.com.ar", "Acopio Sur CUIT 30-70987654-3", now.AddMinutes(-20));
+        var cWebCuit = Mail("web@agropampa.com.ar", "Agropecuaria Pampa SRL pide balanza", now.AddMinutes(-15));
+        var cPendingTax = Mail("pendiente@siniva.com.ar", "Sin IVA SA", now.AddMinutes(-10));
+        var cWrongHomonym = Mail("esteban@homonimo.com.ar", "Homonimo Falso SA", now.AddMinutes(-5));
+
+        var all = new[] { cDirectCuit, cWebCuit, cPendingTax, cWrongHomonym };
+        await using (var comms = new CommunicationsDbContext(new DbContextOptionsBuilder<CommunicationsDbContext>().UseNpgsql(cs).Options))
+        {
+            await comms.EnsureTablesCreatedAsync();
+            comms.Conversations.AddRange(all);
+            foreach (var c in all)
+            {
+                var msg = EmailMessage.Create(tenantId, Guid.NewGuid(), Guid.NewGuid().ToString("N"), null, c.ThreadKey, EmailDirection.Incoming,
+                    "Asunto", c.ParticipantEmail!, "ventas@empresa.com", c.LastMessagePreview ?? "", c.LastMessageAtUtc);
+                msg.SetConversationId(c.Id);
+                comms.EmailMessages.Add(msg);
+            }
+            await comms.SaveChangesAsync();
+        }
+
+        var fakeAi = new WebAndArcaAi();
+        var reader = new AiMailReader(fakeAi, _factory.Services.GetRequiredService<AiKeyProtector>(), NullLogger<AiMailReader>.Instance, new FakeArcaLookup());
+        Assert.Equal(4, await reader.ReadPendingAsync(cs, tenantId, now, default));
+        Assert.Equal(2, fakeAi.WebSearchCalls); // solo para las 2 sin CUIT
+
+        Guid acopioCustomerId;
+        Guid agroCustomerId;
+        await using (var comms = new CommunicationsDbContext(new DbContextOptionsBuilder<CommunicationsDbContext>().UseNpgsql(cs).Options))
+        {
+            var read = await comms.Conversations.AsNoTracking().Where(c => c.TenantId == tenantId).ToDictionaryAsync(c => c.Id);
+
+            // 1) CUIT en el mail → validado en ARCA → cliente + contacto + oportunidad creados
+            Assert.NotNull(read[cDirectCuit.Id].RelatedCustomerId);
+            Assert.NotNull(read[cDirectCuit.Id].RelatedOpportunityId);
+            acopioCustomerId = read[cDirectCuit.Id].RelatedCustomerId!.Value;
+
+            // 2) Sin CUIT → búsqueda web → validado en ARCA → cliente + contacto + oportunidad creados
+            Assert.NotNull(read[cWebCuit.Id].RelatedCustomerId);
+            Assert.NotNull(read[cWebCuit.Id].RelatedOpportunityId);
+            agroCustomerId = read[cWebCuit.Id].RelatedCustomerId!.Value;
+
+            // 3) ARCA con condición fiscal Pendiente → NO crea cliente, cae a Lead
+            Assert.Null(read[cPendingTax.Id].RelatedCustomerId);
+            Assert.NotNull(read[cPendingTax.Id].RelatedLeadId);
+
+            // 4) Búsqueda web devuelve CUIT de razón social distinta → bloqueado, cae a Lead
+            Assert.Null(read[cWrongHomonym.Id].RelatedCustomerId);
+            Assert.NotNull(read[cWrongHomonym.Id].RelatedLeadId);
+        }
+
+        // Ambos clientes nuevos están marcados AddedAutomatically = true y tienen sus contactos guardados.
+        var acopio = await Json(await admin.GetAsync($"/api/v1/crm/customers/{acopioCustomerId}"));
+        Assert.Equal("ACOPIO SUR S.A.", acopio.GetProperty("legalName").GetString());
+        Assert.True(acopio.GetProperty("addedAutomatically").GetBoolean());
+        var luciano = Assert.Single(acopio.GetProperty("contacts").EnumerateArray());
+        Assert.Equal("Luciano Paz", luciano.GetProperty("name").GetString());
+        Assert.Equal("Gerente Operativo", luciano.GetProperty("position").GetString());
+        Assert.True(luciano.GetProperty("addedAutomatically").GetBoolean());
+
+        var agro = await Json(await admin.GetAsync($"/api/v1/crm/customers/{agroCustomerId}"));
+        Assert.Equal("AGROPECUARIA PAMPA S.R.L.", agro.GetProperty("legalName").GetString());
+        Assert.True(agro.GetProperty("addedAutomatically").GetBoolean());
+
+        // Marcar como revisado quita la marca "Cargado automáticamente".
+        var reviewed = await Json(await admin.PostAsync($"/api/v1/crm/customers/{acopioCustomerId}/mark-reviewed", null));
+        Assert.False(reviewed.GetProperty("addedAutomatically").GetBoolean());
+
+        // El gasto mensual incluye las 2 búsquedas web ($0,01 c/u = $0,02 + tokens).
+        var aiSettings = await Json(await inbox.GetAsync("/api/v1/communications/ai/settings"));
+        Assert.True(aiSettings.GetProperty("monthSpentUsd").GetDecimal() >= 0.02m);
     }
 }
