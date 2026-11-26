@@ -385,6 +385,28 @@ public static class CrmEndpoints
             return result.ToHttp();
         });
 
+        crm.MapPost("/opportunities/{id:guid}/attach-customer", async (
+            Guid id,
+            AttachCustomerRequest body,
+            ISender sender,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await sender.Send(new AttachCustomerToOpportunityCommand(id, body.CustomerId), cancellationToken);
+            return result.ToHttp();
+        });
+
+        crm.MapPut("/opportunities/{id:guid}", async (
+            Guid id,
+            UpdateOpportunityRequest body,
+            ISender sender,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await sender.Send(new UpdateOpportunityCommand(
+                id, body.Title, body.Amount, body.Currency, body.OwnerName, body.OwnerId,
+                body.Priority ?? OpportunityPriority.Normal, body.ExpectedCloseDate), cancellationToken);
+            return result.ToHttp();
+        });
+
         crm.MapGet("/reports/pipeline", async (
             string? ownerName,
             DateTime? fromUtc,
@@ -435,6 +457,17 @@ public sealed record ClassifyOpportunityRequest(
     string? OwnerName,
     Guid? OwnerId,
     IReadOnlyList<string>? Tags,
+    DateTime? ExpectedCloseDate);
+
+public sealed record AttachCustomerRequest(Guid CustomerId);
+
+public sealed record UpdateOpportunityRequest(
+    string Title,
+    decimal? Amount,
+    string? Currency,
+    string? OwnerName,
+    Guid? OwnerId,
+    OpportunityPriority? Priority,
     DateTime? ExpectedCloseDate);
 
 public sealed record AddCustomerContactRequest(

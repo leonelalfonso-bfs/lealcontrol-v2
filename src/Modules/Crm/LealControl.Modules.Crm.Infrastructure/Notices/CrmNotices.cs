@@ -95,9 +95,9 @@ public sealed class StaleOpportunityNotices : INoticeProvider
 
     private static string StageName(OpportunityStage stage) => stage switch
     {
-        OpportunityStage.Lead or OpportunityStage.Qualified => "Relevamiento",
-        OpportunityStage.Proposal => "Propuesta",
-        OpportunityStage.Negotiation => "Negociación",
+        OpportunityStage.Lead or OpportunityStage.Qualified => "Por cotizar",
+        OpportunityStage.Proposal => "Presupuestado",
+        OpportunityStage.Negotiation => "En negociación",
         _ => stage.ToString()
     };
 }

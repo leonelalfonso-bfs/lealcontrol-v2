@@ -44,6 +44,20 @@ public sealed record ClassifyOpportunityCommand(
     DateTime? ExpectedCloseDate = null,
     Dictionary<string, string>? CustomFields = null) : IRequest<Result<OpportunityDto>>;
 
+public sealed record AttachCustomerToOpportunityCommand(
+    Guid OpportunityId,
+    Guid CustomerId) : IRequest<Result<OpportunityDto>>;
+
+public sealed record UpdateOpportunityCommand(
+    Guid OpportunityId,
+    string Title,
+    decimal? Amount,
+    string? Currency,
+    string? OwnerName,
+    Guid? OwnerId,
+    OpportunityPriority Priority,
+    DateTime? ExpectedCloseDate = null) : IRequest<Result<OpportunityDto>>;
+
 public sealed record ListCustomerOpportunitiesQuery(Guid CustomerId)
     : IRequest<Result<IReadOnlyList<OpportunityDto>>>;
 
@@ -232,6 +246,100 @@ internal sealed class ClassifyOpportunityCommandHandler
         {
             return Result<OpportunityDto>.Failure(classified.Error);
         }
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return Result<OpportunityDto>.Success(OpenOpportunityCommandHandler.ToDto(opportunity, "Gray", _clock.UtcNow));
+    }
+}
+
+internal sealed class AttachCustomerToOpportunityCommandHandler
+    : IRequestHandler<AttachCustomerToOpportunityCommand, Result<OpportunityDto>>
+{
+    private readonly IOpportunityRepository _opportunities;
+    private readonly ICustomerRepository _customers;
+    private readonly IActivityRepository _activities;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly ITenantContext _tenant;
+    private readonly IClock _clock;
+
+    public AttachCustomerToOpportunityCommandHandler(
+        IOpportunityRepository opportunities,
+        ICustomerRepository customers,
+        IActivityRepository activities,
+        IUnitOfWork unitOfWork,
+        ITenantContext tenant,
+        IClock clock)
+    {
+        _opportunities = opportunities;
+        _customers = customers;
+        _activities = activities;
+        _unitOfWork = unitOfWork;
+        _tenant = tenant;
+        _clock = clock;
+    }
+
+    public async Task<Result<OpportunityDto>> Handle(
+        AttachCustomerToOpportunityCommand request,
+        CancellationToken cancellationToken)
+    {
+        var opportunity = await _opportunities.GetByIdAsync(new OpportunityId(request.OpportunityId), cancellationToken);
+        if (opportunity is null) return Result<OpportunityDto>.Failure(CrmErrors.OpportunityNotFound);
+
+        var customer = await _customers.GetByIdAsync(new CustomerId(request.CustomerId), cancellationToken);
+        if (customer is null || customer.IsDeleted) return Result<OpportunityDto>.Failure(CrmErrors.CustomerNotFound);
+
+        opportunity.AttachCustomer(customer.Id, _clock.UtcNow);
+        var activity = Activity.Log(
+            _tenant.TenantId,
+            ActivityType.Note,
+            $"Cliente vinculado a la oportunidad: {customer.TradeName ?? customer.LegalName}.",
+            customer.Id,
+            opportunity.LeadId,
+            opportunity.Id,
+            null,
+            null,
+            _clock.UtcNow);
+        if (activity.IsSuccess) _activities.Add(activity.Value);
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return Result<OpportunityDto>.Success(OpenOpportunityCommandHandler.ToDto(opportunity, "Gray", _clock.UtcNow));
+    }
+}
+
+internal sealed class UpdateOpportunityCommandHandler
+    : IRequestHandler<UpdateOpportunityCommand, Result<OpportunityDto>>
+{
+    private readonly IOpportunityRepository _opportunities;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IClock _clock;
+
+    public UpdateOpportunityCommandHandler(
+        IOpportunityRepository opportunities,
+        IUnitOfWork unitOfWork,
+        IClock clock)
+    {
+        _opportunities = opportunities;
+        _unitOfWork = unitOfWork;
+        _clock = clock;
+    }
+
+    public async Task<Result<OpportunityDto>> Handle(
+        UpdateOpportunityCommand request,
+        CancellationToken cancellationToken)
+    {
+        var opportunity = await _opportunities.GetByIdAsync(new OpportunityId(request.OpportunityId), cancellationToken);
+        if (opportunity is null) return Result<OpportunityDto>.Failure(CrmErrors.OpportunityNotFound);
+
+        var updated = opportunity.UpdateDetails(
+            request.Title,
+            request.Amount,
+            request.Currency,
+            request.OwnerName,
+            request.OwnerId,
+            request.Priority,
+            request.ExpectedCloseDate,
+            _clock.UtcNow);
+        if (updated.IsFailure) return Result<OpportunityDto>.Failure(updated.Error);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return Result<OpportunityDto>.Success(OpenOpportunityCommandHandler.ToDto(opportunity, "Gray", _clock.UtcNow));
