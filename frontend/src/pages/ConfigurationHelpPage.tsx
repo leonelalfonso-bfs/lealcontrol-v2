@@ -88,6 +88,15 @@ export function ConfigurationHelpPage() {
           </Step>
           <Step title="Marcá “Remitente principal” en la casilla que manda facturas y presupuestos." />
           <Step title="Tocá “Probar”: tiene que decir “Conexión correcta”. “Recibir” trae los correos nuevos a la bandeja de Comunicaciones." />
+          <Step title="Carpetas: “Carpetas a leer” (por defecto INBOX; podés sumar otras, como INBOX.CRM) y “Carpeta de enviados”.">
+            La carpeta de enviados se detecta sola; sirve para saber qué mails ya respondiste, aunque los contestes desde Thunderbird.
+            Leal Control solo lee: no marca como leído, no mueve ni borra nada.
+          </Step>
+          <Step title="“Mails sin atender”: elegí a cuántas horas hábiles avisar (por defecto 24).">
+            Un mail recibido sin respuesta pasa a la carpeta SLA de la bandeja y a “Mis avisos” (y al resumen diario por mail), en rojo
+            cuando pasa el doble del plazo. Cuentan solo los días hábiles: un mail del viernes a la tarde avisa el lunes a la tarde.
+            Vincularlo a un cliente no lo da por atendido: el aviso se va cuando hay respuesta.
+          </Step>
         </Steps>
       </ManualPart>
 

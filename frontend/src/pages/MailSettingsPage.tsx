@@ -14,7 +14,8 @@ const presets: Record<Provider, { imapHost: string; imapPort: number; smtpHost: 
 const empty = {
   id: "", displayName: "", emailAddress: "", provider: "Custom" as Provider, authMode: "Password",
   imapHost: "", imapPort: 993, imapUseSsl: true, smtpHost: "", smtpPort: 587, smtpUseSsl: true,
-  username: "", secret: "", signature: "", isActive: true, isDefaultSender: false
+  username: "", secret: "", signature: "", isActive: true, isDefaultSender: false,
+  incomingFolders: "INBOX", sentFolder: ""
 };
 
 type MailHealth = { label: string; tone: "ok" | "warning" | "error" | "neutral"; hint?: string };
@@ -98,7 +99,9 @@ export function MailSettingsPage({ embedded = false }: { embedded?: boolean }) {
           username: form.username || null,
           isActive: form.isActive,
           isDefaultSender: form.isDefaultSender,
-          signature: form.signature || null
+          signature: form.signature || null,
+          incomingFolders: form.incomingFolders || "INBOX",
+          sentFolder: form.sentFolder || null
         },
         secret: form.secret || null
       });
@@ -161,7 +164,9 @@ export function MailSettingsPage({ embedded = false }: { embedded?: boolean }) {
       username: account.username || account.emailAddress, secret: "",
       signature: account.signature || "",
       isActive: account.isActive,
-      isDefaultSender: account.isDefaultSender
+      isDefaultSender: account.isDefaultSender,
+      incomingFolders: account.incomingFolders || "INBOX",
+      sentFolder: account.sentFolder || ""
     });
   };
 
@@ -170,6 +175,7 @@ export function MailSettingsPage({ embedded = false }: { embedded?: boolean }) {
   return <div className="mail-settings page-wide">
     {!embedded && <div className="page-head"><div><span className="eyebrow">COMUNICACIONES</span><h1>Cuentas de correo</h1><p className="muted">Conectá casillas para enviar propuestas y registrar respuestas en CRM y Ventas.</p></div></div>}
     {message && <div className="success-banner">{message}</div>}{error && <div className="alert">{error}</div>}
+    <UnattendedSettings />
     <div className="mail-layout">
       <section className="card pad"><div className="section-head"><div><h2>Casillas conectadas</h2><p className="muted">Cada empresa puede usar varias cuentas y elegir un remitente principal. La recepción automática es opcional por casilla y se ejecuta cada 5 minutos.</p></div></div>
         <div className="mail-account-list">
@@ -245,9 +251,64 @@ export function MailSettingsPage({ embedded = false }: { embedded?: boolean }) {
         </label>
         <p className="muted t-small" style={{ marginTop: -8 }}>Se agrega al pie de cada correo saliente enviado desde esta casilla.</p>
         <div className="grid-2"><label>Servidor IMAP<input required value={form.imapHost} onChange={(e) => setForm({...form,imapHost:e.target.value})} /></label><label>Puerto IMAP<input required type="number" value={form.imapPort} onChange={(e) => setForm({...form,imapPort:Number(e.target.value)})} /></label><label>Servidor SMTP<input required value={form.smtpHost} onChange={(e) => setForm({...form,smtpHost:e.target.value})} /></label><label>Puerto SMTP<input required type="number" value={form.smtpPort} onChange={(e) => setForm({...form,smtpPort:Number(e.target.value)})} /></label></div>
+        <div className="grid-2">
+          <label>Carpetas a leer
+            <input value={form.incomingFolders} onChange={(e) => setForm({ ...form, incomingFolders: e.target.value })} placeholder="INBOX, INBOX.CRM" />
+          </label>
+          <label>Carpeta de enviados
+            <input value={form.sentFolder} onChange={(e) => setForm({ ...form, sentFolder: e.target.value })} placeholder="Se detecta sola" />
+          </label>
+        </div>
+        <p className="muted t-small" style={{ marginTop: -8 }}>
+          Separadas por coma; INBOX es la bandeja de entrada. Leal Control lee también la carpeta de enviados para saber qué mails ya respondiste,
+          aunque los contestes desde Thunderbird. Todo en modo lectura: no marca ni mueve nada.
+        </p>
         <div className="row"><label className="check-label"><input type="checkbox" checked={form.isDefaultSender} onChange={(e) => setForm({...form,isDefaultSender:e.target.checked})} /> Remitente principal</label><label className="check-label"><input type="checkbox" checked={form.isActive} onChange={(e) => setForm({...form,isActive:e.target.checked})} /> Cuenta activa</label></div>
         <div className="toolbar"><button className="btn" disabled={busy}>{form.id ? "Guardar cambios" : "Guardar cuenta cifrada"}</button>{form.id && <button type="button" className="btn btn-outline" onClick={() => setForm(empty)}>Cancelar edición</button>}</div>
       </form>
     </div>
   </div>;
+}
+
+/** Plazo para avisar de un mail sin respuesta: horas hábiles (lunes a viernes). */
+function UnattendedSettings() {
+  const [hours, setHours] = useState<number | "">("");
+  const [saved, setSaved] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    api.getCommunicationSettings().then((s) => setHours(s.unattendedAfterHours)).catch(() => setHours(24));
+  }, []);
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaved(null);
+    setError(null);
+    try {
+      const result = await api.saveCommunicationSettings(Number(hours));
+      setHours(result.unattendedAfterHours);
+      setSaved("Plazo guardado.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo guardar el plazo.");
+    }
+  };
+  return (
+    <form className="card pad" onSubmit={save} style={{ marginBottom: 16 }}>
+      <div className="section-head">
+        <div>
+          <h2>Mails sin atender</h2>
+          <p className="muted">
+            Un mail recibido que nadie respondió pasa a la carpeta SLA y a “Mis avisos” (y al resumen diario por mail) cuando se cumple este plazo.
+            Cuentan solo los días hábiles: un mail del viernes a la tarde avisa el lunes a la tarde.
+          </p>
+        </div>
+      </div>
+      {error && <div className="alert">{error}</div>}
+      {saved && <div className="success-banner">{saved}</div>}
+      <div className="toolbar">
+        <label style={{ maxWidth: 260 }}>Avisar después de (horas hábiles)
+          <input type="number" min={1} max={240} required value={hours} onChange={(e) => setHours(e.target.value === "" ? "" : Number(e.target.value))} />
+        </label>
+        <button className="btn" style={{ alignSelf: "flex-end" }}>Guardar</button>
+      </div>
+    </form>
+  );
 }

@@ -24,7 +24,7 @@ public sealed class MailSyncService
         MailAccount account,
         CancellationToken ct = default)
     {
-        IReadOnlyList<MimeMessage> messages;
+        IReadOnlyList<MailTransportService.ReceivedMail> messages;
         try
         {
             messages = await _transport.ReceiveRecentAsync(account, account.LastSyncAtUtc, ct);
@@ -35,7 +35,7 @@ public sealed class MailSyncService
         }
 
         var added = 0;
-        foreach (var mime in messages)
+        foreach (var (mime, outgoing) in messages)
         {
             var messageId = mime.MessageId ?? $"generated-{Guid.NewGuid():N}";
             if (await db.EmailMessages.AnyAsync(x => x.TenantId == account.TenantId && x.InternetMessageId == messageId, ct))
@@ -56,9 +56,9 @@ public sealed class MailSyncService
                 messageId,
                 mime.InReplyTo,
                 threadKey,
-                EmailDirection.Incoming,
+                outgoing ? EmailDirection.Outgoing : EmailDirection.Incoming,
                 mime.Subject ?? "(sin asunto)",
-                mime.From.Mailboxes.FirstOrDefault()?.Address ?? "",
+                mime.From.Mailboxes.FirstOrDefault()?.Address ?? (outgoing ? account.EmailAddress : ""),
                 string.Join(",", mime.To.Mailboxes.Select(x => x.Address)),
                 cleanPreview,
                 mime.Date.UtcDateTime,

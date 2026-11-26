@@ -35,11 +35,33 @@ internal static class CommunicationsMailEndpoints
                     Provider = x.Provider.ToString(), AuthMode = x.AuthMode.ToString(),
                     x.ImapHost, x.ImapPort, x.ImapUseSsl, x.SmtpHost, x.SmtpPort, x.SmtpUseSsl, x.Username,
                     x.IsActive, x.AutoSyncEnabled, GlobalAutoSyncEnabled = globalAutoSyncEnabled,
-                    x.IsDefaultSender, x.LastSyncAtUtc, x.LastError, x.Signature,
+                    x.IsDefaultSender, x.LastSyncAtUtc, x.LastError, x.Signature, x.IncomingFolders, x.SentFolder,
                     HasSecret = x.ProtectedSecret != "",
                     OAuthConnected = x.AuthMode == MailAuthMode.OAuth2 && x.OAuthConnectedAtUtc != null && x.ProtectedSecret != "",
                     x.OAuthConnectedAtUtc
                 }).ToListAsync(ct));
+        });
+
+        // Plazo para considerar un mail "sin atender" (horas hábiles), por empresa.
+        group.MapGet("/settings", async (CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        {
+            await db.EnsureTablesCreatedAsync(ct);
+            return Results.Ok(new { UnattendedAfterHours = await ConversationAttention.UnattendedAfterHoursAsync(db, tenant.TenantId.Value, ct) });
+        });
+        group.MapPut("/settings", async (CommunicationSettingsRequest body, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        {
+            if (body.UnattendedAfterHours is < 1 or > 240)
+                return Results.BadRequest(new { detail = "El plazo va de 1 a 240 horas hábiles." });
+            await db.EnsureTablesCreatedAsync(ct);
+            var settings = await db.Settings.FirstOrDefaultAsync(x => x.TenantId == tenant.TenantId.Value, ct);
+            if (settings is null)
+            {
+                settings = CommunicationSettings.For(tenant.TenantId.Value);
+                db.Settings.Add(settings);
+            }
+            settings.SetUnattendedAfterHours(body.UnattendedAfterHours);
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new { settings.UnattendedAfterHours });
         });
 
         group.MapGet("/accounts/oauth/providers", (MailOAuthService oauth) =>
@@ -292,7 +314,8 @@ internal static class CommunicationsMailEndpoints
                 Console.WriteLine($"[Communications] Error en backfill: {ex.Message}");
             }
 
-            var slaCutoff = DateTime.UtcNow.AddHours(-2);
+            // Sin atender: horas hábiles configuradas sin respuesta nuestra (ConversationAttention).
+            var slaCutoff = await ConversationAttention.CutoffForTenantAsync(db, tenantId, ct);
             var query = db.Conversations.AsNoTracking().Where(x => x.TenantId == tenantId);
             if (!string.IsNullOrWhiteSpace(channel) && !channel.Equals("all", StringComparison.OrdinalIgnoreCase))
             {
@@ -335,7 +358,7 @@ internal static class CommunicationsMailEndpoints
             else if (string.Equals(folder, "Unlinked", StringComparison.OrdinalIgnoreCase))
                 query = query.Where(c => c.RelatedCustomerId == null && c.RelatedLeadId == null);
             else if (string.Equals(folder, "NeedsResponse", StringComparison.OrdinalIgnoreCase))
-                query = query.Where(c => c.LastIncomingAtUtc != null && c.LastIncomingAtUtc < slaCutoff && c.Status != "resolved" && c.Status != "archived");
+                query = ConversationAttention.Unattended(query, slaCutoff);
 
             var conversations = await query
                 .OrderByDescending(x => x.LastMessageAtUtc)
@@ -393,7 +416,7 @@ internal static class CommunicationsMailEndpoints
                     x.SuggestionDismissed,
                     x.LastIncomingAtUtc,
                     Tags = tagsById.TryGetValue(x.Id, out var conversationTags) ? conversationTags : Array.Empty<string>(),
-                    NeedsResponse = x.LastIncomingAtUtc != null && x.LastIncomingAtUtc < slaCutoff && x.Status != "resolved" && x.Status != "archived",
+                    NeedsResponse = x.LastIncomingAtUtc != null && x.LastIncomingAtUtc <= slaCutoff && (x.LastOutgoingAtUtc == null || x.LastOutgoingAtUtc < x.LastIncomingAtUtc) && x.Status != "resolved" && x.Status != "archived",
                     HasIncoming = flags?.HasIncoming ?? false,
                     HasOutgoing = flags?.HasOutgoing ?? false
                 };
@@ -592,19 +615,14 @@ internal static class CommunicationsMailEndpoints
             var tenantId = tenant.TenantId.Value;
             if (tenantId == Guid.Empty) return Results.Unauthorized();
 
-            var slaCutoff = DateTime.UtcNow.AddHours(-2);
+            // Sin atender: horas hábiles configuradas sin respuesta nuestra (ConversationAttention).
+            var slaCutoff = await ConversationAttention.CutoffForTenantAsync(db, tenantId, ct);
             var unreadTotal = await db.Conversations.Where(x => x.TenantId == tenantId && x.Status != Conversation.DiscardedStatus).SumAsync(x => x.UnreadCount, ct);
-            var needsResponseCount = await db.Conversations.CountAsync(x =>
-                x.TenantId == tenantId &&
-                x.Status != Conversation.DiscardedStatus &&
-                x.LastIncomingAtUtc != null &&
-                x.LastIncomingAtUtc < slaCutoff &&
-                x.Status != "resolved" &&
-                x.Status != "archived", ct);
+            var needsResponseCount = await ConversationAttention.Unattended(db.Conversations.Where(x => x.TenantId == tenantId), slaCutoff).CountAsync(ct);
 
             var recent = await db.Conversations.AsNoTracking()
                 .Where(x => x.TenantId == tenantId && x.Status != Conversation.DiscardedStatus && (x.UnreadCount > 0 ||
-                    (x.LastIncomingAtUtc != null && x.LastIncomingAtUtc < slaCutoff && x.Status != "resolved" && x.Status != "archived")))
+                    (x.LastIncomingAtUtc != null && x.LastIncomingAtUtc <= slaCutoff && (x.LastOutgoingAtUtc == null || x.LastOutgoingAtUtc < x.LastIncomingAtUtc) && x.Status != "resolved" && x.Status != "archived")))
                 .OrderByDescending(x => x.LastMessageAtUtc)
                 .Take(8)
                 .Select(x => new {
@@ -615,7 +633,7 @@ internal static class CommunicationsMailEndpoints
                     x.LastMessagePreview,
                     x.UnreadCount,
                     x.LastMessageAtUtc,
-                    NeedsResponse = x.LastIncomingAtUtc != null && x.LastIncomingAtUtc < slaCutoff && x.Status != "resolved" && x.Status != "archived"
+                    NeedsResponse = x.LastIncomingAtUtc != null && x.LastIncomingAtUtc <= slaCutoff && (x.LastOutgoingAtUtc == null || x.LastOutgoingAtUtc < x.LastIncomingAtUtc) && x.Status != "resolved" && x.Status != "archived"
                 })
                 .ToListAsync(ct);
 

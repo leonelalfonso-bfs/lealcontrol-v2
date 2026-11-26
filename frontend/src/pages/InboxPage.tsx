@@ -191,9 +191,11 @@ export function InboxPage() {
   useEffect(() => {
     const state = location.state as { conversationId?: string } | null;
     const pending = consumePendingConversationOpen();
-    const id = state?.conversationId || pending;
+    // Desde un aviso ("Mails sin atender") llega como ?conversation=<id>.
+    const fromLink = new URLSearchParams(location.search).get("conversation");
+    const id = state?.conversationId || pending || fromLink;
     if (id) setSelectedConversationId(id);
-  }, [location.state]);
+  }, [location.state, location.search]);
 
   useEffect(() => {
     setActiveConversationForNotifications(selectedConversationId);

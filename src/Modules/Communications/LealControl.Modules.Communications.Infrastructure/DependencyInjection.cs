@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.AddScoped<ConversationService>();
         services.AddScoped<MailSyncService>();
         services.AddHostedService<CommunicationsSyncBackgroundService>();
+        services.AddSingleton<LealControl.BuildingBlocks.Notices.INoticeProvider, UnattendedMailNotices>();
         services.AddHttpClient(nameof(MailOAuthService));
         services.AddHttpClient<MetaGraphApiService>();
         return services;
