@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { api } from "../api/client";
-import type { MailAccount } from "../api/types";
+import type { CommercialCircuitReport, MailAccount } from "../api/types";
 import { loadHtml2Pdf } from "../utils/loadHtml2Pdf";
 import { buildEmailHtml, buildSignatureHtml } from "./communications/emailSignature";
 
@@ -13,6 +13,7 @@ export type EmailAttachmentPayload = {
 export type EmailContext = {
   entityType: string;
   entityId: string;
+  conversationId?: string;
   to?: string;
   subject: string;
   body: string;
@@ -61,6 +62,9 @@ export function EmailComposer({ context, onClose, onSent }: { context: EmailCont
   const [subject, setSubject] = useState(context.subject);
   const [body, setBody] = useState(context.body);
   const [attachDocument, setAttachDocument] = useState(Boolean(context.documentPdf));
+  const [circuit, setCircuit] = useState<CommercialCircuitReport | null>(null);
+  const [drafting, setDrafting] = useState(false);
+  const [draftNote, setDraftNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -71,6 +75,32 @@ export function EmailComposer({ context, onClose, onSent }: { context: EmailCont
       setAccountId(active.find((x) => x.isDefaultSender)?.id ?? active[0]?.id ?? "");
     }).catch((e: Error) => setError(e.message));
   }, []);
+
+  useEffect(() => {
+    if (!context.conversationId) return;
+    api.getCommercialCheck(context.conversationId).then(setCircuit).catch(() => setCircuit(null));
+  }, [context.conversationId]);
+
+  const suggestReply = async () => {
+    if (!context.conversationId) return;
+    setDrafting(true);
+    setError(null);
+    setDraftNote(null);
+    try {
+      const res = await api.generateAiReplyDraft(context.conversationId);
+      if (res.circuit) setCircuit(res.circuit);
+      if (res.ok && res.body) {
+        setBody(res.body);
+        setDraftNote("Borrador armado con el estado real del circuito. Revisalo y editalo antes de enviar.");
+      } else {
+        setError(res.error || "No se pudo generar el borrador.");
+      }
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setDrafting(false);
+    }
+  };
 
   const selectedAccount = accounts.find((a) => a.id === accountId);
   const signature = selectedAccount?.signature?.trim() || "";
@@ -131,7 +161,40 @@ export function EmailComposer({ context, onClose, onSent }: { context: EmailCont
         </label>
         <label>Para<input required type="text" value={to} onChange={(e) => setTo(e.target.value)} placeholder="cliente@empresa.com" /></label>
         <label>Asunto<input required value={subject} onChange={(e) => setSubject(e.target.value)} /></label>
-        <label>Mensaje<textarea required rows={10} value={body} onChange={(e) => setBody(e.target.value)} /></label>
+        {circuit && (
+          <div className="card pad" style={{ background: "var(--lc-surface-2)", gap: 6, display: "grid" }}>
+            <div className="row" style={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
+              <strong className="t-small">Estado del circuito comercial</strong>
+              <span className={`badge ${circuit.isComplete ? "ok" : "warn"}`}>
+                {circuit.isComplete ? "Al día" : `${circuit.missingItems.length} pendiente${circuit.missingItems.length === 1 ? "" : "s"}`}
+              </span>
+            </div>
+            <div className="muted t-small">
+              {circuit.customer ? `Cliente: ${circuit.customer.name}` : circuit.lead ? `Prospecto: ${circuit.lead.name}` : "Sin cliente vinculado"}
+              {circuit.opportunity ? ` · Oportunidad: ${circuit.opportunity.stageLabel}` : ""}
+              {circuit.quotes.length > 0
+                ? ` · Último presupuesto: ${circuit.quotes[0].number} (Rev. ${circuit.quotes[0].revision}, ${circuit.quotes[0].statusLabel})`
+                : " · Sin presupuesto"}
+            </div>
+            {circuit.missingItems.length > 0 && (
+              <ul className="t-small" style={{ margin: "2px 0 0 16px", padding: 0 }}>
+                {circuit.missingItems.slice(0, 3).map((item) => (
+                  <li key={item.code}>{item.text}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+        <div className="row" style={{ justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+          <span className="t-small t-strong">Mensaje</span>
+          {context.conversationId && (
+            <button type="button" className="btn btn-outline compact" disabled={drafting || busy} onClick={() => void suggestReply()}>
+              {drafting ? "Armando borrador…" : "✨ Sugerir respuesta (IA)"}
+            </button>
+          )}
+        </div>
+        {draftNote && <div className="success-banner" style={{ margin: 0 }}>{draftNote}</div>}
+        <textarea required rows={10} value={body} onChange={(e) => setBody(e.target.value)} />
         {(signature || signatureLogoUrl) && (
           <div className="card pad" style={{ background: "white", marginTop: -4 }}>
             <div className="muted t-small" style={{ marginBottom: 4 }}>

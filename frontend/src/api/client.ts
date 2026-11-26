@@ -586,6 +586,11 @@ export const api = {
   saveAiSettings: (body: { apiKey: string | null; monthlyBudgetUsd: number; mailReadingEnabled: boolean; autoOpportunities: boolean; webCuitLookupEnabled?: boolean; supervisorEnabled: boolean; businessDescription: string }) =>
     request<void>("/api/v1/communications/ai/settings", { method: "PUT", body: JSON.stringify(body) }),
   testAiSettings: () => request<{ ok: boolean; detail: string }>("/api/v1/communications/ai/settings/test", { method: "POST" }),
+  runAiSupervisorNow: () => request<{ ok: boolean; count?: number; detail: string }>("/api/v1/communications/ai/settings/supervisor-run-now", { method: "POST" }),
+  getCommercialCheck: (conversationId: string) =>
+    request<import("./types").CommercialCircuitReport>(`/api/v1/communications/conversations/${conversationId}/commercial-check`),
+  generateAiReplyDraft: (conversationId: string) =>
+    request<import("./types").AiDraftResult>(`/api/v1/communications/conversations/${conversationId}/ai-draft`, { method: "POST" }),
   listMailAccounts: () => request<import("./types").MailAccount[]>("/api/v1/communications/accounts"),
   saveMailAccount: (body: object) => request<{ id: string }>("/api/v1/communications/accounts", { method: "POST", body: JSON.stringify(body) }),
   testMailAccount: (id: string) => request<{ connected: boolean }>(`/api/v1/communications/accounts/${id}/test`, { method: "POST" }),

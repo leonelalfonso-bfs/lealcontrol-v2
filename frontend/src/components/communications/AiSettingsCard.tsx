@@ -70,6 +70,21 @@ export function AiSettingsCard() {
     }
   };
 
+  const runSupervisorNow = async () => {
+    setBusy(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const result = await api.runAiSupervisorNow();
+      if (result.ok) setMessage(result.detail); else setError(result.detail);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo generar el informe.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (!settings) return error ? <div className="alert">{error}</div> : null;
   const usedShare = settings.monthlyBudgetUsd > 0 ? Math.min(100, (settings.monthSpentUsd / settings.monthlyBudgetUsd) * 100) : 0;
 
@@ -133,6 +148,11 @@ export function AiSettingsCard() {
       <div className="toolbar">
         <button className="btn" disabled={busy}>Guardar</button>
         <button type="button" className="btn ghost" disabled={busy || !settings.hasKey} onClick={() => void test()}>Probar la clave</button>
+        {settings.hasKey && (
+          <button type="button" className="btn btn-outline" disabled={busy} onClick={() => void runSupervisorNow()}>
+            Generar informe ahora
+          </button>
+        )}
         {settings.hasKey && (
           <button type="button" className="btn ghost danger" disabled={busy} onClick={(e) => void save(e as unknown as React.FormEvent, true)}>Borrar la clave</button>
         )}

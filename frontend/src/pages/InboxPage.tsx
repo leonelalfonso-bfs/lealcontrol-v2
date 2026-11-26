@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
-import type { Conversation, ConversationActivity, ConversationNote, ConversationTag, CustomerMatch, CustomerSummary, EmailMessage, MailAccount, MessageReplyTemplate, TenantUser } from "../api/types";
+import type { CommercialCircuitReport, Conversation, ConversationActivity, ConversationNote, ConversationTag, CustomerMatch, CustomerSummary, EmailMessage, MailAccount, MessageReplyTemplate, TenantUser } from "../api/types";
 import { EmailComposer } from "../components/EmailComposer";
 import { MessageAttachments } from "../components/MessageAttachments";
 import { AudioRecorderButton } from "../components/AudioRecorderButton";
@@ -119,6 +119,7 @@ export function InboxPage() {
   const [templates, setTemplates] = useState<MessageReplyTemplate[]>([]);
   const [tenantUsers, setTenantUsers] = useState<TenantUser[]>([]);
   const [suggestedMatches, setSuggestedMatches] = useState<CustomerMatch[]>([]);
+  const [commercialCheck, setCommercialCheck] = useState<CommercialCircuitReport | null>(null);
   const [pendingAudio, setPendingAudio] = useState<{ base64: string; mimeType: string; fileName: string } | null>(null);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [compose, setCompose] = useState(false);
@@ -335,10 +336,12 @@ export function InboxPage() {
   useEffect(() => {
     if (!selectedConversationId) {
       setSuggestedMatches([]);
+      setCommercialCheck(null);
       return;
     }
     void api.getSuggestedMatches(selectedConversationId).then(setSuggestedMatches).catch(() => setSuggestedMatches([]));
-  }, [selectedConversationId]);
+    void api.getCommercialCheck(selectedConversationId).then(setCommercialCheck).catch(() => setCommercialCheck(null));
+  }, [selectedConversationId, activeConversation?.relatedCustomerId, activeConversation?.relatedOpportunityId, activeConversation?.relatedLeadId]);
 
   const getConversationDisplayName = (c: Conversation): string => {
     if (c.participantName && !isOwnBrand(c.participantName)) return c.participantName;
@@ -1097,6 +1100,7 @@ export function InboxPage() {
                   context={{
                     entityType: activeMessages[activeMessages.length - 1].relatedEntityType || "Email",
                     entityId: activeMessages[activeMessages.length - 1].relatedEntityId || emptyLead,
+                    conversationId: activeConversation.id,
                     to: activeConversation.participantEmail || activeConversation.participantId,
                     subject: activeMessages[activeMessages.length - 1].subject.startsWith("Re:") ? activeMessages[activeMessages.length - 1].subject : `Re: ${activeMessages[activeMessages.length - 1].subject}`,
                     body: `\n\n--- Mensaje original ---\n${activeMessages[activeMessages.length - 1].bodyPreview}`,
@@ -1260,6 +1264,53 @@ export function InboxPage() {
                       Ahora no
                     </button>
                   </div>
+                </div>
+              )}
+
+              {/* Revisión del circuito comercial (100% código, costo $0 en tokens) */}
+              {commercialCheck && (
+                <div className="card pad" style={{ margin: "12px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div className="row" style={{ justifyContent: "space-between", alignItems: "center", gap: 6 }}>
+                    <strong className="t-small">Circuito comercial</strong>
+                    <span className={`badge ${commercialCheck.isComplete ? "ok" : "warn"}`}>
+                      {commercialCheck.isComplete ? "Al día" : `${commercialCheck.missingItems.length} pendiente${commercialCheck.missingItems.length === 1 ? "" : "s"}`}
+                    </span>
+                  </div>
+                  {commercialCheck.quotes.length > 0 && (
+                    <div className="stack" style={{ gap: 4 }}>
+                      <span className="muted t-small">Presupuestos</span>
+                      {commercialCheck.quotes.slice(0, 3).map((q) => (
+                        <Link
+                          key={q.id}
+                          to={`/presupuestos/${q.id}/editar`}
+                          className="t-small"
+                          style={{ textDecoration: "none", color: "inherit", padding: "4px 6px", borderRadius: 6, background: "var(--lc-surface-2)" }}
+                        >
+                          <strong>{q.number}</strong> · Rev. {q.revision} ·{" "}
+                          <span className={`badge ${q.isExpired ? "danger" : q.status === "Sent" ? "info" : q.status === "Accepted" || q.status === "Ordered" ? "ok" : "off"}`}>
+                            {q.isExpired ? "Vencido" : q.statusLabel}
+                          </span>
+                          {q.daysSinceSent != null && <span className="muted"> ({q.daysSinceSent}d)</span>}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                  {commercialCheck.missingItems.length > 0 && (
+                    <div className="stack" style={{ gap: 6 }}>
+                      {commercialCheck.missingItems.map((item) => (
+                        <div key={item.code} className="t-small" style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
+                          <span className={`badge ${item.severity}`} style={{ flexShrink: 0 }}>
+                            {item.severity === "danger" ? "!" : item.severity === "warn" ? "•" : "i"}
+                          </span>
+                          {item.link ? (
+                            <Link to={item.link} style={{ color: "inherit" }}>{item.text}</Link>
+                          ) : (
+                            <span>{item.text}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 

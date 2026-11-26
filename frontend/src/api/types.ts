@@ -2766,3 +2766,59 @@ export type AiSettings = {
   monthSpentUsd: number;
   monthCalls: number;
 };
+
+export type CommercialCircuitReport = {
+  customer?: {
+    id: string;
+    name: string;
+    documentNumber: string;
+    taxCondition: string;
+    addedAutomatically: boolean;
+    hasFiscalAddress: boolean;
+  } | null;
+  contact?: {
+    saved: boolean;
+    name?: string | null;
+    position?: string | null;
+    hasPhone: boolean;
+  } | null;
+  lead?: { id: string; name: string; status: string } | null;
+  opportunity?: {
+    id: string;
+    title: string;
+    stage: string;
+    stageLabel: string;
+    amount?: number | null;
+    currency?: string | null;
+    ownerName?: string | null;
+    hasNextAction: boolean;
+    nextFollowUpUtc?: string | null;
+  } | null;
+  quotes: Array<{
+    id: string;
+    number: string;
+    revision: number;
+    status: string;
+    statusLabel: string;
+    sentAtUtc?: string | null;
+    daysSinceSent?: number | null;
+    validUntilUtc: string;
+    isExpired: boolean;
+    total?: number | null;
+    currency: string;
+  }>;
+  missingItems: Array<{
+    code: string;
+    severity: "ok" | "warn" | "danger" | "info";
+    text: string;
+    link?: string | null;
+  }>;
+  isComplete: boolean;
+};
+
+export type AiDraftResult = {
+  ok: boolean;
+  body?: string | null;
+  error?: string | null;
+  circuit?: CommercialCircuitReport | null;
+};

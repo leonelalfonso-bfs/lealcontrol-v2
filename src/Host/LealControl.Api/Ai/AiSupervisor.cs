@@ -33,22 +33,31 @@ public sealed partial class AiSupervisor(IAiClient ai, AiKeyProtector keys, IEnu
     public static readonly string[] Sources =
         ["communications.unattended", "sales.quotes-unanswered", "sales.quotes-expiring", "crm.activities-due", "crm.stale-opportunities"];
 
-    /// <summary>Arma el informe de hoy si corresponde. Devuelve true si lo armó.</summary>
-    public async Task<bool> GenerateAsync(string connectionString, Guid tenantId, DateTime nowUtc, CancellationToken ct)
+    /// <summary>Arma el informe de hoy si corresponde (o a demanda si force = true). Devuelve true si lo armó.</summary>
+    public async Task<bool> GenerateAsync(string connectionString, Guid tenantId, DateTime nowUtc, CancellationToken ct, bool force = false)
     {
         var local = ArgentinaTime.Now(new DateTimeOffset(nowUtc, TimeSpan.Zero));
-        if (local.Hour < StartHour || local.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday) return false;
+        if (!force && (local.Hour < StartHour || local.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)) return false;
         var today = DateOnly.FromDateTime(local.DateTime);
 
         await using var aiDb = await AiEndpoints.OpenAsync(connectionString, ct);
         var settings = await aiDb.Settings.FirstOrDefaultAsync(s => s.TenantId == tenantId, ct);
-        if (settings is not { SupervisorActive: true }) return false;
-        if (await aiDb.Briefings.AnyAsync(b => b.TenantId == tenantId && b.Day == today, ct)) return false;
+        if (force)
+        {
+            if (settings?.ProtectedApiKey is null) return false;
+        }
+        else if (settings is not { SupervisorActive: true }) return false;
+
+        var existing = await aiDb.Briefings.FirstOrDefaultAsync(b => b.TenantId == tenantId && b.Day == today, ct);
+        if (!force && existing is not null) return false;
         var (spent, _) = await aiDb.MonthAsync(tenantId, nowUtc, ct);
         if (spent >= settings.MonthlyBudgetUsd) return false;
-        var lastFailure = await aiDb.Usage.AsNoTracking().Where(u => u.TenantId == tenantId && u.Feature == Feature && !u.Ok)
-            .MaxAsync(u => (DateTime?)u.AtUtc, ct);
-        if (lastFailure > nowUtc.AddMinutes(-30)) return false;
+        if (!force)
+        {
+            var lastFailure = await aiDb.Usage.AsNoTracking().Where(u => u.TenantId == tenantId && u.Feature == Feature && !u.Ok)
+                .MaxAsync(u => (DateTime?)u.AtUtc, ct);
+            if (lastFailure > nowUtc.AddMinutes(-30)) return false;
+        }
 
         // Lo que hoy ve un usuario con todos los permisos comerciales.
         var context = new NoticeContext(tenantId, connectionString, today, SeesAmounts: true);
@@ -61,6 +70,7 @@ public sealed partial class AiSupervisor(IAiClient ai, AiKeyProtector keys, IEnu
         var links = sections.SelectMany(s => s.Items).Select(i => i.Link).Where(l => l is not null).ToHashSet();
         if (sections.All(s => s.Items.Count == 0))
         {
+            if (existing is not null) aiDb.Briefings.Remove(existing);
             aiDb.Briefings.Add(AiBriefing.Create(tenantId, today, "[]", nowUtc)); // nada que priorizar: no se consulta
             await aiDb.SaveChangesAsync(ct);
             return true;
@@ -81,6 +91,7 @@ public sealed partial class AiSupervisor(IAiClient ai, AiKeyProtector keys, IEnu
                 ok ? null : $"La IA terminó por {completion.StopReason}", nowUtc));
             if (ok)
             {
+                if (existing is not null) aiDb.Briefings.Remove(existing);
                 aiDb.Briefings.Add(AiBriefing.Create(tenantId, today, JsonSerializer.Serialize(Parse(completion.Json, links)), nowUtc));
                 settings.RecordError(null);
             }
