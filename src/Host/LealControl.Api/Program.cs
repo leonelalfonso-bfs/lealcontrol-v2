@@ -98,6 +98,7 @@ try
     builder.Services.AddSingleton<LealControl.BuildingBlocks.Security.IPermissionChangeNotifier>(sp =>
         sp.GetRequiredService<LealControl.Api.Security.PermissionResolver>());
     LealControl.Api.Notices.NoticeEndpoints.AddPersonalNotices(builder.Services);
+    LealControl.Api.Ai.AiEndpoints.AddAi(builder.Services);
 
     builder.Services.AddSingleton<IClock, SystemClock>();
     builder.Services.AddHttpClient<BcraApiClient>();
@@ -434,6 +435,7 @@ try
     app.MapMetrologyModule();
     app.MapQualityModule();
     app.MapAutomationEndpoints();
+    LealControl.Api.Ai.AiEndpoints.MapAiEndpoints(app);
     app.MapPublicWebhookEndpoints();
     app.MapGet("/api/v1/public/features", async (ICommunicationsInboxSettings settings, CancellationToken ct) =>
         Results.Ok(new { communicationsInboxEnabled = await settings.IsEnabledAsync(ct) })).AllowAnonymous();

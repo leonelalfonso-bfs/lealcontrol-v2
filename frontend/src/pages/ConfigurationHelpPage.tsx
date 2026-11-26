@@ -97,6 +97,14 @@ export function ConfigurationHelpPage() {
             cuando pasa el doble del plazo. Cuentan solo los días hábiles: un mail del viernes a la tarde avisa el lunes a la tarde.
             Vincularlo a un cliente no lo da por atendido: el aviso se va cuando hay respuesta.
           </Step>
+          <Step title="“Inteligencia artificial”: pegá la clave de la API de Anthropic, fijá el tope mensual y tocá “Probar la clave”.">
+            La clave se crea en console.anthropic.com → API Keys (con un medio de pago cargado allá). Se guarda cifrada y no se vuelve
+            a mostrar. Completá “Qué hace la empresa” y activá “Leer los mails nuevos con IA”: cada 5 minutos, cada conversación con un
+            mail nuevo de un contacto recibe categoría, urgencia y un resumen, que se ven en la bandeja. Si es un pedido comercial
+            nuevo y está activada la apertura automática, se abre la oportunidad con la etiqueta “IA”: con el cliente si el CUIT o el
+            mail ya existen, si no con un lead nuevo. Las que no sirvan se pasan a Perdida. El gasto del mes se ve en la misma
+            tarjeta; al llegar al tope, la lectura se frena hasta el mes siguiente.
+          </Step>
         </Steps>
       </ManualPart>
 
