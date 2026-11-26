@@ -391,9 +391,11 @@
   gap: 7px;
   height: 36px;
   padding: 0 12px 0 11px;
-  border-radius: 9px;
-  background: var(--ins-ink);
-  color: var(--ins-surface);
+  border-radius: 11px;
+  background: var(--lc-accent-fill);
+  box-shadow: var(--lc-accent-relief);
+  color: var(--lc-on-accent);
+  font-weight: 700;
   font-weight: 600;
   font-size: 13px;
   cursor: pointer;
@@ -593,4 +595,40 @@
 
 @media (prefers-reduced-motion: reduce) {
   .ins-cmdk, .ins-cmdk-overlay, .ins-popover, .ins-sidebar, .ins-nav__chevron { animation: none !important; transition: none !important; }
+}
+
+/* ---------------- Avisos del pie del menú (Mis avisos, Comunicaciones) ---------------- */
+.ins-bell { position: relative; width: 100%; }
+.ins-bell__button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 10px 0 12px;
+  border: none;
+  border-radius: 12px;
+  background: var(--lc-chrome-hover);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  color: var(--ins-ink-2);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+}
+.ins-bell__button:hover { background: rgba(255, 255, 255, 0.12); color: var(--ins-ink); }
+.ins-bell__button--alert { background: rgba(242, 140, 40, 0.16); color: var(--ins-ink); }
+.ins-bell__label { display: flex; align-items: center; gap: 8px; }
+.ins-bell__count { min-width: 22px; padding: 2px 7px; border-radius: 999px; background: var(--lc-accent-fill); box-shadow: var(--lc-accent-relief); color: var(--lc-on-accent); font-size: 11.5px; font-weight: 800; text-align: center; }
+/* La lista se abre hacia arriba, fuera del grafito: vuelve a los colores claros. */
+.ins-bell__panel {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  max-height: 420px;
+  border-radius: 16px;
+  background: var(--lc-surface);
+  box-shadow: var(--lc-raise-3);
+  color: var(--lc-ink);
 }

@@ -100,18 +100,15 @@ export function LoginPage() {
         </div>
         <div className="login-intro-content">
           <span className="login-eyebrow">Tu espacio de trabajo</span>
-          <h1>Todo tu negocio,<br /><span>pesado al gramo.</span></h1>
+          <h1>Todo tu negocio,<br /><span>más claro y conectado.</span></h1>
           <p>Un solo lugar para trabajar con tus equipos, procesos e información.</p>
-          <div className="login-intro-points">
-            <span>Gestión integrada</span>
-            <span>Información en tiempo real</span>
-            <span>Acceso a tus empresas</span>
-          </div>
+          <ul className="login-qualities">
+            <li><strong>Gestión integrada</strong><span>Ventas, compras, stock, finanzas y contabilidad conectadas.</span></li>
+            <li><strong>Al día con ARCA</strong><span>Facturación electrónica, libros IVA y padrón.</span></li>
+            <li><strong>Tus empresas, separadas</strong><span>Cada empresa con sus datos, permisos y marca.</span></li>
+          </ul>
         </div>
-        <div className="login-scale" aria-hidden="true">
-          <div className="login-scale__head"><span>INDICADOR</span><b>● ESTABLE</b></div>
-          <div className="login-scale__display">0.000<small> kg</small></div>
-        </div>
+        <p className="login-intro-footer">LEAL Control · ERP en la nube</p>
       </section>
 
       <section className="login-panel" aria-label="Acceso al sistema">
