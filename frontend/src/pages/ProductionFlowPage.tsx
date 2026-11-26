@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import "../production-flow.css";
 
 const steps = [
   ["1", "Catálogo", "Definí productos terminados, materias primas y semielaborados.", "/productos", "Abrir catálogo"],

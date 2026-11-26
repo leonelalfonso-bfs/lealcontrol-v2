@@ -210,7 +210,7 @@ export const ProductFormPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="card pad" style={{ textAlign: "center", padding: "48px" }}>
+      <div className="card pad t-center" style={{ padding: "48px" }}>
         <div className="muted">Cargando producto...</div>
       </div>
     );
@@ -232,7 +232,7 @@ export const ProductFormPage: React.FC = () => {
       </div>
 
       {error && (
-        <div style={{ padding: "12px 16px", background: "var(--lc-danger-bg)", color: "var(--lc-danger)", borderRadius: "8px", marginBottom: "16px", border: "1px solid var(--lc-danger)" }}>
+        <div className="alert" style={{ marginBottom: "16px" }}>
           {error}
         </div>
       )}
@@ -276,7 +276,7 @@ export const ProductFormPage: React.FC = () => {
             {/* Top Product Header Card with Photo & Main SKU */}
             <div style={{ display: "grid", gridTemplateColumns: "150px 1fr", gap: "20px", alignItems: "flex-start", paddingBottom: "16px", borderBottom: "1px solid var(--surface-border)" }}>
               {/* Photo Box */}
-              <div style={{ textAlign: "center" }}>
+              <div className="t-center">
                 <div
                   style={{
                     width: 140,
@@ -298,7 +298,7 @@ export const ProductFormPage: React.FC = () => {
                       style={{ width: "100%", height: "100%", objectFit: "contain" }}
                     />
                   ) : (
-                    <div style={{ color: "var(--ink-soft)", fontSize: "0.78rem", padding: "8px", textAlign: "center" }}>
+                    <div className="muted t-small t-center" style={{ padding: "8px" }}>
                       <span style={{ fontSize: "2.2rem", display: "block", marginBottom: 2 }}>📷</span>
                       Subir Foto
                     </div>
@@ -308,8 +308,8 @@ export const ProductFormPage: React.FC = () => {
                 <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
                   <label
                     htmlFor="productImageUpload"
-                    className="btn btn-outline"
-                    style={{ padding: "4px 8px", fontSize: "0.74rem", cursor: "pointer", display: "inline-block" }}
+                    className="btn btn-outline compact"
+                    style={{ cursor: "pointer" }}
                   >
                     📁 {imagePath ? "Cambiar Foto" : "Cargar Foto"}
                   </label>
@@ -321,10 +321,10 @@ export const ProductFormPage: React.FC = () => {
                     style={{ display: "none" }}
                   />
                   {imagePath && (
-                    <button
+                    <button className="t-danger t-small"
                       type="button"
                       onClick={() => setImagePath(null)}
-                      style={{ background: "none", border: "none", color: "var(--lc-danger)", fontSize: "0.72rem", cursor: "pointer", textDecoration: "underline" }}
+                      style={{ background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
                     >
                       Quitar Foto
                     </button>
@@ -336,42 +336,42 @@ export const ProductFormPage: React.FC = () => {
               <div style={{ display: "grid", gap: "14px" }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "14px" }}>
                   <div>
-                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: "bold", marginBottom: "4px" }}>
+                    <label>
                       Código / SKU *
                     </label>
-                    <input
+                    <input className="t-strong"
                       type="text"
                       required
                       value={code}
                       onChange={(e) => setCode(e.target.value)}
                       placeholder="Ej: BAL-IND-500"
-                      style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)", fontFamily: "monospace", fontWeight: "bold" }}
+                      style={{ width: "100%" }}
                     />
                   </div>
                   <div>
-                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: "bold", marginBottom: "4px" }}>
+                    <label>
                       Nombre del Artículo / Servicio *
                     </label>
-                    <input
+                    <input className="t-strong"
                       type="text"
                       required
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Ej: Balanza Industrial de Plataforma 500kg"
-                      style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)", fontWeight: 600 }}
+                      style={{ width: "100%" }}
                     />
                   </div>
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", gap: "14px" }}>
                   <div>
-                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: "bold", marginBottom: "4px" }}>
+                    <label>
                       Tipo de Artículo
                     </label>
                     <select
                       value={type}
                       onChange={(e) => handleTypeChange(e.target.value as ProductWrite["type"])}
-                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                      style={{ width: "100%" }}
                     >
                       <option value="DirectSale">📦 Venta Directa (Reventa)</option>
                       <option value="Service">🛠️ Servicio Intangible</option>
@@ -383,13 +383,13 @@ export const ProductFormPage: React.FC = () => {
                   </div>
 
                   <div>
-                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: "bold", marginBottom: "4px" }}>
+                    <label>
                       Categoría
                     </label>
                     <select
                       value={categoryId}
                       onChange={(e) => setCategoryId(e.target.value)}
-                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                      style={{ width: "100%" }}
                     >
                       <option value="">(Sin Categoría Especial)</option>
                       {categories.map((cat) => (
@@ -401,13 +401,13 @@ export const ProductFormPage: React.FC = () => {
                   </div>
 
                   <div>
-                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: "bold", marginBottom: "4px" }}>
+                    <label>
                       Unidad de Medida
                     </label>
                     <select
                       value={baseUnit}
                       onChange={(e) => setBaseUnit(e.target.value)}
-                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                      style={{ width: "100%" }}
                     >
                       <option value="UN">Unidad (UN)</option>
                       <option value="KG">Kilogramo (KG)</option>
@@ -439,7 +439,7 @@ export const ProductFormPage: React.FC = () => {
                     onChange={(e) => setShowInCatalog(e.target.checked)}
                     style={{ width: 16, height: 16, cursor: "pointer" }}
                   />
-                  <label htmlFor="showInCatalogPill" style={{ cursor: "pointer", fontSize: "0.82rem", fontWeight: 700, color: showInCatalog ? "#047857" : "var(--ink)" }}>
+                  <label htmlFor="showInCatalogPill" style={{ cursor: "pointer", color: showInCatalog ? "#047857" : "var(--ink)" }}>
                     🌐 Publicar en Catálogo Web / Carrito de Clientes (Portal B2B)
                   </label>
                 </div>
@@ -447,7 +447,7 @@ export const ProductFormPage: React.FC = () => {
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "6px" }}>
+              <label>
                 Descripción Breve (para presupuestos, pedidos y facturas)
               </label>
               <textarea
@@ -455,12 +455,12 @@ export const ProductFormPage: React.FC = () => {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Resumen comercial del producto o alcance del servicio..."
-                style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "6px" }}>
+              <label>
                 Descripción Técnica Detallada (Ficha técnica para Presupuestos y Ofertas Técnicas)
               </label>
               <textarea
@@ -468,31 +468,31 @@ export const ProductFormPage: React.FC = () => {
                 value={detailedDescription}
                 onChange={(e) => setDetailedDescription(e.target.value)}
                 placeholder="Especificaciones técnicas completas, capacidad, dimensiones, tolerancias, certificaciones INTI..."
-                style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             {/* Precios 3-Monedas */}
-            <div style={{ background: "var(--lc-surface-2)", padding: "18px", borderRadius: "12px", border: "1px solid var(--surface-border)" }}>
-              <h3 style={{ marginTop: 0, marginBottom: "14px", fontSize: "1rem", color: "var(--brand-accent)", display: "flex", alignItems: "center", gap: "8px" }}>
+            <div className="box">
+              <h3 style={{ marginBottom: "14px", display: "flex", alignItems: "center", gap: "8px" }}>
                 <span>💰 Estructura de Precios & 3 Monedas Nativas Leal Control</span>
               </h3>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
                 {/* Sale Price Card */}
                 <div style={{ background: "white", padding: "14px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}>
-                  <div style={{ fontSize: "0.8rem", fontWeight: "bold", color: "var(--lc-ok)", textTransform: "uppercase", marginBottom: "10px" }}>
+                  <div className="t-small t-strong t-ok t-caps" style={{ marginBottom: "10px" }}>
                     🟢 PRECIO DE VENTA AL PÚBLICO
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "10px" }}>
                     <div>
-                      <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, marginBottom: "4px" }}>
+                      <label>
                         Moneda de Venta *
                       </label>
                       <select
                         value={saleCurrency}
                         onChange={(e) => setSaleCurrency(e.target.value as ProductWrite["saleCurrency"])}
-                        style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontSize: "0.85rem" }}
+                        style={{ width: "100%" }}
                       >
                         <option value="ARS">Pesos ARS ($)</option>
                         <option value="USD_BILLETE">USD Billete (BNA)</option>
@@ -501,17 +501,17 @@ export const ProductFormPage: React.FC = () => {
                     </div>
 
                     <div>
-                      <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, marginBottom: "4px" }}>
+                      <label>
                         Precio Base Venta *
                       </label>
-                      <input
+                      <input className="t-strong t-ok"
                         type="number"
                         step="0.01"
                         min="0"
                         placeholder="0.00"
                         value={basePrice === 0 && !isEditing ? "" : basePrice}
                         onChange={(e) => setBasePrice(e.target.value === "" ? 0 : Number(e.target.value))}
-                        style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontFamily: "monospace", fontWeight: "bold", fontSize: "1rem", color: "var(--lc-ok)" }}
+                        style={{ width: "100%" }}
                       />
                     </div>
                   </div>
@@ -519,18 +519,18 @@ export const ProductFormPage: React.FC = () => {
 
                 {/* Purchase Cost Card */}
                 <div style={{ background: "white", padding: "14px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}>
-                  <div style={{ fontSize: "0.8rem", fontWeight: "bold", color: "var(--lc-warn)", textTransform: "uppercase", marginBottom: "10px" }}>
+                  <div className="t-small t-strong t-warn t-caps" style={{ marginBottom: "10px" }}>
                     🟠 COSTO DE REPOSICIÓN / COMPRA
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "10px" }}>
                     <div>
-                      <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, marginBottom: "4px" }}>
+                      <label>
                         Moneda de Compra *
                       </label>
                       <select
                         value={purchaseCurrency}
                         onChange={(e) => setPurchaseCurrency(e.target.value as ProductWrite["purchaseCurrency"])}
-                        style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontSize: "0.85rem" }}
+                        style={{ width: "100%" }}
                       >
                         <option value="ARS">Pesos ARS ($)</option>
                         <option value="USD_BILLETE">USD Billete (BNA)</option>
@@ -539,17 +539,17 @@ export const ProductFormPage: React.FC = () => {
                     </div>
 
                     {seesCosts && <div>
-                      <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, marginBottom: "4px" }}>
+                      <label>
                         Costo Base Reposición
                       </label>
-                      <input
+                      <input className="t-strong t-warn"
                         type="number"
                         step="0.01"
                         min="0"
                         placeholder="0.00"
                         value={costPrice === 0 && !isEditing ? "" : costPrice}
                         onChange={(e) => setCostPrice(e.target.value === "" ? 0 : Number(e.target.value))}
-                        style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontFamily: "monospace", fontWeight: "bold", fontSize: "1rem", color: "var(--lc-warn)" }}
+                        style={{ width: "100%" }}
                       />
                     </div>}
                   </div>
@@ -562,7 +562,7 @@ export const ProductFormPage: React.FC = () => {
         {/* Tab 2: Stock & Trazabilidad */}
         {activeTab === "stock" && (
           <div className="card pad" style={{ display: "grid", gap: "20px" }}>
-            <h3 style={{ marginTop: 0, fontSize: "1.05rem", color: "var(--brand-accent)" }}>
+            <h3>
               Reglas de Control de Inventario & Trazabilidad
             </h3>
 
@@ -578,12 +578,12 @@ export const ProductFormPage: React.FC = () => {
                   gap: 16
                 }}
               >
-                <span style={{ fontSize: "2rem" }}>🛠️</span>
+                <span className="t-xl">🛠️</span>
                 <div>
-                  <strong style={{ display: "block", color: "var(--ink)", fontSize: "1rem" }}>
+                  <strong style={{ display: "block" }}>
                     Artículo configurado como Servicio Intangible
                   </strong>
-                  <p style={{ margin: "4px 0 0", color: "var(--ink-soft)", fontSize: "0.88rem", lineHeight: 1.45 }}>
+                  <p className="muted" style={{ margin: "4px 0 0", lineHeight: 1.45 }}>
                     Los servicios, calibraciones y horas técnicas no controlan existencias físicas en depósitos ni generan movimientos en Kardex. Su disponibilidad para ventas y órdenes de trabajo es ilimitada.
                   </p>
                 </div>
@@ -603,8 +603,8 @@ export const ProductFormPage: React.FC = () => {
                 }}
               >
                 <div>
-                  <div style={{ fontWeight: "bold", fontSize: "0.95rem" }}>Control de Stock Físico</div>
-                  <div className="muted" style={{ fontSize: "0.82rem" }}>Llevar recuento de existencias y descontar con remitos</div>
+                  <div className="t-strong">Control de Stock Físico</div>
+                  <div className="muted t-small">Llevar recuento de existencias y descontar con remitos</div>
                 </div>
                 <input
                   type="checkbox"
@@ -615,17 +615,17 @@ export const ProductFormPage: React.FC = () => {
               </div>
 
               <div style={{ border: "1px solid var(--surface-border)", padding: "16px", borderRadius: "10px", background: "white" }}>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+                <label>
                   Stock Mínimo de Alerta (Punto de Pedido)
                 </label>
-                <input
+                <input className="t-strong"
                   type="number"
                   step="0.01"
                   min="0"
                   placeholder="0"
                   value={minStock === 0 && !isEditing ? "" : minStock}
                   onChange={(e) => setMinStock(e.target.value === "" ? 0 : Number(e.target.value))}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontWeight: "bold" }}
+                  style={{ width: "100%" }}
                 />
               </div>
 
@@ -641,8 +641,8 @@ export const ProductFormPage: React.FC = () => {
                 }}
               >
                 <div>
-                  <div style={{ fontWeight: "bold", fontSize: "0.95rem" }}>Número de Serie Obligatorio (S/N)</div>
-                  <div className="muted" style={{ fontSize: "0.82rem" }}>Exigir número de serie individual por equipo / celda</div>
+                  <div className="t-strong">Número de Serie Obligatorio (S/N)</div>
+                  <div className="muted t-small">Exigir número de serie individual por equipo / celda</div>
                 </div>
                 <input
                   type="checkbox"
@@ -664,8 +664,8 @@ export const ProductFormPage: React.FC = () => {
                 }}
               >
                 <div>
-                  <div style={{ fontWeight: "bold", fontSize: "0.95rem" }}>Trazabilidad por Lote / Partida</div>
-                  <div className="muted" style={{ fontSize: "0.82rem" }}>Control de fechas de vencimiento y lotes de fabricación</div>
+                  <div className="t-strong">Trazabilidad por Lote / Partida</div>
+                  <div className="muted t-small">Control de fechas de vencimiento y lotes de fabricación</div>
                 </div>
                 <input
                   type="checkbox"
@@ -682,19 +682,19 @@ export const ProductFormPage: React.FC = () => {
         {/* Tab 3: Contabilidad & Impuestos ARCA */}
         {activeTab === "fiscal" && (
           <div className="card pad" style={{ display: "grid", gap: "20px" }}>
-            <h3 style={{ marginTop: 0, fontSize: "1.05rem", color: "var(--brand-accent)" }}>
+            <h3>
               Configuración Impositiva ARCA & Matriz Contable ERP
             </h3>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px" }}>
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "6px" }}>
+                <label>
                   Alícuota IVA ARCA *
                 </label>
-                <select
+                <select className="t-strong"
                   value={taxRate}
                   onChange={(e) => setTaxRate(Number(e.target.value))}
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)", fontWeight: "bold" }}
+                  style={{ width: "100%" }}
                 >
                   <option value={21.00}>21.00% (Tasa General)</option>
                   <option value={10.50}>10.50% (Bienes de Capital / Reducida)</option>
@@ -704,7 +704,7 @@ export const ProductFormPage: React.FC = () => {
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "6px" }}>
+                <label>
                   Cuenta Contable de Ventas
                 </label>
                 <input
@@ -712,12 +712,12 @@ export const ProductFormPage: React.FC = () => {
                   value={salesAccountingCode}
                   onChange={(e) => setSalesAccountingCode(e.target.value)}
                   placeholder="Ej: 4.1.01.001"
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                  style={{ width: "100%" }}
                 />
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "6px" }}>
+                <label>
                   Cuenta Contable de Compras
                 </label>
                 <input
@@ -725,7 +725,7 @@ export const ProductFormPage: React.FC = () => {
                   value={purchaseAccountingCode}
                   onChange={(e) => setPurchaseAccountingCode(e.target.value)}
                   placeholder="Ej: 5.1.02.004"
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                  style={{ width: "100%" }}
                 />
               </div>
             </div>
@@ -737,10 +737,10 @@ export const ProductFormPage: React.FC = () => {
           <div className="card pad" style={{ display: "grid", gap: "16px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: "1.05rem", color: "var(--brand-accent)" }}>
+                <h3 style={{ margin: 0 }}>
                   Atributos y Especificaciones Personalizadas
                 </h3>
-                <p className="muted" style={{ margin: "4px 0 0 0", fontSize: "0.85rem" }}>
+                <p className="muted t-small" style={{ margin: "4px 0 0 0" }}>
                   Campos dinámicos guardados estructuralmente en formato JSONB
                 </p>
               </div>
@@ -748,22 +748,20 @@ export const ProductFormPage: React.FC = () => {
                 type="button"
                 onClick={handleAddCustomAttr}
                 className="btn btn-outline"
-                style={{ fontSize: "0.85rem" }}
               >
                 + Agregar Atributo
               </button>
             </div>
 
             {customAttributesList.length === 0 ? (
-              <div style={{ padding: "32px", textAlign: "center", background: "var(--lc-surface-2)", borderRadius: "8px", border: "1px dashed var(--surface-border)" }}>
-                <p className="muted" style={{ margin: "0 0 10px 0", fontSize: "0.88rem" }}>
+              <div className="box t-center">
+                <p className="muted" style={{ margin: "0 0 10px 0" }}>
                   No hay atributos personalizados cargados para este artículo.
                 </p>
                 <button
                   type="button"
                   onClick={handleAddCustomAttr}
                   className="btn btn-outline"
-                  style={{ fontSize: "0.85rem" }}
                 >
                   + Agregar Primer Atributo
                 </button>
@@ -772,24 +770,24 @@ export const ProductFormPage: React.FC = () => {
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 {customAttributesList.map((attr, idx) => (
                   <div key={idx} style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                    <input
+                    <input className="t-strong"
                       type="text"
                       placeholder="Nombre del Atributo (Ej: Capacidad Máxima, Voltaje)"
                       value={attr.key}
                       onChange={(e) => handleCustomAttrChange(idx, "key", e.target.value)}
-                      style={{ width: "35%", padding: "8px 12px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontWeight: 600 }}
+                      style={{ width: "35%" }}
                     />
                     <input
                       type="text"
                       placeholder="Valor (Ej: 1000 kg, 220V 50Hz)"
                       value={attr.value}
                       onChange={(e) => handleCustomAttrChange(idx, "value", e.target.value)}
-                      style={{ flex: 1, padding: "8px 12px", borderRadius: "6px", border: "1px solid var(--surface-border)" }}
+                      style={{ flex: 1 }}
                     />
-                    <button
+                    <button className="t-danger"
                       type="button"
                       onClick={() => handleRemoveCustomAttr(idx)}
-                      style={{ background: "transparent", border: "none", color: "var(--lc-danger)", cursor: "pointer", fontSize: "1.1rem", padding: "0 8px" }}
+                      style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: "1.1rem", padding: "0 8px" }}
                       title="Eliminar atributo"
                     >
                       ✕
@@ -803,14 +801,13 @@ export const ProductFormPage: React.FC = () => {
 
         {/* Actions Footer */}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "24px" }}>
-          <Link to="/productos" className="btn btn-outline" style={{ padding: "10px 20px" }}>
+          <Link to="/productos" className="btn btn-outline">
             Cancelar
           </Link>
           <button
             type="submit"
             disabled={saving}
             className="btn btn-primary"
-            style={{ padding: "10px 28px", fontWeight: "bold" }}
           >
             {saving ? "💾 Guardando..." : isEditing ? "💾 Guardar Cambios" : "✨ Crear Producto"}
           </button>
