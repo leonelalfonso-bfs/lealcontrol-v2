@@ -2751,6 +2751,8 @@ export type AiSettings = {
   monthlyBudgetUsd: number;
   mailReadingEnabled: boolean;
   autoOpportunities: boolean;
+  supervisorEnabled: boolean;
+  supervisorModel: string;
   businessDescription: string;
   enabledAtUtc?: string | null;
   lastError?: string | null;

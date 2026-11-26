@@ -17,7 +17,7 @@ using Microsoft.Extensions.Logging;
 
 namespace LealControl.Api.Ai;
 
-public sealed record AiSettingsRequest(string? ApiKey, decimal MonthlyBudgetUsd, bool MailReadingEnabled, bool AutoOpportunities, string? BusinessDescription);
+public sealed record AiSettingsRequest(string? ApiKey, decimal MonthlyBudgetUsd, bool MailReadingEnabled, bool AutoOpportunities, string? BusinessDescription, bool SupervisorEnabled = false);
 
 public static class AiEndpoints
 {
@@ -40,6 +40,8 @@ public static class AiEndpoints
         services.AddSingleton<AiKeyProtector>();
         services.AddSingleton<IAiClient, ClaudeAiClient>();
         services.AddSingleton<AiMailReader>();
+        services.AddSingleton<AiSupervisor>();
+        services.AddSingleton<LealControl.BuildingBlocks.Notices.INoticeProvider, AiBriefingNotices>();
         services.AddHostedService<AiBackgroundService>();
         return services;
     }
@@ -64,6 +66,8 @@ public static class AiEndpoints
                 settings.MonthlyBudgetUsd,
                 settings.MailReadingEnabled,
                 settings.AutoOpportunities,
+                settings.SupervisorEnabled,
+                supervisorModel = AiModels.Supervisor,
                 settings.BusinessDescription,
                 settings.EnabledAtUtc,
                 settings.LastError,
@@ -86,9 +90,9 @@ public static class AiEndpoints
                 key = key.Trim();
                 settings.SetApiKey(key.Length == 0 ? null : keys.Protect(key), key.Length < 8 ? null : key[^4..], now);
             }
-            if (body.MailReadingEnabled && settings.ProtectedApiKey is null)
-                return Results.BadRequest(new { error = "Cargá la clave de la API antes de activar la lectura de mails." });
-            settings.Update(body.MonthlyBudgetUsd, body.MailReadingEnabled, body.AutoOpportunities, body.BusinessDescription, now);
+            if ((body.MailReadingEnabled || body.SupervisorEnabled) && settings.ProtectedApiKey is null)
+                return Results.BadRequest(new { error = "Cargá la clave de la API antes de activar la IA." });
+            settings.Update(body.MonthlyBudgetUsd, body.MailReadingEnabled, body.AutoOpportunities, body.SupervisorEnabled, body.BusinessDescription, now);
             await db.SaveChangesAsync(ct);
             return Results.NoContent();
         });
@@ -131,7 +135,7 @@ public static class AiEndpoints
     }
 }
 
-/// <summary>Cada 5 minutos, lee con IA los mails nuevos de las empresas que la activaron.</summary>
+/// <summary>Cada 5 minutos, lee con IA los mails nuevos y, desde las 6 de cada día hábil, arma el informe del supervisor comercial.</summary>
 public sealed class AiBackgroundService(IServiceProvider services, TimeProvider clock, ILogger<AiBackgroundService> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -161,6 +165,7 @@ public sealed class AiBackgroundService(IServiceProvider services, TimeProvider 
         var master = scope.ServiceProvider.GetRequiredService<MasterDbContext>();
         var connections = scope.ServiceProvider.GetRequiredService<ITenantConnectionProvider>();
         var reader = scope.ServiceProvider.GetRequiredService<AiMailReader>();
+        var supervisor = scope.ServiceProvider.GetRequiredService<AiSupervisor>();
         var tenants = await master.Tenants.AsNoTracking()
             .Where(x => x.IsActive && (x.Status == "Active" || x.Status == "Trial")).Select(x => x.Id).ToListAsync(ct);
         foreach (var tenantId in tenants)
@@ -171,6 +176,8 @@ public sealed class AiBackgroundService(IServiceProvider services, TimeProvider 
                 await (await AiEndpoints.OpenAsync(cs, ct)).DisposeAsync();
                 var read = await reader.ReadPendingAsync(cs, tenantId, clock.GetUtcNow().UtcDateTime, ct);
                 if (read > 0) logger.LogInformation("IA: {Count} conversaciones leídas (empresa {TenantId})", read, tenantId);
+                if (await supervisor.GenerateAsync(cs, tenantId, clock.GetUtcNow().UtcDateTime, ct))
+                    logger.LogInformation("IA: informe del supervisor comercial listo (empresa {TenantId})", tenantId);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {

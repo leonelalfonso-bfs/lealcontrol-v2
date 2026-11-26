@@ -26,7 +26,7 @@ public sealed class AiMailReaderTests : IAsyncLifetime
     {
         public int Calls;
         public Task<AiCompletion> CompleteJsonAsync(string apiKey, string model, string system, string user,
-            IReadOnlyDictionary<string, JsonElement> schema, int maxTokens, CancellationToken ct)
+            IReadOnlyDictionary<string, JsonElement> schema, int maxTokens, CancellationToken ct, bool deeper = false)
         {
             Calls++;
             Assert.Equal("sk-ant-prueba-1234", apiKey);
@@ -111,6 +111,7 @@ public sealed class AiMailReaderTests : IAsyncLifetime
             Assert.NotNull(read[question.Id].RelatedLeadId); // cliente nuevo: lead
             Assert.NotNull(read[question.Id].RelatedOpportunityId);
             Assert.Equal(3, read[question.Id].AiUrgency);
+            Assert.Equal("Pedro · Molino Nuevo", read[question.Id].ParticipantName); // antes se veía la dirección de mail
             Assert.Equal("spam", read[spam.Id].AiCategory);
             Assert.Null(read[spam.Id].RelatedOpportunityId);
             Assert.Null(read[old.Id].AiCategory);

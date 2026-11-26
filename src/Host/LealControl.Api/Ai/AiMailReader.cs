@@ -112,6 +112,7 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
             }
 
             conversation.SetAiReading(reading.Category, reading.Urgency, reading.Summary, nowUtc);
+            conversation.SetNameFromAi(string.Join(" · ", new[] { reading.ContactName, reading.Company }.Where(x => x.Length > 0)));
             if (settings.AutoOpportunities && Commercial.Contains(reading.Category) && reading.IsNewBusiness && conversation.RelatedOpportunityId is null)
                 await OpenOpportunityAsync(crm, tenant, conversation, reading, nowUtc, ct);
             settings.RecordError(null);

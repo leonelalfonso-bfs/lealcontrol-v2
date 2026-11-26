@@ -103,7 +103,11 @@ export function ConfigurationHelpPage() {
             mail nuevo de un contacto recibe categoría, urgencia y un resumen, que se ven en la bandeja. Si es un pedido comercial
             nuevo y está activada la apertura automática, se abre la oportunidad con la etiqueta “IA”: con el cliente si el CUIT o el
             mail ya existen, si no con un lead nuevo. Las que no sirvan se pasan a Perdida. El gasto del mes se ve en la misma
-            tarjeta; al llegar al tope, la lectura se frena hasta el mes siguiente.
+            tarjeta; al llegar al tope, la IA se frena hasta el mes siguiente.
+            “Supervisor comercial”: cada día hábil, desde las 6, lee los avisos de ventas (mails sin atender, presupuestos sin
+            respuesta o por vencer, actividades vencidas, oportunidades frías) y elige las 3 a 5 prioridades del día, con el porqué
+            y el enlace para resolverlas. Salen primero en “Mis avisos” y en el resumen diario; quien no ve importes recibe la
+            versión sin montos. Es una sola consulta por día.
           </Step>
         </Steps>
       </ManualPart>

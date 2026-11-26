@@ -19,7 +19,7 @@ public sealed record AiCompletion(string Json, long InputTokens, long OutputToke
 public interface IAiClient
 {
     Task<AiCompletion> CompleteJsonAsync(string apiKey, string model, string system, string user,
-        IReadOnlyDictionary<string, JsonElement> schema, int maxTokens, CancellationToken ct);
+        IReadOnlyDictionary<string, JsonElement> schema, int maxTokens, CancellationToken ct, bool deeper = false);
 }
 
 public static class AiModels
@@ -44,7 +44,7 @@ public static class AiModels
 public sealed class ClaudeAiClient : IAiClient
 {
     public async Task<AiCompletion> CompleteJsonAsync(string apiKey, string model, string system, string user,
-        IReadOnlyDictionary<string, JsonElement> schema, int maxTokens, CancellationToken ct)
+        IReadOnlyDictionary<string, JsonElement> schema, int maxTokens, CancellationToken ct, bool deeper = false)
     {
         var client = new AnthropicClient { ApiKey = apiKey };
         var message = await client.Messages.Create(new MessageCreateParams
@@ -55,7 +55,7 @@ public sealed class ClaudeAiClient : IAiClient
             Messages = [new UserMessageParam { Content = user }],
             OutputConfig = new OutputConfig
             {
-                Effort = Effort.Low,
+                Effort = deeper ? Effort.Medium : Effort.Low,
                 Format = new JsonOutputFormat { Schema = schema.ToDictionary(x => x.Key, x => x.Value) },
             },
         }, ct);
