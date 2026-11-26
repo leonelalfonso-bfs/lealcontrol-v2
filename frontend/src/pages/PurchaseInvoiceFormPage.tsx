@@ -421,7 +421,7 @@ export function PurchaseInvoiceFormPage() {
       )}
 
       <form onSubmit={handleSubmit}>
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "20px", alignItems: "start" }}>
+        <div className="split" style={{ alignItems: "start" }}>
           {/* Main Info Card */}
           <div className="card pad">
             <h3 className="t-accent" style={{ marginBottom: "16px" }}>

@@ -7,7 +7,7 @@
 
 .ins-shell {
   display: grid;
-  grid-template-columns: 278px minmax(0, 1fr);
+  grid-template-columns: 262px minmax(0, 1fr);
   min-height: 100vh;
   background: transparent;
   color: var(--ins-ink);
