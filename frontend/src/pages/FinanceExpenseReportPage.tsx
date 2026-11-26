@@ -94,7 +94,7 @@ export function FinanceExpenseReportPage() {
         <div className="card pad"><span className="muted">Anticipos / reposiciones de la semana</span><strong style={{ display: "block", fontSize: "1.4rem" }}>$ {money(report.advancesTotal)}</strong></div>
         <div className="card pad"><span className="muted">Saldo de la billetera</span><strong style={{ display: "block", fontSize: "1.4rem" }}>$ {money(report.walletBalance)}</strong></div>
         <div className="card pad"><span className="muted">{open ? "Saldo al aprobar" : "Topes al dólar"}</span>
-          <strong style={{ display: "block", fontSize: "1.4rem", color: open && report.balanceAfter < 0 ? "var(--danger, #b42318)" : undefined }}>
+          <strong style={{ display: "block", fontSize: "1.4rem", color: open && report.balanceAfter < 0 ? "var(--lc-danger, #b42318)" : undefined }}>
             {open ? `$ ${money(report.balanceAfter)}` : rate ? `$ ${money(rate)}` : "—"}
           </strong>
           {open && <small className="muted">Dólar billete BNA: {rate ? `$ ${money(rate)}` : "no disponible"}</small>}
@@ -153,7 +153,7 @@ export function FinanceExpenseReportPage() {
         </table>
 
         {draft && (
-          <form className="stack" style={{ gap: 8, borderTop: "1px solid var(--border, var(--lc-line))", paddingTop: 10 }} onSubmit={(e) => {
+          <form className="stack" style={{ gap: 8, borderTop: "1px solid var(--lc-line, var(--lc-line))", paddingTop: 10 }} onSubmit={(e) => {
             e.preventDefault();
             const { id: lineId, ...body } = draft;
             void run(async () => {

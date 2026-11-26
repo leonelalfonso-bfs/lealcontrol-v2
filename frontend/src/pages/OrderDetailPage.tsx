@@ -286,7 +286,7 @@ export function OrderDetailPage() {
                 </span>
               </div>
             )}
-            <hr style={{ borderColor: "var(--line)", margin: "8px 0" }} />
+            <hr style={{ borderColor: "var(--lc-line)", margin: "8px 0" }} />
             <div className="row t-strong" style={{ justifyContent: "space-between", fontSize: "1.3rem" }}>
               <span>TOTAL PEDIDO:</span>
               <span className="t-accent">

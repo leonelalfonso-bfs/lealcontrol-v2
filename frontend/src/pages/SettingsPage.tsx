@@ -251,8 +251,8 @@ export function SettingsPage({ section = "general" }: { section?: SettingsSectio
                 style={{
                   width: 180,
                   height: 100,
-                  border: "2px dashed var(--line)",
-                  borderRadius: "var(--radius-sm)",
+                  border: "2px dashed var(--lc-line)",
+                  borderRadius: "var(--lc-radius-control)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -561,7 +561,7 @@ export function SettingsPage({ section = "general" }: { section?: SettingsSectio
               </div>
             </div>
 
-            <div style={{ marginTop: 24, padding: "12px 16px", background: "rgba(245, 158, 11, 0.1)", borderRadius: "var(--radius-sm)", border: "1px solid rgba(245, 158, 11, 0.2)" }}>
+            <div style={{ marginTop: 24, padding: "12px 16px", background: "rgba(245, 158, 11, 0.1)", borderRadius: "var(--lc-radius-control)", border: "1px solid rgba(245, 158, 11, 0.2)" }}>
               <div className="t-strong t-warn">🔒 Almacenamiento Seguro</div>
               <div className="t-small muted" style={{ marginTop: 4 }}>
                 Los certificados y claves privadas se resguardan de forma segura e independiente en la base de datos de tu empresa.
@@ -593,7 +593,7 @@ export function SettingsPage({ section = "general" }: { section?: SettingsSectio
                   </div>
                   <ul className="t-small" style={{ margin: 0, paddingLeft: 18 }}>
                     {arcaDiagnostics.checks.map((c) => (
-                      <li key={c.code} style={{ marginBottom: 6, color: c.ok ? "var(--ok, #15803d)" : "var(--danger, #b91c1c)" }}>
+                      <li key={c.code} style={{ marginBottom: 6, color: c.ok ? "var(--lc-ok, #15803d)" : "var(--lc-danger, #b91c1c)" }}>
                         {c.ok ? "✓" : "✗"} <strong>{c.label}</strong> — {c.detail}
                       </li>
                     ))}

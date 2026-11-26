@@ -1072,7 +1072,7 @@ export function FinanceAccountsPage() {
                                 onChange={(e) =>
                                   setInlineConcepts({ ...inlineConcepts, [x.id]: e.target.value })
                                 }
-                                style={{ border: isSuggested ? "1px solid #f59e0b" : "1px solid var(--surface-border)", background: isSuggested ? "#fffbeb" : "white", maxWidth: "180px" }}
+                                style={{ border: isSuggested ? "1px solid #f59e0b" : "1px solid var(--lc-line)", background: isSuggested ? "#fffbeb" : "white", maxWidth: "180px" }}
                               >
                                 <option value="">⏳ Sin identificar</option>
                                 {concepts.map((c) => (

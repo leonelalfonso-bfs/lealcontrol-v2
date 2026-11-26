@@ -314,7 +314,7 @@ export function CurrentAccountsPage() {
     return (
       <div className="page-wide" style={{ paddingBottom: 60 }}>
         <div className="card pad">
-          <div className="toolbar" style={{ justifyContent: "space-between", borderBottom: "1px solid var(--border, var(--lc-line))", paddingBottom: 12, flexWrap: "wrap", gap: 10 }}>
+          <div className="toolbar" style={{ justifyContent: "space-between", borderBottom: "1px solid var(--lc-line, var(--lc-line))", paddingBottom: 12, flexWrap: "wrap", gap: 10 }}>
             <div>
               <span className="eyebrow">CUENTA CORRIENTE</span>
               <h2 style={{ margin: 0 }}>{name}</h2>

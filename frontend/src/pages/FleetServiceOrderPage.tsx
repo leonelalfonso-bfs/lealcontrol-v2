@@ -137,8 +137,8 @@ export function FleetServiceOrderPage() {
               <input type="checkbox" checked={selected} disabled={!editable || (blocked && !selected)} onChange={() => toggle(key, r.id)} style={{ marginTop: 3 }} />
               <span>
                 <strong>{r.label}</strong>{r.detail ? <span className="muted"> · {r.detail}</span> : null}
-                {r.blockers.map((b) => <div className="t-small" key={b} style={{ color: "var(--danger, var(--lc-danger))" }}>✕ {b}</div>)}
-                {r.warnings.map((w) => <div className="t-small" key={w} style={{ color: "var(--warn, var(--lc-warn))" }}>⚠ {w}</div>)}
+                {r.blockers.map((b) => <div className="t-small" key={b} style={{ color: "var(--lc-danger, var(--lc-danger))" }}>✕ {b}</div>)}
+                {r.warnings.map((w) => <div className="t-small" key={w} style={{ color: "var(--lc-warn, var(--lc-warn))" }}>⚠ {w}</div>)}
               </span>
             </label>
           );

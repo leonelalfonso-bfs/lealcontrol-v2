@@ -39,7 +39,7 @@ export const LealLogo: React.FC<LealLogoProps> = ({
       {showText && (
         <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.15 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontWeight: 900, fontSize: "1.12rem", color: "var(--logo-title-color, var(--ink))", letterSpacing: "-0.02em" }}>
+            <span style={{ fontWeight: 900, fontSize: "1.12rem", color: "var(--logo-title-color, var(--lc-ink))", letterSpacing: "-0.02em" }}>
               LEAL
             </span>
             <span className="t-small t-strong"
@@ -48,7 +48,7 @@ export const LealLogo: React.FC<LealLogoProps> = ({
               v2.0
             </span>
           </div>
-          <span className="t-small t-strong t-caps" style={{ color: "var(--logo-subtitle-color, var(--ink-soft))", letterSpacing: "0.06em" }}>
+          <span className="t-small t-strong t-caps" style={{ color: "var(--logo-subtitle-color, var(--lc-ink-2))", letterSpacing: "0.06em" }}>
             Control ERP
           </span>
         </div>

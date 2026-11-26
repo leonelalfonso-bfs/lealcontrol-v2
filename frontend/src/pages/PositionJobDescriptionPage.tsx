@@ -101,7 +101,7 @@ export function PositionJobDescriptionPage() {
       {/* Main Document Card */}
       <div className="card pad stack" style={{ gap: 24, borderTop: "6px solid #ec4899" }}>
         {/* Top Summary Grid */}
-        <div className="grid-3" style={{ background: "var(--surface-sunken)", padding: "16px", borderRadius: 8 }}>
+        <div className="grid-3" style={{ background: "var(--lc-surface-sunken)", padding: "16px", borderRadius: 8 }}>
           <div>
             <span className="muted t-small" style={{ display: "block" }}>DEPARTAMENTO / ÁREA</span>
             <strong style={{ fontSize: "1.05rem" }}>🏢 {position.department}</strong>

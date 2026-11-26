@@ -105,11 +105,11 @@ export function JournalEntriesPage() {
                         style={{
                           cursor: "pointer",
                           background: isExp ? "rgba(13, 148, 136, 0.05)" : "transparent",
-                          borderBottom: isExp ? "none" : "1px solid var(--surface-border)"
+                          borderBottom: isExp ? "none" : "1px solid var(--lc-line)"
                         }}
                       >
                         <td className="t-center">
-                          <span className="t-small" style={{ color: "var(--text-muted)" }}>
+                          <span className="t-small" style={{ color: "var(--lc-ink-3)" }}>
                             {isExp ? "▼" : "▶"}
                           </span>
                         </td>

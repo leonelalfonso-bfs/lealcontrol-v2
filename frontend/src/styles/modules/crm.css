@@ -3,17 +3,26 @@
  * Solo reglas propias del módulo; botones, tarjetas, tablas y campos vienen de ds/components.css.
  */
 
+/* Tonos de las etapas del embudo. */
+:root {
+  --crm-amber: #d99a32;
+  --crm-blue: #4f7ee8;
+  --crm-green: #43a878;
+  --crm-red: #cf625d;
+  --crm-violet: #8065d8;
+}
+
 .pipeline {display:grid;grid-template-columns:repeat(6,minmax(280px,1fr));gap:16px;overflow-x:auto;padding-bottom:16px}
-.pipeline-col {background:#f0f5f8a6;border:1px solid var(--surface-border);border-radius:var(--radius-sm);padding:14px;display:flex;flex-direction:column;gap:12px;min-height:500px}
-.opp-card {background:#fff;border-radius:var(--radius-sm);padding:14px;box-shadow:0 4px 12px #0f172a0d;border:1px solid var(--line);cursor:grab;transition:transform .15s ease,box-shadow .15s ease;display:flex;flex-direction:column;gap:6px}
+.pipeline-col {background:#f0f5f8a6;border:1px solid var(--lc-line);border-radius:var(--lc-radius-control);padding:14px;display:flex;flex-direction:column;gap:12px;min-height:500px}
+.opp-card {background:#fff;border-radius:var(--lc-radius-control);padding:14px;box-shadow:0 4px 12px #0f172a0d;border:1px solid var(--lc-line);cursor:grab;transition:transform .15s ease,box-shadow .15s ease;display:flex;flex-direction:column;gap:6px}
 .opp-card:hover {transform:translateY(-2px);box-shadow:0 8px 20px #0f172a1a}
-.pipeline-col.drop-ready {border-style:dashed;border-color:var(--primary);background:#0a7a6a0a}
+.pipeline-col.drop-ready {border-style:dashed;border-color:var(--lc-accent);background:#0a7a6a0a}
 .pipeline-head {display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
-.pipeline-head h3 {margin:0;font-size:1.05rem;font-weight:700;color:var(--ink)}
+.pipeline-head h3 {margin:0;font-size:1.05rem;font-weight:700;color:var(--lc-ink)}
 .pipeline-total {font-size:.85rem;margin-bottom:8px;font-weight:600}
 .crm-help h2, .opportunity-workspace h2 {margin: 0 0 5px; font-size: 1.05rem;}
 .crm-pipeline {grid-template-columns: repeat(5, minmax(250px, 1fr)); align-items: stretch; overflow-x: auto; padding-bottom: 12px;}
-.crm-pipeline .pipeline-col {min-height: 560px; border-top: 3px solid var(--surface-border);}
+.crm-pipeline .pipeline-col {min-height: 560px; border-top: 3px solid var(--lc-line);}
 .crm-pipeline .stage-discovery {border-top-color: #5b8def;}
 .crm-pipeline .stage-proposal {border-top-color: #8b6bd6;}
 .crm-pipeline .stage-negotiation {border-top-color: #e2a84b;}
@@ -21,30 +30,30 @@
 .crm-pipeline .stage-lost {border-top-color: #d76b65;}
 .crm-pipeline .pipeline-head {align-items: flex-start;}
 .crm-pipeline .pipeline-head h3 {margin: 0 0 4px;}
-.crm-pipeline .pipeline-head p {margin: 0; max-width: 190px; color: var(--ink-soft); font-size: .74rem; line-height: 1.35;}
+.crm-pipeline .pipeline-head p {margin: 0; max-width: 190px; color: var(--lc-ink-2); font-size: .74rem; line-height: 1.35;}
 .pipeline-cards {display: grid; align-content: start; gap: 10px; margin-top: 12px;}
-.opp-card-title {display: block; margin-bottom: 8px; color: var(--ink); font-weight: 800; text-decoration: none;}
-.opp-card-title:hover {color: var(--brand-accent);}
-.opp-amount {display: block; margin-bottom: 8px; color: var(--ink-soft); font-size: .9rem;}
-.proposal-chip {display: block; margin: 10px 0; padding: 7px 9px; border-radius: 8px; background: color-mix(in srgb, var(--brand-accent) 9%, white); color: var(--brand-accent); font-size: .76rem; font-weight: 700; text-decoration: none;}
+.opp-card-title {display: block; margin-bottom: 8px; color: var(--lc-ink); font-weight: 800; text-decoration: none;}
+.opp-card-title:hover {color: var(--lc-accent-strong);}
+.opp-amount {display: block; margin-bottom: 8px; color: var(--lc-ink-2); font-size: .9rem;}
+.proposal-chip {display: block; margin: 10px 0; padding: 7px 9px; border-radius: 8px; background: color-mix(in srgb, var(--lc-accent-strong) 9%, white); color: var(--lc-accent-strong); font-size: .76rem; font-weight: 700; text-decoration: none;}
 .loss-reason {margin-top: 8px; color: #a43d37; font-size: .78rem;}
-.empty-col {padding: 28px 10px; border: 1px dashed var(--surface-border); border-radius: 10px; text-align: center; color: var(--ink-soft); font-size: .8rem;}
+.empty-col {padding: 28px 10px; border: 1px dashed var(--lc-line); border-radius: 10px; text-align: center; color: var(--lc-ink-2); font-size: .8rem;}
 .transition-dialog {display: grid; gap: 16px;}
 .transition-dialog label {display: grid; gap: 6px;}
 .opportunity-summary {display: grid; grid-template-columns: repeat(5, minmax(140px, 1fr)); gap: 14px; margin-bottom: 18px;}
 .opportunity-summary > div {display: grid; gap: 5px;}
 .opportunity-layout {display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(290px, .7fr); gap: 18px; align-items: start;}
 .activity-composer {position: sticky; top: 76px;}
-.quote-row {display: flex; justify-content: space-between; padding: 12px 0; border-top: 1px solid var(--surface-border);}
+.quote-row {display: flex; justify-content: space-between; padding: 12px 0; border-top: 1px solid var(--lc-line);}
 .crm-timeline {margin-top: 18px;}
 .timeline-event {position: relative; display: grid; grid-template-columns: 16px 1fr; gap: 10px; padding-bottom: 18px;}
-.timeline-event::before {content: ""; position: absolute; left: 6px; top: 14px; bottom: 0; width: 1px; background: var(--surface-border);}
+.timeline-event::before {content: ""; position: absolute; left: 6px; top: 14px; bottom: 0; width: 1px; background: var(--lc-line);}
 .timeline-event:last-child::before {display: none;}
 .timeline-dot {position: relative; z-index: 1; width: 13px; height: 13px; margin-top: 3px; border-radius: 50%; background: #8491a8;}
 .timeline-dot.info {background: #5b8def;}
 .timeline-dot.proposal {background: #8b6bd6;}
 .timeline-event p {margin: 3px 0;}
-.timeline-event time {color: var(--ink-soft); font-size: .72rem;}
+.timeline-event time {color: var(--lc-ink-2); font-size: .72rem;}
 .crm-help li {margin-bottom: 8px;}
 @media (max-width: 1180px) {
   .opportunity-summary {grid-template-columns: repeat(3, 1fr);}
@@ -62,14 +71,14 @@
 .opportunities-page .page-head, .opportunity-workspace .page-head, .crm-help .page-head {position: relative;
   padding: 18px 20px;
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--crm-blue) 14%, var(--surface-border));
+  border: 1px solid color-mix(in srgb, var(--crm-blue) 14%, var(--lc-line));
   border-radius: 18px;
   background:
     radial-gradient(circle at 8% 10%, color-mix(in srgb, var(--crm-blue) 13%, transparent) 0, transparent 34%),
     radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--crm-violet) 10%, transparent) 0, transparent 30%),
     rgba(255, 255, 255, .5);
   backdrop-filter: blur(18px) saturate(120%);}
-.opportunities-page .filters {border-color: color-mix(in srgb, var(--crm-blue) 12%, var(--surface-border));
+.opportunities-page .filters {border-color: color-mix(in srgb, var(--crm-blue) 12%, var(--lc-line));
   background: rgba(255, 255, 255, .72);}
 .crm-pipeline .pipeline-col {position: relative;
   overflow: hidden;
@@ -88,12 +97,12 @@
   background: rgba(255, 255, 255, .86);
   transition: transform .18s ease, border-color .18s ease, background .18s ease;}
 .crm-pipeline .opp-card:hover {transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--crm-blue) 32%, var(--surface-border));
+  border-color: color-mix(in srgb, var(--crm-blue) 32%, var(--lc-line));
   background: rgba(255, 255, 255, .98);}
 .proposal-chip {border-left: 3px solid var(--crm-violet);
   background: color-mix(in srgb, var(--crm-violet) 10%, white);
   color: #6046b0;}
-.opportunity-summary {border-color: color-mix(in srgb, var(--crm-blue) 18%, var(--surface-border));
+.opportunity-summary {border-color: color-mix(in srgb, var(--crm-blue) 18%, var(--lc-line));
   background: rgba(255, 255, 255, .76);}
 .opportunity-summary > div {padding: 10px 12px;
   border-left: 3px solid color-mix(in srgb, var(--crm-blue) 65%, white);
@@ -123,10 +132,10 @@
   gap: 7px;
   min-width: 120px;
   padding: 9px 10px;
-  border: 1px solid var(--surface-border);
+  border: 1px solid var(--lc-line);
   border-radius: 10px;
   background: rgba(255,255,255,.68);
-  color: var(--ink-soft);
+  color: var(--lc-ink-2);
   font-size: .8rem;
   font-weight: 700;}
 .sales-step > span {width: 22px;
@@ -137,11 +146,11 @@
   background: #edf1f6;
   color: #65748d;
   font-size: .7rem;}
-.sales-step.complete {border-color: color-mix(in srgb, #3a9a70 18%, var(--surface-border));
+.sales-step.complete {border-color: color-mix(in srgb, #3a9a70 18%, var(--lc-line));
   background: #edf8f2;
   color: #357b5d;}
 .sales-step.complete > span {background: #3a9a70; color: white;}
-.sales-step.active {border-color: color-mix(in srgb, #d18435 32%, var(--surface-border));
+.sales-step.active {border-color: color-mix(in srgb, #d18435 32%, var(--lc-line));
   background: #fff4e5;
   color: #9a601d;}
 .sales-step.active > span {background: #d18435; color: white;}

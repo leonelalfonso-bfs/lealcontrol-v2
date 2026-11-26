@@ -795,7 +795,7 @@ export function CalibrationReportFormPage() {
     block: ReturnType<typeof computeFidelityBlock>
   ) => {
     return (
-      <div style={{ background: "rgba(0,0,0,0.015)", border: "1px solid var(--surface-border)", borderRadius: 8, padding: 10, marginBottom: 12 }}>
+      <div style={{ background: "rgba(0,0,0,0.015)", border: "1px solid var(--lc-line)", borderRadius: 8, padding: 10, marginBottom: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, borderBottom: "1px solid rgba(0,0,0,0.06)", paddingBottom: 6 }}>
           <strong className="t-accent">{title}</strong>
           <span className="muted t-small">
@@ -1022,7 +1022,7 @@ export function CalibrationReportFormPage() {
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id as FormTab)}
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 16px", borderRadius: "8px 8px 0 0", border: "none", borderBottom: isActive ? "3px solid #0d9488" : "3px solid transparent", background: isActive ? "rgba(13, 148, 136, 0.12)" : "rgba(0,0,0,0.02)", color: isActive ? "#06574c" : "var(--text-color, #333)", fontWeight: isActive ? 800 : 600, cursor: "pointer", whiteSpace: "nowrap", transition: "all 0.15s ease" }}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 16px", borderRadius: "8px 8px 0 0", border: "none", borderBottom: isActive ? "3px solid #0d9488" : "3px solid transparent", background: isActive ? "rgba(13, 148, 136, 0.12)" : "rgba(0,0,0,0.02)", color: isActive ? "#06574c" : "var(--lc-ink, #333)", fontWeight: isActive ? 800 : 600, cursor: "pointer", whiteSpace: "nowrap", transition: "all 0.15s ease" }}
             >
               <span>{tab.icon}</span>
               <span>{tab.label}</span>
@@ -1222,7 +1222,7 @@ export function CalibrationReportFormPage() {
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 14, marginBottom: 14 }}>
                 {/* Test 1: Puesta a cero dentro del rango */}
-                <div style={{ background: "rgba(0,0,0,0.02)", padding: 12, borderRadius: 8, border: "1px solid var(--surface-border)" }}>
+                <div style={{ background: "rgba(0,0,0,0.02)", padding: 12, borderRadius: 8, border: "1px solid var(--lc-line)" }}>
                   <strong className="t-small t-accent">A. Puesta a Cero Dentro del Rango</strong>
                   <p className="muted t-small" style={{ margin: "4px 0 8px" }}>
                     Carga aplicada menor al 4% Max donde el dispositivo debe poner a cero efectivamente.
@@ -1247,7 +1247,7 @@ export function CalibrationReportFormPage() {
                 </div>
 
                 {/* Test 2: Bloqueo fuera del rango del 4% */}
-                <div style={{ background: "rgba(0,0,0,0.02)", padding: 12, borderRadius: 8, border: "1px solid var(--surface-border)" }}>
+                <div style={{ background: "rgba(0,0,0,0.02)", padding: 12, borderRadius: 8, border: "1px solid var(--lc-line)" }}>
                   <strong className="t-small t-accent">B. Bloqueo Fuera del Rango (&gt; 4% Max)</strong>
                   <p className="muted t-small" style={{ margin: "4px 0 8px" }}>
                     Carga superior a {zero4PctLimit} {selectedEquipment?.unit} donde el indicador DEBE bloquear la puesta a cero.
@@ -1632,7 +1632,7 @@ export function CalibrationReportFormPage() {
                 const err = Math.abs(correctedError);
                 const ok = eccentricityConfig ? err <= (eccentricityConfig.emt || 20) : true;
                 return (
-                  <div key={p.pos} style={{ background: "rgba(0,0,0,0.02)", padding: 10, borderRadius: 8, border: "1px solid var(--surface-border)" }}>
+                  <div key={p.pos} style={{ background: "rgba(0,0,0,0.02)", padding: 10, borderRadius: 8, border: "1px solid var(--lc-line)" }}>
                     <label>
                       {p.label}
                       <span className="muted t-small" style={{ display: "block" }}>Indicación I</span>
@@ -2168,7 +2168,7 @@ export function CalibrationReportFormPage() {
               </button>
             </div>
 
-            <div style={{ maxHeight: 320, overflowY: "auto", border: "1px solid var(--surface-border)", borderRadius: 6 }}>
+            <div style={{ maxHeight: 320, overflowY: "auto", border: "1px solid var(--lc-line)", borderRadius: 6 }}>
               {weights
                 .filter((w) =>
                   matchesSearch(weightSearch, w.code, w.certificateNumber, `${w.nominalValue} ${w.unit ?? ""}`, w.accuracyClass)

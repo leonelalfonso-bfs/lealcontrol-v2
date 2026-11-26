@@ -67,7 +67,7 @@ export function MetrologyDashboardPage() {
         <div className="card pad" style={{ borderLeft: "4px solid var(--lc-accent)" }}>
           <div className="muted">Equipos Registrados</div>
           <strong className="t-xl">{totalEquipments}</strong>
-          <div className="t-small t-strong" style={{ color: "var(--ok)", marginTop: 4 }}>
+          <div className="t-small t-strong" style={{ color: "var(--lc-ok)", marginTop: 4 }}>
             ✓ {activeEquipments} operativos en clientes
           </div>
         </div>
@@ -77,7 +77,7 @@ export function MetrologyDashboardPage() {
           <strong className="t-xl" style={{ color: expiredEquipments > 0 ? "#dc2626" : "inherit" }}>
             {expiredEquipments}
           </strong>
-          <div className="t-small t-strong" style={{ color: expiredEquipments > 0 ? "#dc2626" : "var(--ink-soft)", marginTop: 4 }}>
+          <div className="t-small t-strong" style={{ color: expiredEquipments > 0 ? "#dc2626" : "var(--lc-ink-2)", marginTop: 4 }}>
             {expiredEquipments > 0 ? "⚠️ Requieren nuevo ensayo" : "✓ Al día"}
           </div>
         </div>

@@ -706,10 +706,10 @@ export function InboxPage() {
 
         {/* Middle: Conversation Threads List */}
         <section className="message-list" style={{ display: "flex", flexDirection: "column" }}>
-          <div className="message-list-toolbar t-strong muted" style={{ padding: "12px 16px", borderBottom: "1px solid var(--surface-border)" }}>
+          <div className="message-list-toolbar t-strong muted" style={{ padding: "12px 16px", borderBottom: "1px solid var(--lc-line)" }}>
             CONVERSACIONES ({visibleConversations.length})
           </div>
-          <div style={{ padding: "8px 12px", borderBottom: "1px solid var(--surface-border)" }}>
+          <div style={{ padding: "8px 12px", borderBottom: "1px solid var(--lc-line)" }}>
             <SearchField
               value={search}
               onChange={setSearch}
@@ -733,7 +733,7 @@ export function InboxPage() {
                   alignItems: "center",
                   gap: 12,
                   padding: "14px 16px",
-                  borderBottom: "1px solid var(--surface-border)",
+                  borderBottom: "1px solid var(--lc-line)",
                   background: isActive ? "rgba(13, 148, 136, 0.08)" : "transparent",
                   cursor: "pointer",
                   transition: "background 0.15s ease",
@@ -898,7 +898,7 @@ export function InboxPage() {
                       ? `Estado: ${statusName(activity.previousValue)} → ${statusName(activity.currentValue)}`
                       : `Asignación: ${assigneeName(activity.previousValue)} → ${assigneeName(activity.currentValue)}`;
                     return (
-                      <div className="muted t-small t-center" key={item.id} style={{ alignSelf: "center", maxWidth: "85%", padding: "6px 12px", borderRadius: 12, background: "var(--surface)", border: "1px solid var(--surface-border)" }}>
+                      <div className="muted t-small t-center" key={item.id} style={{ alignSelf: "center", maxWidth: "85%", padding: "6px 12px", borderRadius: 12, background: "var(--lc-surface)", border: "1px solid var(--lc-line)" }}>
                         {detail} · {actor} · {new Date(item.at).toLocaleString("es-AR")}
                       </div>
                     );
@@ -975,7 +975,7 @@ export function InboxPage() {
                 <div ref={chatBottomRef} />
               </div>
 
-              <form onSubmit={saveNote} style={{ padding: "10px 20px", borderTop: "1px solid var(--surface-border)", background: "#fffaf0", display: "flex", gap: 8, alignItems: "center" }}>
+              <form onSubmit={saveNote} style={{ padding: "10px 20px", borderTop: "1px solid var(--lc-line)", background: "#fffaf0", display: "flex", gap: 8, alignItems: "center" }}>
                 <input
                   type="text"
                   aria-label="Nota interna"
@@ -995,11 +995,11 @@ export function InboxPage() {
                   onSubmit={handleSendDirectReply}
                   style={{
                     padding: "14px 20px",
-                    borderTop: "1px solid var(--surface-border)",
+                    borderTop: "1px solid var(--lc-line)",
                     display: "flex",
                     flexDirection: "column",
                     gap: 8,
-                    background: "var(--surface)"
+                    background: "var(--lc-surface)"
                   }}
                 >
                   {pendingAudio && (
@@ -1046,7 +1046,7 @@ export function InboxPage() {
                   </div>
                 </form>
               ) : (
-                <div style={{ padding: 14, borderTop: "1px solid var(--surface-border)", display: "flex", justifyContent: "flex-end" }}>
+                <div style={{ padding: 14, borderTop: "1px solid var(--lc-line)", display: "flex", justifyContent: "flex-end" }}>
                   <button className="btn btn-outline" onClick={() => setReply(true)}>
                     ↩ Responder Correo
                   </button>
@@ -1160,7 +1160,7 @@ export function InboxPage() {
                 </div>
               </div>
 
-              <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--surface-border)", background: "var(--surface)", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+              <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--lc-line)", background: "var(--lc-surface)", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
                 <strong className="t-small muted">Etiquetas</strong>
                 {activeTags.map((tag) => (
                   <span className="t-small t-strong" key={tag.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 8px", borderRadius: 12, background: "var(--lc-info-bg)", color: "#075985" }}>

@@ -274,7 +274,7 @@ export const ProductFormPage: React.FC = () => {
         {activeTab === "general" && (
           <div className="card pad" style={{ display: "grid", gap: "20px" }}>
             {/* Top Product Header Card with Photo & Main SKU */}
-            <div style={{ display: "grid", gridTemplateColumns: "150px 1fr", gap: "20px", alignItems: "flex-start", paddingBottom: "16px", borderBottom: "1px solid var(--surface-border)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "150px 1fr", gap: "20px", alignItems: "flex-start", paddingBottom: "16px", borderBottom: "1px solid var(--lc-line)" }}>
               {/* Photo Box */}
               <div className="t-center">
                 <div
@@ -282,8 +282,8 @@ export const ProductFormPage: React.FC = () => {
                     width: 140,
                     height: 140,
                     borderRadius: 14,
-                    border: "2px dashed var(--surface-border)",
-                    background: "var(--surface-muted)",
+                    border: "2px dashed var(--lc-line)",
+                    background: "var(--lc-surface-2)",
                     display: "grid",
                     placeItems: "center",
                     overflow: "hidden",
@@ -427,8 +427,8 @@ export const ProductFormPage: React.FC = () => {
                     gap: 10,
                     padding: "8px 14px",
                     borderRadius: 10,
-                    background: showInCatalog ? "rgba(16, 185, 129, 0.1)" : "var(--surface-muted)",
-                    border: `1px solid ${showInCatalog ? "rgba(16, 185, 129, 0.4)" : "var(--surface-border)"}`,
+                    background: showInCatalog ? "rgba(16, 185, 129, 0.1)" : "var(--lc-surface-2)",
+                    border: `1px solid ${showInCatalog ? "rgba(16, 185, 129, 0.4)" : "var(--lc-line)"}`,
                     width: "fit-content"
                   }}
                 >
@@ -439,7 +439,7 @@ export const ProductFormPage: React.FC = () => {
                     onChange={(e) => setShowInCatalog(e.target.checked)}
                     style={{ width: 16, height: 16, cursor: "pointer" }}
                   />
-                  <label htmlFor="showInCatalogPill" style={{ cursor: "pointer", color: showInCatalog ? "#047857" : "var(--ink)" }}>
+                  <label htmlFor="showInCatalogPill" style={{ cursor: "pointer", color: showInCatalog ? "#047857" : "var(--lc-ink)" }}>
                     🌐 Publicar en Catálogo Web / Carrito de Clientes (Portal B2B)
                   </label>
                 </div>
@@ -480,7 +480,7 @@ export const ProductFormPage: React.FC = () => {
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
                 {/* Sale Price Card */}
-                <div style={{ background: "white", padding: "14px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}>
+                <div style={{ background: "white", padding: "14px", borderRadius: "8px", border: "1px solid var(--lc-line)" }}>
                   <div className="t-small t-strong t-ok t-caps" style={{ marginBottom: "10px" }}>
                     🟢 PRECIO DE VENTA AL PÚBLICO
                   </div>
@@ -518,7 +518,7 @@ export const ProductFormPage: React.FC = () => {
                 </div>
 
                 {/* Purchase Cost Card */}
-                <div style={{ background: "white", padding: "14px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}>
+                <div style={{ background: "white", padding: "14px", borderRadius: "8px", border: "1px solid var(--lc-line)" }}>
                   <div className="t-small t-strong t-warn t-caps" style={{ marginBottom: "10px" }}>
                     🟠 COSTO DE REPOSICIÓN / COMPRA
                   </div>
@@ -571,8 +571,8 @@ export const ProductFormPage: React.FC = () => {
                 style={{
                   padding: "16px 20px",
                   borderRadius: 14,
-                  background: "var(--surface-muted)",
-                  border: "1px solid var(--surface-border)",
+                  background: "var(--lc-surface-2)",
+                  border: "1px solid var(--lc-line)",
                   display: "flex",
                   alignItems: "center",
                   gap: 16
@@ -593,7 +593,7 @@ export const ProductFormPage: React.FC = () => {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
               <div
                 style={{
-                  border: "1px solid var(--surface-border)",
+                  border: "1px solid var(--lc-line)",
                   padding: "16px",
                   borderRadius: "10px",
                   display: "flex",
@@ -614,7 +614,7 @@ export const ProductFormPage: React.FC = () => {
                 />
               </div>
 
-              <div style={{ border: "1px solid var(--surface-border)", padding: "16px", borderRadius: "10px", background: "white" }}>
+              <div style={{ border: "1px solid var(--lc-line)", padding: "16px", borderRadius: "10px", background: "white" }}>
                 <label>
                   Stock Mínimo de Alerta (Punto de Pedido)
                 </label>
@@ -631,7 +631,7 @@ export const ProductFormPage: React.FC = () => {
 
               <div
                 style={{
-                  border: "1px solid var(--surface-border)",
+                  border: "1px solid var(--lc-line)",
                   padding: "16px",
                   borderRadius: "10px",
                   display: "flex",
@@ -654,7 +654,7 @@ export const ProductFormPage: React.FC = () => {
 
               <div
                 style={{
-                  border: "1px solid var(--surface-border)",
+                  border: "1px solid var(--lc-line)",
                   padding: "16px",
                   borderRadius: "10px",
                   display: "flex",

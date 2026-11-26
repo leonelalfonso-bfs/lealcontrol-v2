@@ -251,7 +251,7 @@ export function GeneralLedgerPage() {
                   <tr key={idx}>
                     <td>{m.date ? new Date(m.date).toLocaleDateString("es-AR") : "-"}</td>
                     <td className="t-center t-strong">
-                      <Link to={`/contabilidad/asientos`} style={{ color: "var(--accent)" }}>
+                      <Link to={`/contabilidad/asientos`} style={{ color: "var(--lc-accent)" }}>
                         #{m.entryNumber}
                       </Link>
                     </td>

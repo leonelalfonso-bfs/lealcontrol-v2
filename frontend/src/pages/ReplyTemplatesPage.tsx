@@ -104,7 +104,7 @@ export function ReplyTemplatesPage() {
                 key={t.id}
                 style={{
                   padding: 14,
-                  border: "1px solid var(--surface-border)",
+                  border: "1px solid var(--lc-line)",
                   borderRadius: 10,
                   display: "flex",
                   justifyContent: "space-between",
@@ -117,7 +117,7 @@ export function ReplyTemplatesPage() {
                     <strong>{t.name}</strong>
                     {t.channelType && (
                       <span className="t-small muted"
-                        style={{ background: "var(--surface-muted)", padding: "2px 8px", borderRadius: 10 }}
+                        style={{ background: "var(--lc-surface-2)", padding: "2px 8px", borderRadius: 10 }}
                       >
                         {t.channelType}
                       </span>

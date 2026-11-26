@@ -169,7 +169,7 @@ export function LeadsPage() {
             </label>
           </div>
 
-          <div style={{ marginTop: 14, padding: "10px 14px", background: "var(--surface-sunken)", borderRadius: 8 }}>
+          <div style={{ marginTop: 14, padding: "10px 14px", background: "var(--lc-surface-sunken)", borderRadius: 8 }}>
             <label style={{ alignItems: "center", gap: 8, cursor: "pointer" }}>
               <input
                 type="checkbox"

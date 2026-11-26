@@ -59,7 +59,7 @@ export function LandingPage() {
   const waUrl = `https://wa.me/5493416000000?text=${waText}`;
 
   return (
-    <div style={{ background: "#f8fafc", color: "#0f172a", minHeight: "100vh", fontFamily: "var(--font-sans, system-ui, sans-serif)" }}>
+    <div style={{ background: "#f8fafc", color: "#0f172a", minHeight: "100vh", fontFamily: "var(--lc-font, system-ui, sans-serif)" }}>
       {/* Top Navbar */}
       <header style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(255, 255, 255, 0.94)", backdropFilter: "blur(16px)", borderBottom: "1px solid #e2e8f0" }}>
         <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px", height: 80, display: "flex", alignItems: "center", justifyContent: "space-between" }}>

@@ -133,7 +133,7 @@ export function ProcedureManualsPage() {
                     </td>
                     <td>
                       <div>
-                        <strong style={{ color: "var(--text-main)", display: "block" }}>{m.title}</strong>
+                        <strong style={{ color: "var(--lc-ink)", display: "block" }}>{m.title}</strong>
                         {m.description && (
                           <span className="muted t-small">
                             {m.description}

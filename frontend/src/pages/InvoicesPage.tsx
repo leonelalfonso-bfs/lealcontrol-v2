@@ -393,7 +393,7 @@ export function InvoicesPage() {
                             🔴 Pendiente
                           </span>
                           <div className="t-small"
-                            style={{ fontWeight: inv.daysOverdue > 0 ? 700 : 500, color: inv.daysOverdue > 0 ? "#dc2626" : "var(--ink-soft)", marginTop: 2 }}
+                            style={{ fontWeight: inv.daysOverdue > 0 ? 700 : 500, color: inv.daysOverdue > 0 ? "#dc2626" : "var(--lc-ink-2)", marginTop: 2 }}
                           >
                             {inv.daysOverdue > 0
                               ? `⚠️ Vencida hace ${inv.daysOverdue}d`

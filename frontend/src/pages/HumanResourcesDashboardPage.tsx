@@ -94,7 +94,7 @@ export function HumanResourcesDashboardPage() {
                       <span className="t-strong">{d.department}</span>
                       <span className="muted">{d.count} colaboradores ({pct}%)</span>
                     </div>
-                    <div style={{ height: 8, background: "var(--surface-sunken)", borderRadius: 4, overflow: "hidden" }}>
+                    <div style={{ height: 8, background: "var(--lc-surface-sunken)", borderRadius: 4, overflow: "hidden" }}>
                       <div style={{ width: `${pct}%`, height: "100%", background: "linear-gradient(90deg, #ec4899, var(--lc-violet))", borderRadius: 4 }} />
                     </div>
                   </div>
@@ -116,7 +116,7 @@ export function HumanResourcesDashboardPage() {
               style={{ display: "flex", alignItems: "center", justifyContent: "space-between", textDecoration: "none" }}
             >
               <div>
-                <strong style={{ color: "var(--text-main)", display: "block" }}>🏢 Organigrama & Descripción de Puestos</strong>
+                <strong style={{ color: "var(--lc-ink)", display: "block" }}>🏢 Organigrama & Descripción de Puestos</strong>
                 <span className="muted t-small">Definir estructura jerárquica, misiones, responsabilidades y competencias.</span>
               </div>
               <span>➔</span>
@@ -128,7 +128,7 @@ export function HumanResourcesDashboardPage() {
               style={{ display: "flex", alignItems: "center", justifyContent: "space-between", textDecoration: "none" }}
             >
               <div>
-                <strong style={{ color: "var(--text-main)", display: "block" }}>👤 Legajos Digitales de Colaboradores</strong>
+                <strong style={{ color: "var(--lc-ink)", display: "block" }}>👤 Legajos Digitales de Colaboradores</strong>
                 <span className="muted t-small">Checklist de 14 documentos (Ingreso activo + Subcategoría de Egreso).</span>
               </div>
               <span>➔</span>
@@ -140,7 +140,7 @@ export function HumanResourcesDashboardPage() {
               style={{ display: "flex", alignItems: "center", justifyContent: "space-between", textDecoration: "none" }}
             >
               <div>
-                <strong style={{ color: "var(--text-main)", display: "block" }}>📖 Manuales de Procedimientos e Instructivos</strong>
+                <strong style={{ color: "var(--lc-ink)", display: "block" }}>📖 Manuales de Procedimientos e Instructivos</strong>
                 <span className="muted t-small">Gestión documental por áreas operativas y control de versiones.</span>
               </div>
               <span>➔</span>
@@ -152,7 +152,7 @@ export function HumanResourcesDashboardPage() {
               style={{ display: "flex", alignItems: "center", justifyContent: "space-between", textDecoration: "none" }}
             >
               <div>
-                <strong style={{ color: "var(--text-main)", display: "block" }}>💰 Liquidación de Sueldos</strong>
+                <strong style={{ color: "var(--lc-ink)", display: "block" }}>💰 Liquidación de Sueldos</strong>
                 <span className="muted t-small">En reconstrucción: ley vigente y convenios configurables.</span>
               </div>
               <span>➔</span>

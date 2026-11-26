@@ -851,7 +851,7 @@ export function InvoiceFormPage() {
 
             {/* General Info Card */}
             <div className="card pad">
-              <h3 style={{ margin: "0 0 16px", borderBottom: "1px solid var(--border)", paddingBottom: 8 }}>
+              <h3 style={{ margin: "0 0 16px", borderBottom: "1px solid var(--lc-line)", paddingBottom: 8 }}>
                 1. Información General & Receptor
               </h3>
 
@@ -1291,7 +1291,7 @@ export function InvoiceFormPage() {
 
           {/* Right Sticky Totals Sidebar */}
           <div className="card pad" style={{ position: "sticky", top: 20 }}>
-            <h3 style={{ margin: "0 0 16px", borderBottom: "1px solid var(--border)", paddingBottom: 8 }}>
+            <h3 style={{ margin: "0 0 16px", borderBottom: "1px solid var(--lc-line)", paddingBottom: 8 }}>
               Resumen de Totales
             </h3>
 
@@ -1334,7 +1334,7 @@ export function InvoiceFormPage() {
                 </div>
               )}
 
-              <hr style={{ margin: "8px 0", borderColor: "var(--border)" }} />
+              <hr style={{ margin: "8px 0", borderColor: "var(--lc-line)" }} />
 
               <div className="row t-strong" style={{ justifyContent: "space-between", fontSize: "1.25rem" }}>
                 <span>TOTAL:</span>

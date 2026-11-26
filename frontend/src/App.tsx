@@ -218,7 +218,7 @@ import { DEVELOPMENT_ACCESS, resolveActiveModule, resolveAllowedModuleIds, visib
 
 function PageFallback() {
   return (
-    <div style={{ padding: 40, textAlign: "center", color: "var(--ink-soft, #64748b)" }}>
+    <div style={{ padding: 40, textAlign: "center", color: "var(--lc-ink-2, #64748b)" }}>
       Cargando…
     </div>
   );
@@ -667,7 +667,7 @@ export function App() {
               className="card pad"
               role="dialog"
               aria-modal="true"
-              style={{ maxWidth: 420, margin: "12vh auto", background: "var(--surface)" }}
+              style={{ maxWidth: 420, margin: "12vh auto", background: "var(--lc-surface)" }}
               onClick={(e) => e.stopPropagation()}
             >
               <h3 style={{ marginTop: 0 }}>Salir del modo presentación</h3>

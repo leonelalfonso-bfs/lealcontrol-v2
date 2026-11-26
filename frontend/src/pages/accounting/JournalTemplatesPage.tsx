@@ -82,7 +82,7 @@ export function JournalTemplatesPage() {
         <div className="card pad" style={{ borderLeft: "4px solid var(--lc-accent)" }}>
           <div className="muted">Total Modelos Configurados</div>
           <strong className="t-xl">{templates.length}</strong>
-          <div className="t-small t-strong" style={{ color: "var(--ok)", marginTop: 4 }}>
+          <div className="t-small t-strong" style={{ color: "var(--lc-ok)", marginTop: 4 }}>
             ✓ {templates.filter((t) => t.status === "Active").length} activos en ejecución
           </div>
         </div>

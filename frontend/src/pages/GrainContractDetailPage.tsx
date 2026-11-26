@@ -174,7 +174,7 @@ export function GrainContractDetailPage() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: "flex", gap: "8px", borderBottom: "1px solid var(--surface-border)", paddingBottom: "8px" }}>
+      <div style={{ display: "flex", gap: "8px", borderBottom: "1px solid var(--lc-line)", paddingBottom: "8px" }}>
         <button
           className={`btn ${activeTab === "resumen" ? "primary" : "secondary"}`}
           onClick={() => setActiveTab("resumen")}
@@ -201,8 +201,8 @@ export function GrainContractDetailPage() {
       {/* Tab Content */}
       {activeTab === "resumen" && (
         <div style={{
-          background: "var(--surface-canvas)",
-          border: "1px solid var(--surface-border)",
+          background: "var(--lc-canvas)",
+          border: "1px solid var(--lc-line)",
           borderRadius: "20px",
           padding: "24px",
           display: "grid",
@@ -249,8 +249,8 @@ export function GrainContractDetailPage() {
 
       {activeTab === "entregas" && (
         <div style={{
-          background: "var(--surface-canvas)",
-          border: "1px solid var(--surface-border)",
+          background: "var(--lc-canvas)",
+          border: "1px solid var(--lc-line)",
           borderRadius: "20px",
           padding: "20px"
         }}>
@@ -295,8 +295,8 @@ export function GrainContractDetailPage() {
 
       {activeTab === "fijaciones" && (
         <div style={{
-          background: "var(--surface-canvas)",
-          border: "1px solid var(--surface-border)",
+          background: "var(--lc-canvas)",
+          border: "1px solid var(--lc-line)",
           borderRadius: "20px",
           padding: "20px"
         }}>
@@ -340,7 +340,7 @@ export function GrainContractDetailPage() {
       {showFixModal && (
         <div className="modal-backdrop">
           <div style={{
-            background: "var(--surface-canvas)",
+            background: "var(--lc-canvas)",
             borderRadius: "20px",
             padding: "24px",
             maxWidth: "480px",
@@ -405,7 +405,7 @@ export function GrainContractDetailPage() {
       {showDelModal && (
         <div className="modal-backdrop">
           <div style={{
-            background: "var(--surface-canvas)",
+            background: "var(--lc-canvas)",
             borderRadius: "20px",
             padding: "24px",
             maxWidth: "560px",

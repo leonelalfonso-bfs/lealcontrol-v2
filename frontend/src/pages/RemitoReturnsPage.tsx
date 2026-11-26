@@ -191,7 +191,7 @@ export function RemitoReturnsPage() {
         </div>
         {returns.length === 0 ? <p className="muted">Todavía no hay devoluciones.</p> :
           <div className="stack" style={{ marginTop: 12 }}>
-            {returns.map((r) => <div key={r.id} className="row" style={{ justifyContent: "space-between", borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+            {returns.map((r) => <div key={r.id} className="row" style={{ justifyContent: "space-between", borderTop: "1px solid var(--lc-line)", paddingTop: 12 }}>
               <span><strong>{r.returnNumber}</strong> · {new Date(r.receivedAtUtc).toLocaleDateString("es-AR")} · {r.reason} · {r.items.length} ítem(s)</span>
               <button type="button" className="btn ghost" onClick={() => setSelectedId(r.id)}>Ver constancia</button>
             </div>)}

@@ -51,7 +51,7 @@ export function NoticesBell() {
               ))}
             </div>
           ))}
-          <div className="t-small" style={{ marginTop: 12, borderTop: "1px solid var(--surface-border)", paddingTop: 8 }}>
+          <div className="t-small" style={{ marginTop: 12, borderTop: "1px solid var(--lc-line)", paddingTop: 8 }}>
             <Link to="/mi-perfil/avisos" onClick={() => setOpen(false)}>Ver todos y elegir qué recibir →</Link>
           </div>
         </div>

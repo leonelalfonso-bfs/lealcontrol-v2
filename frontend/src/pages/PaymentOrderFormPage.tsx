@@ -612,7 +612,7 @@ export function PaymentOrderFormPage() {
                 style={{
                   marginTop: 12,
                   padding: 10,
-                  background: "var(--surface-soft, var(--lc-surface-2))",
+                  background: "var(--lc-surface-2, var(--lc-surface-2))",
                   borderRadius: 6,
                   fontSize: "0.84rem",
                   display: "flex",
@@ -842,7 +842,7 @@ export function PaymentOrderFormPage() {
                 <strong>{money(totalPaymentLines)}</strong>
               </div>
 
-              <hr style={{ border: "none", borderTop: "1px solid var(--border, var(--lc-line))", margin: "4px 0" }} />
+              <hr style={{ border: "none", borderTop: "1px solid var(--lc-line, var(--lc-line))", margin: "4px 0" }} />
 
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span className="t-strong" style={{ fontSize: "1.05rem" }}>Total Orden de Pago:</span>

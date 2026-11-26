@@ -805,9 +805,9 @@ export function CollectionReceiptsWorkspacePage() {
         >
           <div
             className="card pad"
-            style={{ width: "100%", maxWidth: 720, maxHeight: "90vh", overflowY: "auto", backgroundColor: "var(--surface, var(--lc-surface))" }}
+            style={{ width: "100%", maxWidth: 720, maxHeight: "90vh", overflowY: "auto", backgroundColor: "var(--lc-surface, var(--lc-surface))" }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--surface-border)", paddingBottom: 12, marginBottom: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--lc-line)", paddingBottom: 12, marginBottom: 16 }}>
               <div>
                 <span className="eyebrow">RECIBO OFICIAL DE COBRANZA</span>
                 <h2 style={{ margin: 0 }}>{selectedReceiptDetail.receiptNumber}</h2>
@@ -872,7 +872,7 @@ export function CollectionReceiptsWorkspacePage() {
               </table>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--surface-border)", paddingTop: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--lc-line)", paddingTop: 12 }}>
               <strong>Total cobrado</strong>
               <strong style={{ fontSize: "1.2rem" }}>
                 {money(selectedReceiptDetail.amount, selectedReceiptDetail.currency)}
