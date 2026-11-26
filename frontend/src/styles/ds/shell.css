@@ -1,25 +1,47 @@
-/* Estructura de la aplicación "Instrumento": menú lateral, barra superior y buscador ⌘K. */
+/*
+ * Estructura de la aplicación: menú lateral, barra superior y buscador ⌘K.
+ * Estilo "Relieve y vidrio" (tokens en ds/tokens.css): el menú es una región grafito de vidrio que flota
+ * sobre el fondo; la barra superior es vidrio claro. Los colores del menú salen de redefinir los --ins-*
+ * dentro de .ins-sidebar, así sus componentes no necesitan reglas propias para el fondo oscuro.
+ */
 
 .ins-shell {
   display: grid;
-  grid-template-columns: 264px minmax(0, 1fr);
+  grid-template-columns: 278px minmax(0, 1fr);
   min-height: 100vh;
-  background: var(--ins-canvas);
+  background: transparent;
   color: var(--ins-ink);
 }
 
 /* ---------------- Menú lateral ---------------- */
 .ins-sidebar {
+  /* Región oscura: los componentes del menú leen estos valores. */
+  --ins-surface: transparent;
+  --ins-surface-2: var(--lc-chrome-hover);
+  --ins-line: var(--lc-chrome-line);
+  --ins-line-2: rgba(255, 255, 255, 0.16);
+  --ins-ink: var(--lc-ink-on-dark);
+  --ins-ink-2: var(--lc-ink-on-dark-2);
+  --ins-ink-3: var(--lc-ink-on-dark-3);
+  --ins-accent: var(--lc-orange-400);
+  --ins-accent-soft: rgba(242, 140, 40, 0.16);
+  --ins-accent-ink: #ffc48a;
+  --mod-ink-mix: 40%;
   position: sticky;
-  top: 0;
-  height: 100vh;
+  top: 14px;
+  height: calc(100vh - 28px);
+  margin: 14px 0 14px 14px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 16px 12px 12px;
-  background: var(--ins-surface);
-  border-right: 1px solid var(--ins-line);
+  padding: 18px 12px 12px;
+  border-radius: 22px;
+  background: var(--lc-chrome);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  backdrop-filter: blur(24px) saturate(140%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 20px 40px rgba(20, 22, 26, 0.28);
+  color: var(--ins-ink);
   overflow: hidden;
   z-index: 40;
 }
@@ -201,7 +223,7 @@
 }
 .ins-nav__item:hover { background: var(--ins-surface-2); color: var(--ins-ink); }
 .ins-nav__item:focus-visible { outline: 2px solid var(--ins-accent); outline-offset: -2px; }
-.ins-nav__item.active { background: var(--ins-accent-soft); color: var(--ins-accent-ink); font-weight: 600; }
+.ins-nav__item.active { background: var(--ins-accent-soft); color: #ffffff; font-weight: 700; }
 .ins-nav__item.active::before {
   content: "";
   position: absolute;
@@ -220,10 +242,11 @@
   line-height: 1;
   padding: 3px 7px;
   border-radius: 99px;
-  background: var(--ins-accent);
-  color: #fff;
+  background: var(--lc-accent-fill);
+  box-shadow: var(--lc-accent-relief);
+  color: var(--lc-on-accent);
+  font-weight: 700;
 }
-:root[data-color-mode="dark"] .ins-nav__badge { color: #052e21; }
 
 .ins-sidebar__footer { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid var(--ins-line); }
 .ins-presentation {
@@ -275,8 +298,8 @@
 
 /* ---------------- Barra superior ---------------- */
 .ins-main-column { min-width: 0; display: flex; flex-direction: column; }
-/* La barra anterior vivía dentro de .main y daba el aire superior: ahora lo da la columna. */
-html:root body .ins-main-column > main.main { padding-top: 24px !important; }
+/* Área de trabajo de cada pantalla. */
+.ins-main-column > main.main { flex: 1; min-width: 0; padding: 22px 28px 40px 18px; }
 .ins-topbar {
   position: sticky;
   top: 0;
@@ -287,10 +310,12 @@ html:root body .ins-main-column > main.main { padding-top: 24px !important; }
   min-height: 56px;
   padding: 10px 28px;
   box-sizing: border-box;
-  background: color-mix(in srgb, var(--ins-surface) 88%, transparent);
-  backdrop-filter: saturate(160%) blur(10px);
-  -webkit-backdrop-filter: saturate(160%) blur(10px);
-  border-bottom: 1px solid var(--ins-line);
+  margin: 14px 14px 0 18px;
+  border-radius: 20px;
+  background: var(--lc-surface-glass);
+  -webkit-backdrop-filter: var(--lc-blur);
+  backdrop-filter: var(--lc-blur);
+  box-shadow: var(--lc-raise-1);
 }
 .ins-topbar__menu { display: none !important; }
 .ins-crumbs {
@@ -366,9 +391,11 @@ html:root body .ins-main-column > main.main { padding-top: 24px !important; }
   gap: 7px;
   height: 36px;
   padding: 0 12px 0 11px;
-  border-radius: 9px;
-  background: var(--ins-ink);
-  color: var(--ins-surface);
+  border-radius: 11px;
+  background: var(--lc-accent-fill);
+  box-shadow: var(--lc-accent-relief);
+  color: var(--lc-on-accent);
+  font-weight: 700;
   font-weight: 600;
   font-size: 13px;
   cursor: pointer;
@@ -470,6 +497,9 @@ html:root body .ins-main-column > main.main { padding-top: 24px !important; }
     top: 0;
     bottom: 0;
     width: min(300px, 86vw);
+    height: auto;
+    margin: 0;
+    border-radius: 0 22px 22px 0;
     transform: translateX(-102%);
     transition: transform 200ms var(--ins-ease);
     box-shadow: var(--ins-shadow-3);
@@ -482,8 +512,8 @@ html:root body .ins-main-column > main.main { padding-top: 24px !important; }
     z-index: 35;
     background: rgba(12, 16, 14, 0.35);
   }
-  .ins-topbar { padding: 10px 16px; }
-  html:root body .ins-main-column > main.main { padding-top: 16px !important; }
+  .ins-topbar { margin: 10px 10px 0; padding: 10px 16px; }
+  .ins-main-column > main.main { padding: 16px 14px 32px; }
   .ins-topbar__menu { display: grid !important; }
   .ins-search-pill { min-width: 0; width: 36px; padding: 0; justify-content: center; }
   .ins-search-pill span, .ins-search-pill kbd { display: none; }
@@ -522,6 +552,8 @@ html:root body .ins-main-column > main.main { padding-top: 24px !important; }
 :root[data-color-mode="dark"] .ins-cmdk__glyph--hue {
   color: color-mix(in srgb, var(--mod) 62%, white);
 }
+/* En el menú grafito el ícono del módulo va aclarado, como en el modo oscuro. */
+.ins-sidebar .ins-nav__tile { color: color-mix(in srgb, var(--mod) 62%, white); }
 .ins-nav__tile { width: 26px; height: 26px; }
 .ins-menu-item__tile { width: 26px; height: 26px; }
 .ins-cmdk__glyph--hue { border-color: transparent; }
@@ -531,9 +563,9 @@ html:root body .ins-main-column > main.main { padding-top: 24px !important; }
 /* Módulo donde estás: pastilla llena con su color. */
 .ins-nav__module--current .ins-nav__tile,
 .ins-nav__module--solo.active .ins-nav__tile {
-  background: var(--mod);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--mod) 78%, white), var(--mod));
   color: #fff;
-  box-shadow: 0 2px 8px -2px color-mix(in srgb, var(--mod) 55%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 4px 12px -2px color-mix(in srgb, var(--mod) 60%, transparent);
 }
 .ins-nav__module--solo.active {
   background: color-mix(in srgb, var(--mod) 10%, transparent);
@@ -543,24 +575,60 @@ html:root body .ins-main-column > main.main { padding-top: 24px !important; }
 /* Pantallas del módulo: el activo toma el color del módulo (texto oscurecido para el contraste). */
 .ins-nav__items { margin-left: 20px; border-left-color: color-mix(in srgb, var(--mod) 28%, var(--ins-line)); }
 .ins-nav__item.active {
-  background: color-mix(in srgb, var(--mod) 11%, transparent);
-  color: color-mix(in srgb, var(--mod) var(--mod-ink-mix), var(--ins-ink));
+  background: color-mix(in srgb, var(--mod) 22%, transparent);
+  color: color-mix(in srgb, var(--mod) var(--mod-ink-mix), white);
 }
-:root[data-color-mode="dark"] .ins-nav__item.active { color: color-mix(in srgb, var(--mod) 55%, white); }
 .ins-nav__item.active::before { background: var(--mod); }
 
 /* Ubicación: pastilla del módulo actual y una línea fina con su color sobre la barra. */
 .ins-crumbs__tile { width: 24px; height: 24px; --mod: var(--mod-current); }
-.ins-topbar { box-shadow: inset 0 2px 0 var(--mod-current); }
+.ins-topbar { box-shadow: var(--lc-raise-1), inset 0 2px 0 var(--mod-current); }
 
 /* Avatar con degradé de marca. */
-.ins-avatar { background: linear-gradient(135deg, #10b981, #0e7490); color: #fff; }
+.ins-avatar { background: var(--lc-accent-fill); box-shadow: var(--lc-accent-relief); color: var(--lc-on-accent); }
 
 @media print {
   .ins-sidebar, .ins-topbar, .ins-backdrop { display: none !important; }
   .ins-shell { display: block; background: none; }
+  .ins-main-column > main.main { padding: 0 !important; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .ins-cmdk, .ins-cmdk-overlay, .ins-popover, .ins-sidebar, .ins-nav__chevron { animation: none !important; transition: none !important; }
+}
+
+/* ---------------- Avisos del pie del menú (Mis avisos, Comunicaciones) ---------------- */
+.ins-bell { position: relative; width: 100%; }
+.ins-bell__button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 10px 0 12px;
+  border: none;
+  border-radius: 12px;
+  background: var(--lc-chrome-hover);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  color: var(--ins-ink-2);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+}
+.ins-bell__button:hover { background: rgba(255, 255, 255, 0.12); color: var(--ins-ink); }
+.ins-bell__button--alert { background: rgba(242, 140, 40, 0.16); color: var(--ins-ink); }
+.ins-bell__label { display: flex; align-items: center; gap: 8px; }
+.ins-bell__count { min-width: 22px; padding: 2px 7px; border-radius: 999px; background: var(--lc-accent-fill); box-shadow: var(--lc-accent-relief); color: var(--lc-on-accent); font-size: 11.5px; font-weight: 800; text-align: center; }
+/* La lista se abre hacia arriba, fuera del grafito: vuelve a los colores claros. */
+.ins-bell__panel {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  max-height: 420px;
+  border-radius: 16px;
+  background: var(--lc-surface);
+  box-shadow: var(--lc-raise-3);
+  color: var(--lc-ink);
 }

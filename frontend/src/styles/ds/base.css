@@ -1,0 +1,122 @@
+/* LealControl · base: documento, tipografía, campos y tablas. Solo variables de tokens.css. */
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html,
+body,
+#root { min-height: 100%; margin: 0; }
+
+body {
+  font-family: var(--lc-font);
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--lc-ink);
+  -webkit-font-smoothing: antialiased;
+  background-color: var(--lc-canvas);
+  /* Luces del fondo: le dan algo que mostrar al vidrio. Fijas, no se mueven con el scroll. */
+  background-image:
+    radial-gradient(720px 560px at 100% -8%, var(--lc-glow-1), transparent 70%),
+    radial-gradient(640px 520px at 30% 110%, var(--lc-glow-2), transparent 70%),
+    radial-gradient(520px 420px at 72% 62%, var(--lc-glow-3), transparent 70%);
+  background-attachment: fixed;
+}
+
+h1, h2, h3, h4 { margin: 0 0 0.4em; color: var(--lc-ink); letter-spacing: -0.015em; line-height: 1.2; }
+h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.025em; }
+h2 { font-size: 18px; font-weight: 800; }
+h3 { font-size: 15.5px; font-weight: 700; }
+h4 { font-size: 14px; font-weight: 700; }
+p { margin: 0 0 0.75em; }
+strong, b { font-weight: 700; }
+small { font-size: 12.5px; }
+code, kbd, samp { font-family: var(--lc-font-mono); font-size: 0.92em; }
+hr { border: none; border-top: 1px solid var(--lc-line); margin: 16px 0; }
+
+a { color: var(--lc-accent-strong); text-decoration: none; }
+a:hover { color: var(--lc-accent-ink); text-decoration: underline; text-underline-offset: 3px; }
+
+::selection { background: var(--lc-orange-300); color: var(--lc-orange-ink); }
+
+:focus-visible { outline: none; box-shadow: var(--lc-focus); border-radius: var(--lc-radius-xs); }
+
+/* Números: alineados en columnas */
+table, .num, input[type="number"] { font-variant-numeric: tabular-nums; }
+
+/* ---------- Campos ---------- */
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--lc-ink-2);
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  min-height: var(--lc-control-h);
+  padding: 8px 12px;
+  border: 1px solid var(--lc-line-2);
+  border-radius: var(--lc-radius-control);
+  background: var(--lc-surface);
+  box-shadow: var(--lc-sink);
+  color: var(--lc-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  outline: none;
+  transition: border-color 140ms var(--lc-ease), box-shadow 140ms var(--lc-ease);
+}
+textarea { min-height: 88px; resize: vertical; line-height: 1.45; }
+input::placeholder,
+textarea::placeholder { color: var(--lc-ink-3); font-weight: 400; }
+input:hover,
+select:hover,
+textarea:hover { border-color: var(--lc-graphite-400); }
+input:focus,
+select:focus,
+textarea:focus { border-color: var(--lc-accent); box-shadow: var(--lc-sink), var(--lc-focus); }
+input:disabled,
+select:disabled,
+textarea:disabled { background: var(--lc-surface-2); color: var(--lc-ink-3); cursor: not-allowed; }
+input[type="checkbox"],
+input[type="radio"] { width: auto; min-height: 0; padding: 0; box-shadow: none; accent-color: var(--lc-accent); cursor: pointer; }
+input[type="color"] { padding: 2px; }
+button,
+input,
+select,
+textarea { font-family: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+
+/* ---------- Tablas ---------- */
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+th {
+  padding: 12px 14px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--lc-ink-3);
+  border-bottom: 1px solid var(--lc-line);
+  background: var(--lc-surface-2);
+  white-space: nowrap;
+}
+td { padding: 12px 14px; border-bottom: 1px solid var(--lc-line); color: var(--lc-ink); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: var(--lc-orange-50); }
+:root[data-color-mode="dark"] tbody tr:hover td { background: rgba(242, 140, 40, 0.06); }
+
+/* ---------- Barras de desplazamiento ---------- */
+* { scrollbar-width: thin; scrollbar-color: var(--lc-line-2) transparent; }
+
+/* ---------- Impresión: papel blanco, sin marco de la aplicación ---------- */
+@media print {
+  html, body, #root { background: #fff !important; color: #000 !important; }
+  .no-print { display: none !important; }
+  @page { margin: 12mm; }
+}

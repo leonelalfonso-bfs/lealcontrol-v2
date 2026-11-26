@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
+import { Icon } from "./ui/Icon";
 import {
   enableBrowserNotifications,
   getNotificationPermission,
@@ -67,62 +68,27 @@ export function CommunicationsNotificationBell() {
   const canUseDesktop = isBrowserNotificationsSupported();
 
   return (
-    <div ref={ref} style={{ position: "relative", width: "100%" }}>
+    <div ref={ref} className="ins-bell">
       <button
         type="button"
         onClick={() => {
           setOpen((v) => !v);
           load();
         }}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          width: "100%",
-          padding: "8px 12px",
-          borderRadius: 10,
-          border: hasAlert ? "1px solid #fbbf24" : "1px solid var(--surface-border)",
-          background: hasAlert ? "rgba(251, 191, 36, 0.12)" : "var(--surface-muted)",
-          cursor: "pointer",
-          fontSize: "0.82rem",
-          fontWeight: 700,
-          color: "var(--ink)"
-        }}
+        className={`ins-bell__button${hasAlert ? " ins-bell__button--alert" : ""}`}
         title="Notificaciones de comunicaciones"
       >
-        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span>🔔</span>
+        <span className="ins-bell__label">
+          <Icon name="bell" size={16} />
           <span>Comunicaciones</span>
         </span>
-        {hasAlert && (
-          <span
-            style={{
-              background: "#dc2626",
-              color: "#fff",
-              borderRadius: 10,
-              padding: "1px 7px",
-              fontSize: "0.72rem",
-              minWidth: 20,
-              textAlign: "center"
-            }}
-          >
-            {badgeCount > 99 ? "99+" : badgeCount}
-          </span>
-        )}
+        {hasAlert && <span className="ins-bell__count">{badgeCount > 99 ? "99+" : badgeCount}</span>}
       </button>
 
       {open && (
         <div
+          className="ins-bell__panel"
           style={{
-            position: "absolute",
-            bottom: "calc(100% + 8px)",
-            left: 0,
-            right: 0,
-            zIndex: 50,
-            background: "var(--surface)",
-            border: "1px solid var(--surface-border)",
-            borderRadius: 12,
-            boxShadow: "0 8px 30px rgba(0,0,0,0.15)",
             maxHeight: 420,
             overflow: "hidden",
             display: "flex",

@@ -8,7 +8,6 @@ import { moduleHue, resolveAllowedModuleIds } from "../app/moduleRegistry";
 import { Icon, type IconName } from "../components/ui/Icon";
 import { useAuth } from "../context/AuthContext";
 import { withCollections, type ReceiptForImputation } from "../lib/receivables";
-import "../styles/instrumento.css";
 import "./today.css";
 
 import { todayAr } from "../lib/dates";

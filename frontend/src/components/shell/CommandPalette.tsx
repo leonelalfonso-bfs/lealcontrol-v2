@@ -8,8 +8,6 @@ import { highlightSearch, matchesSearch, parseSearch, type SearchToken } from ".
 import { useDebouncedValue } from "../../lib/useDebouncedValue";
 import { formatCuit, formatProductPrice } from "../pickers";
 import { Icon, type IconName } from "../ui/Icon";
-import "../../styles/instrumento.css";
-import "../../styles/shell.css";
 
 export type RecentPage = { path: string; title: string; moduleLabel: string; glyph: IconName; moduleId?: string };
 

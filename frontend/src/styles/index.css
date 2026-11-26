@@ -1,0 +1,15 @@
+/*
+ * LealControl · hoja de estilos de la aplicación (única entrada, se importa en main.tsx).
+ * Orden: tokens → base → componentes → controles → estructura → módulos.
+ * Estilos de un documento impreso o de una pantalla puntual viven junto a ese componente (por ejemplo
+ * components/quoteDocument.css) y también usan los tokens.
+ */
+@import "./ds/tokens.css";
+@import "./ds/base.css";
+@import "./ds/components.css";
+@import "./ds/controls.css";
+@import "./ds/shell.css";
+@import "./modules/crm.css";
+@import "./modules/communications.css";
+@import "./modules/production.css";
+@import "./modules/help.css";

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../api/client";
 import type { MyNotices } from "../../api/types";
+import { Icon } from "../ui/Icon";
 
 const REFRESH_MS = 5 * 60_000;
 
@@ -28,26 +29,15 @@ export function NoticesBell() {
   const total = notices?.total ?? 0;
   return (
     // Va al pie del menú lateral: botón a lo ancho y la lista se abre hacia arriba, como la de Comunicaciones.
-    <div ref={ref} style={{ position: "relative", width: "100%" }}>
+    <div ref={ref} className="ins-bell">
       <button type="button" aria-label={`Mis avisos: ${total}`} title="Mis avisos" onClick={() => setOpen(!open)}
-        style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "8px 12px",
-          borderRadius: 10, border: total > 0 ? "1px solid #fbbf24" : "1px solid var(--surface-border)",
-          background: total > 0 ? "rgba(251, 191, 36, 0.12)" : "var(--surface-muted)", cursor: "pointer",
-          fontSize: "0.82rem", fontWeight: 700, color: "var(--ink)"
-        }}>
-        <span style={{ display: "flex", alignItems: "center", gap: 8 }}><span>🔔</span><span>Mis avisos</span></span>
-        {total > 0 && (
-          <span style={{ background: "#dc2626", color: "#fff", borderRadius: 10, padding: "1px 7px", fontSize: "0.72rem", minWidth: 20, textAlign: "center" }}>
-            {total > 99 ? "99+" : total}
-          </span>
-        )}
+        className={`ins-bell__button${total > 0 ? " ins-bell__button--alert" : ""}`}>
+        <span className="ins-bell__label"><Icon name="bell" size={16} /><span>Mis avisos</span></span>
+        {total > 0 && <span className="ins-bell__count">{total > 99 ? "99+" : total}</span>}
       </button>
       {open && (
-        <div style={{
-          position: "absolute", bottom: "calc(100% + 8px)", left: 0, right: 0, zIndex: 50, background: "var(--surface)",
-          border: "1px solid var(--surface-border)", borderRadius: 12, boxShadow: "0 8px 30px rgba(0,0,0,0.15)",
-          maxHeight: 420, overflowY: "auto", padding: "12px 14px"
+        <div className="ins-bell__panel" style={{
+          overflowY: "auto", padding: "12px 14px"
         }}>
           <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>Mis avisos</div>
           {total === 0 ? <p className="muted" style={{ margin: "8px 0", fontSize: "0.82rem" }}>No tenés avisos pendientes.</p> : notices!.groups.map((g) => (

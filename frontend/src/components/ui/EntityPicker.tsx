@@ -11,7 +11,6 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { filterBySearch, highlightSearch, parseSearch, type SearchToken } from "../../lib/search";
-import "../../styles/instrumento.css";
 
 export type EntityPickerProps<T> = {
   /** Id seleccionado ("" o null si no hay selección). */

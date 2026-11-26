@@ -1,0 +1,151 @@
+/*
+ * LealControl · estilos del módulo CRM: embudo de oportunidades, ficha y actividades.
+ * Solo reglas propias del módulo; botones, tarjetas, tablas y campos vienen de ds/components.css.
+ */
+
+.pipeline {display:grid;grid-template-columns:repeat(6,minmax(280px,1fr));gap:16px;overflow-x:auto;padding-bottom:16px}
+.pipeline-col {background:#f0f5f8a6;border:1px solid var(--surface-border);border-radius:var(--radius-sm);padding:14px;display:flex;flex-direction:column;gap:12px;min-height:500px}
+.opp-card {background:#fff;border-radius:var(--radius-sm);padding:14px;box-shadow:0 4px 12px #0f172a0d;border:1px solid var(--line);cursor:grab;transition:transform .15s ease,box-shadow .15s ease;display:flex;flex-direction:column;gap:6px}
+.opp-card:hover {transform:translateY(-2px);box-shadow:0 8px 20px #0f172a1a}
+.pipeline-col.drop-ready {border-style:dashed;border-color:var(--primary);background:#0a7a6a0a}
+.pipeline-head {display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.pipeline-head h3 {margin:0;font-size:1.05rem;font-weight:700;color:var(--ink)}
+.pipeline-total {font-size:.85rem;margin-bottom:8px;font-weight:600}
+.crm-help h2, .opportunity-workspace h2 {margin: 0 0 5px; font-size: 1.05rem;}
+.crm-pipeline {grid-template-columns: repeat(5, minmax(250px, 1fr)); align-items: stretch; overflow-x: auto; padding-bottom: 12px;}
+.crm-pipeline .pipeline-col {min-height: 560px; border-top: 3px solid var(--surface-border);}
+.crm-pipeline .stage-discovery {border-top-color: #5b8def;}
+.crm-pipeline .stage-proposal {border-top-color: #8b6bd6;}
+.crm-pipeline .stage-negotiation {border-top-color: #e2a84b;}
+.crm-pipeline .stage-won {border-top-color: #58b985;}
+.crm-pipeline .stage-lost {border-top-color: #d76b65;}
+.crm-pipeline .pipeline-head {align-items: flex-start;}
+.crm-pipeline .pipeline-head h3 {margin: 0 0 4px;}
+.crm-pipeline .pipeline-head p {margin: 0; max-width: 190px; color: var(--ink-soft); font-size: .74rem; line-height: 1.35;}
+.pipeline-cards {display: grid; align-content: start; gap: 10px; margin-top: 12px;}
+.opp-card-title {display: block; margin-bottom: 8px; color: var(--ink); font-weight: 800; text-decoration: none;}
+.opp-card-title:hover {color: var(--brand-accent);}
+.opp-amount {display: block; margin-bottom: 8px; color: var(--ink-soft); font-size: .9rem;}
+.proposal-chip {display: block; margin: 10px 0; padding: 7px 9px; border-radius: 8px; background: color-mix(in srgb, var(--brand-accent) 9%, white); color: var(--brand-accent); font-size: .76rem; font-weight: 700; text-decoration: none;}
+.loss-reason {margin-top: 8px; color: #a43d37; font-size: .78rem;}
+.empty-col {padding: 28px 10px; border: 1px dashed var(--surface-border); border-radius: 10px; text-align: center; color: var(--ink-soft); font-size: .8rem;}
+.transition-dialog {display: grid; gap: 16px;}
+.transition-dialog label {display: grid; gap: 6px;}
+.opportunity-summary {display: grid; grid-template-columns: repeat(5, minmax(140px, 1fr)); gap: 14px; margin-bottom: 18px;}
+.opportunity-summary > div {display: grid; gap: 5px;}
+.opportunity-layout {display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(290px, .7fr); gap: 18px; align-items: start;}
+.activity-composer {position: sticky; top: 76px;}
+.quote-row {display: flex; justify-content: space-between; padding: 12px 0; border-top: 1px solid var(--surface-border);}
+.crm-timeline {margin-top: 18px;}
+.timeline-event {position: relative; display: grid; grid-template-columns: 16px 1fr; gap: 10px; padding-bottom: 18px;}
+.timeline-event::before {content: ""; position: absolute; left: 6px; top: 14px; bottom: 0; width: 1px; background: var(--surface-border);}
+.timeline-event:last-child::before {display: none;}
+.timeline-dot {position: relative; z-index: 1; width: 13px; height: 13px; margin-top: 3px; border-radius: 50%; background: #8491a8;}
+.timeline-dot.info {background: #5b8def;}
+.timeline-dot.proposal {background: #8b6bd6;}
+.timeline-event p {margin: 3px 0;}
+.timeline-event time {color: var(--ink-soft); font-size: .72rem;}
+.crm-help li {margin-bottom: 8px;}
+@media (max-width: 1180px) {
+  .opportunity-summary {grid-template-columns: repeat(3, 1fr);}
+}
+@media (max-width: 820px) {
+  .opportunity-layout {grid-template-columns: 1fr;}
+  .activity-composer {position: static;}
+  .opportunity-summary, .help-flow {grid-template-columns: 1fr;}
+}
+.opportunities-page, .opportunity-workspace, .crm-help {--crm-blue: #4f7ee8;
+  --crm-violet: #8065d8;
+  --crm-amber: #d99a32;
+  --crm-green: #43a878;
+  --crm-red: #cf625d;}
+.opportunities-page .page-head, .opportunity-workspace .page-head, .crm-help .page-head {position: relative;
+  padding: 18px 20px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--crm-blue) 14%, var(--surface-border));
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 8% 10%, color-mix(in srgb, var(--crm-blue) 13%, transparent) 0, transparent 34%),
+    radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--crm-violet) 10%, transparent) 0, transparent 30%),
+    rgba(255, 255, 255, .5);
+  backdrop-filter: blur(18px) saturate(120%);}
+.opportunities-page .filters {border-color: color-mix(in srgb, var(--crm-blue) 12%, var(--surface-border));
+  background: rgba(255, 255, 255, .72);}
+.crm-pipeline .pipeline-col {position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, .58);}
+.crm-pipeline .stage-discovery {background: color-mix(in srgb, var(--crm-blue) 5%, rgba(255,255,255,.76));}
+.crm-pipeline .stage-proposal {background: color-mix(in srgb, var(--crm-violet) 5%, rgba(255,255,255,.76));}
+.crm-pipeline .stage-negotiation {background: color-mix(in srgb, var(--crm-amber) 6%, rgba(255,255,255,.76));}
+.crm-pipeline .stage-won {background: color-mix(in srgb, var(--crm-green) 6%, rgba(255,255,255,.76));}
+.crm-pipeline .stage-lost {background: color-mix(in srgb, var(--crm-red) 5%, rgba(255,255,255,.76));}
+.crm-pipeline .stage-discovery .count-badge {background: color-mix(in srgb, var(--crm-blue) 15%, white); color: #315da9;}
+.crm-pipeline .stage-proposal .count-badge {background: color-mix(in srgb, var(--crm-violet) 15%, white); color: #6246b4;}
+.crm-pipeline .stage-negotiation .count-badge {background: color-mix(in srgb, var(--crm-amber) 18%, white); color: #9a6515;}
+.crm-pipeline .stage-won .count-badge {background: color-mix(in srgb, var(--crm-green) 17%, white); color: #267a54;}
+.crm-pipeline .stage-lost .count-badge {background: color-mix(in srgb, var(--crm-red) 14%, white); color: #a6403c;}
+.crm-pipeline .opp-card {border: 1px solid rgba(121, 139, 175, .2);
+  background: rgba(255, 255, 255, .86);
+  transition: transform .18s ease, border-color .18s ease, background .18s ease;}
+.crm-pipeline .opp-card:hover {transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--crm-blue) 32%, var(--surface-border));
+  background: rgba(255, 255, 255, .98);}
+.proposal-chip {border-left: 3px solid var(--crm-violet);
+  background: color-mix(in srgb, var(--crm-violet) 10%, white);
+  color: #6046b0;}
+.opportunity-summary {border-color: color-mix(in srgb, var(--crm-blue) 18%, var(--surface-border));
+  background: rgba(255, 255, 255, .76);}
+.opportunity-summary > div {padding: 10px 12px;
+  border-left: 3px solid color-mix(in srgb, var(--crm-blue) 65%, white);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--crm-blue) 4%, white);}
+.opportunity-summary > div:nth-child(2) {border-left-color: var(--crm-green); background: color-mix(in srgb, var(--crm-green) 5%, white);}
+.opportunity-summary > div:nth-child(3) {border-left-color: var(--crm-violet); background: color-mix(in srgb, var(--crm-violet) 5%, white);}
+.opportunity-summary > div:nth-child(4) {border-left-color: var(--crm-amber); background: color-mix(in srgb, var(--crm-amber) 5%, white);}
+.opportunity-summary > div:nth-child(5) {border-left-color: var(--crm-red); background: color-mix(in srgb, var(--crm-red) 4%, white);}
+.activity-composer {border-top: 3px solid var(--crm-green);
+  background: color-mix(in srgb, var(--crm-green) 3%, rgba(255,255,255,.9));}
+.opportunity-workspace .stack > .card:first-child {border-top: 3px solid var(--crm-violet);}
+.opportunity-workspace .stack > .card:nth-child(2) {border-top: 3px solid var(--crm-blue);}
+.crm-help .help-flow {border-top: 3px solid var(--crm-blue);}
+.crm-help .help-step:nth-child(2) .help-number {background: var(--crm-violet);}
+.crm-help .help-step:nth-child(3) .help-number {background: var(--crm-green);}
+.crm-help .help-step:nth-child(4) .help-number {background: var(--crm-amber);}
+.crm-help .help-step:nth-child(5) .help-number {background: #cd754d;}
+.crm-help .help-step:nth-child(6) .help-number {background: var(--crm-red);}
+.crm-help .help-grid > .card:first-child {border-top: 3px solid var(--crm-green);}
+.crm-help .help-grid > .card:last-child {border-top: 3px solid var(--crm-violet);}
+.transition-dialog {border-top: 4px solid var(--crm-violet);
+  background: rgba(252, 253, 255, .96);}
+.sales-step {display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 120px;
+  padding: 9px 10px;
+  border: 1px solid var(--surface-border);
+  border-radius: 10px;
+  background: rgba(255,255,255,.68);
+  color: var(--ink-soft);
+  font-size: .8rem;
+  font-weight: 700;}
+.sales-step > span {width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #edf1f6;
+  color: #65748d;
+  font-size: .7rem;}
+.sales-step.complete {border-color: color-mix(in srgb, #3a9a70 18%, var(--surface-border));
+  background: #edf8f2;
+  color: #357b5d;}
+.sales-step.complete > span {background: #3a9a70; color: white;}
+.sales-step.active {border-color: color-mix(in srgb, #d18435 32%, var(--surface-border));
+  background: #fff4e5;
+  color: #9a601d;}
+.sales-step.active > span {background: #d18435; color: white;}
+.customer-next-action {display: flex; justify-content: space-between; gap: 16px; align-items: center; margin-bottom: 14px; padding: 12px 14px; border: 1px solid #c5daf8; border-radius: 10px; background: #f3f8ff;}
+.customer-next-action strong {display: block; margin-bottom: 2px;}
+.customer-next-action.overdue {border-color: #f1b4b4; background: #fff5f5;}
+.customer-next-action.today {border-color: #f0d48a; background: #fffbeb;}
