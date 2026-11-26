@@ -47,6 +47,7 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
     public DbSet<ConversationActivity> ConversationActivities => Set<ConversationActivity>();
     public DbSet<MessageReplyTemplate> ReplyTemplates => Set<MessageReplyTemplate>();
     public DbSet<StoredMedia> StoredMedia => Set<StoredMedia>();
+    public DbSet<CommunicationSettings> Settings => Set<CommunicationSettings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -71,7 +72,13 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
             b.Property(x => x.ProtectedRefreshToken).HasColumnType("text");
             b.Property(x => x.Signature).HasColumnType("text");
             b.Property(x => x.AutoSyncEnabled).HasDefaultValue(false);
+            b.Property(x => x.IncomingFolders).HasMaxLength(500).HasDefaultValue(MailAccount.DefaultIncomingFolder);
+            b.Property(x => x.SentFolder).HasMaxLength(200);
+            b.Ignore(x => x.IncomingFolderList);
             b.HasIndex(x => new { x.TenantId, x.EmailAddress }).IsUnique();
+        });
+        modelBuilder.Entity<CommunicationSettings>(b => {
+            b.ToTable("settings"); b.HasKey(x => x.TenantId);
         });
         modelBuilder.Entity<EmailMessage>(b => {
             b.ToTable("email_messages"); b.HasKey(x => x.Id);
@@ -100,6 +107,7 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
             b.Property(x => x.AssignedToUserId);
             b.Property(x => x.SuggestionDismissed).HasDefaultValue(false);
             b.Property(x => x.LastIncomingAtUtc);
+            b.Property(x => x.LastOutgoingAtUtc);
             b.Property(x => x.RelatedOpportunityId);
             b.Property(x => x.IgnoreParticipant).HasDefaultValue(false);
             b.HasIndex(x => new { x.TenantId, x.RelatedOpportunityId });
@@ -275,6 +283,14 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
             ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""AssignedToUserId"" uuid;
             ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""SuggestionDismissed"" boolean NOT NULL DEFAULT false;
             ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""LastIncomingAtUtc"" timestamp with time zone;
+            ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""LastOutgoingAtUtc"" timestamp with time zone;
+            ALTER TABLE communications.mail_accounts ADD COLUMN IF NOT EXISTS ""IncomingFolders"" character varying(500) NOT NULL DEFAULT 'INBOX';
+            ALTER TABLE communications.mail_accounts ADD COLUMN IF NOT EXISTS ""SentFolder"" character varying(200);
+            CREATE TABLE IF NOT EXISTS communications.settings (
+                ""TenantId"" uuid PRIMARY KEY,
+                ""UnattendedAfterHours"" integer NOT NULL DEFAULT 24,
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL
+            );
             ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""RelatedQuoteId"" uuid;
             ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""RelatedOrderId"" uuid;
             ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""RelatedInvoiceId"" uuid;
@@ -356,6 +372,16 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
                 GROUP BY ""ConversationId""
             ) sub
             WHERE c.""Id"" = sub.""ConversationId"" AND c.""LastIncomingAtUtc"" IS NULL;
+
+            UPDATE communications.conversations c
+            SET ""LastOutgoingAtUtc"" = sub.max_ts
+            FROM (
+                SELECT ""ConversationId"", MAX(""OccurredAtUtc"") AS max_ts
+                FROM communications.email_messages
+                WHERE ""Direction"" = 'Outgoing' AND ""ConversationId"" IS NOT NULL
+                GROUP BY ""ConversationId""
+            ) sub
+            WHERE c.""Id"" = sub.""ConversationId"" AND c.""LastOutgoingAtUtc"" IS NULL;
         ";
 
         await Database.ExecuteSqlRawAsync(sql, cancellationToken);

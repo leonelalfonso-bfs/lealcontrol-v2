@@ -76,19 +76,65 @@ public sealed class MailTransportService(MailSecretProtector secrets)
         return message;
     }
 
-    public async Task<IReadOnlyList<MimeMessage>> ReceiveRecentAsync(MailAccount account, DateTime? sinceUtc, CancellationToken cancellationToken)
+    /// <summary>Un mail leído por IMAP y si es nuestro (de la carpeta de enviados) o recibido.</summary>
+    public sealed record ReceivedMail(MimeMessage Message, bool Outgoing);
+
+    /// <summary>Nombres habituales de la carpeta de enviados cuando el servidor no la marca (DonWeb usa "INBOX.Sent").</summary>
+    internal static readonly string[] SentFolderNames = ["Sent", "INBOX.Sent", "Enviados", "INBOX.Enviados", "Sent Items", "Elementos enviados", "Sent Messages"];
+
+    /// <summary>
+    /// Los últimos mails de las carpetas de entrada configuradas y de la carpeta de enviados (para saber qué se
+    /// respondió, también desde Thunderbird u otro programa). Todo en modo lectura: no marca ni mueve nada.
+    /// </summary>
+    public async Task<IReadOnlyList<ReceivedMail>> ReceiveRecentAsync(MailAccount account, DateTime? sinceUtc, CancellationToken cancellationToken)
     {
         using var imap = new ImapClient();
         await imap.ConnectAsync(account.ImapHost, account.ImapPort, SocketOption(account.ImapUseSsl, account.ImapPort), cancellationToken);
         Authenticate(account, secrets.Unprotect(account.ProtectedSecret), imap);
-        await imap.Inbox.OpenAsync(FolderAccess.ReadOnly, cancellationToken);
         var query = sinceUtc.HasValue ? SearchQuery.DeliveredAfter(sinceUtc.Value.Date) : SearchQuery.All;
-        var ids = await imap.Inbox.SearchAsync(query, cancellationToken);
-        var recent = ids.TakeLast(100).ToArray();
-        var messages = new List<MimeMessage>(recent.Length);
-        foreach (var id in recent) messages.Add(await imap.Inbox.GetMessageAsync(id, cancellationToken));
+        var messages = new List<ReceivedMail>();
+
+        foreach (var name in account.IncomingFolderList)
+        {
+            var folder = string.Equals(name, MailAccount.DefaultIncomingFolder, StringComparison.OrdinalIgnoreCase)
+                ? imap.Inbox
+                : await TryGetFolderAsync(imap, name, cancellationToken);
+            if (folder is not null) await ReadAsync(folder, query, outgoing: false, messages, cancellationToken);
+        }
+
+        var sent = await FindSentFolderAsync(imap, account.SentFolder, cancellationToken);
+        if (sent is not null) await ReadAsync(sent, query, outgoing: true, messages, cancellationToken);
+
         await imap.DisconnectAsync(true, cancellationToken);
         return messages;
+    }
+
+    private static async Task ReadAsync(IMailFolder folder, SearchQuery query, bool outgoing, List<ReceivedMail> into, CancellationToken ct)
+    {
+        await folder.OpenAsync(FolderAccess.ReadOnly, ct);
+        var ids = await folder.SearchAsync(query, ct);
+        foreach (var id in ids.TakeLast(100)) into.Add(new ReceivedMail(await folder.GetMessageAsync(id, ct), outgoing));
+        await folder.CloseAsync(false, ct);
+    }
+
+    private static async Task<IMailFolder?> TryGetFolderAsync(ImapClient imap, string name, CancellationToken ct)
+    {
+        try { return await imap.GetFolderAsync(name, ct); }
+        catch (FolderNotFoundException) { return null; }
+    }
+
+    /// <summary>La configurada; si no, la que el servidor marca como enviados; si no, la primera con un nombre habitual.</summary>
+    private static async Task<IMailFolder?> FindSentFolderAsync(ImapClient imap, string? configured, CancellationToken ct)
+    {
+        if (!string.IsNullOrWhiteSpace(configured)) return await TryGetFolderAsync(imap, configured, ct);
+        if ((imap.Capabilities & (ImapCapabilities.SpecialUse | ImapCapabilities.XList)) != 0)
+        {
+            try { if (imap.GetFolder(SpecialFolder.Sent) is { } special) return special; }
+            catch (NotSupportedException) { }
+        }
+        foreach (var name in SentFolderNames)
+            if (await TryGetFolderAsync(imap, name, ct) is { } folder) return folder;
+        return null;
     }
 
     public static string ThreadKey(MimeMessage message)

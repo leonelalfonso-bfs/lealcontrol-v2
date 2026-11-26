@@ -557,6 +557,9 @@ export const api = {
   pipelineReport: (params?: { ownerName?: string; fromUtc?: string; toUtc?: string }) =>
     request<PipelineReport>(`/api/v1/crm/reports/pipeline${params?.ownerName ? `?ownerName=${encodeURIComponent(params.ownerName)}` : ""}`),
 
+  getCommunicationSettings: () => request<{ unattendedAfterHours: number }>("/api/v1/communications/settings"),
+  saveCommunicationSettings: (unattendedAfterHours: number) =>
+    request<{ unattendedAfterHours: number }>("/api/v1/communications/settings", { method: "PUT", body: JSON.stringify({ unattendedAfterHours }) }),
   listMailAccounts: () => request<import("./types").MailAccount[]>("/api/v1/communications/accounts"),
   saveMailAccount: (body: object) => request<{ id: string }>("/api/v1/communications/accounts", { method: "POST", body: JSON.stringify(body) }),
   testMailAccount: (id: string) => request<{ connected: boolean }>(`/api/v1/communications/accounts/${id}/test`, { method: "POST" }),

@@ -30,6 +30,8 @@ public sealed class Conversation
     public Guid? AssignedToUserId { get; private set; }
     public bool SuggestionDismissed { get; private set; }
     public DateTime? LastIncomingAtUtc { get; private set; }
+    /// <summary>Última respuesta nuestra (desde Leal Control o leída de la carpeta de enviados).</summary>
+    public DateTime? LastOutgoingAtUtc { get; private set; }
     public DateTime CreatedAtUtc { get; private set; }
     public DateTime UpdatedAtUtc { get; private set; }
 
@@ -59,6 +61,8 @@ public sealed class Conversation
             LastMessagePreview = messagePreview,
             LastMessageAtUtc = occurredAtUtc,
             UnreadCount = direction == EmailDirection.Incoming ? 1 : 0,
+            LastIncomingAtUtc = direction == EmailDirection.Incoming ? occurredAtUtc : null,
+            LastOutgoingAtUtc = direction == EmailDirection.Outgoing ? occurredAtUtc : null,
             CreatedAtUtc = now,
             UpdatedAtUtc = now
         };
@@ -81,7 +85,11 @@ public sealed class Conversation
         if (direction == EmailDirection.Incoming)
         {
             UnreadCount++;
-            LastIncomingAtUtc = occurredAtUtc;
+            if (LastIncomingAtUtc is null || occurredAtUtc > LastIncomingAtUtc) LastIncomingAtUtc = occurredAtUtc;
+        }
+        else if (LastOutgoingAtUtc is null || occurredAtUtc > LastOutgoingAtUtc)
+        {
+            LastOutgoingAtUtc = occurredAtUtc;
         }
 
         UpdatedAtUtc = DateTime.UtcNow;
