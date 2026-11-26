@@ -188,7 +188,7 @@ export function TruckScaleReportPage() {
             <label>Módulos de la plataforma{numberInput(input.modules, (v) => set({ modules: v ?? 0 }))}</label>
           </div>
           {eq && (
-            <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}>
+            <p className="muted t-small" style={{ margin: 0 }}>
               Máx. {num(eq.maxCapacity)} {u} · e = {num(eq.verificationIntervalE)} {u} · d = {num(eq.divisionD)} {u} · clase {eq.accuracyClass} · {eq.loadCellsCount} apoyos · indicación {eq.indicationType}
               {evaluation && ` · capacidad mínima ${num(evaluation.minCapacity)} ${u} (${evaluation.minCapacityRule})`}. Los datos del instrumento se corrigen en la ficha del equipo.
             </p>
@@ -197,24 +197,24 @@ export function TruckScaleReportPage() {
 
         <section className="card pad stack" style={{ gap: 8 }}>
           <h3 style={{ margin: 0 }}>2. Patrones utilizados</h3>
-          <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}>Solo se emite con patrones vigentes a la fecha del ensayo.</p>
+          <p className="muted t-small" style={{ margin: 0 }}>Solo se emite con patrones vigentes a la fecha del ensayo.</p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 6, maxHeight: 260, overflow: "auto" }}>
             {validWeights.map((w) => (
-              <label key={w.id} className="row" style={{ gap: 6, alignItems: "center", fontSize: "0.82rem", color: expiredAt(w) ? "#A1271B" : undefined }}>
+              <label key={w.id} className="row" style={{ gap: 6, alignItems: "center", color: expiredAt(w) ? "#A1271B" : undefined }}>
                 <input type="checkbox" checked={input.weightIds.includes(w.id)}
                   onChange={(e) => set({ weightIds: e.target.checked ? [...input.weightIds, w.id] : input.weightIds.filter((x) => x !== w.id) })} />
                 {w.code} · {num(w.nominalValue)} {w.unit}{expiredAt(w) ? " · vencida" : ""}
               </label>
             ))}
           </div>
-          {data && <p style={{ margin: 0, fontSize: "0.82rem" }}>Seleccionados: {input.weightIds.length} · {num(evaluation?.totalStandardsMass)} {u}</p>}
+          {data && <p className="t-small" style={{ margin: 0 }}>Seleccionados: {input.weightIds.length} · {num(evaluation?.totalStandardsMass)} {u}</p>}
         </section>
 
         <section className="card pad stack" style={{ gap: 6 }}>
           <h3 style={{ margin: 0 }}>3. Inspección del instrumento</h3>
           {input.inspection.map((it, i) => (
             <div key={it.point} className="row" style={{ gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-              <span style={{ flex: "1 1 240px", fontSize: "0.86rem" }}>{it.point}</span>
+              <span style={{ flex: "1 1 240px" }}>{it.point}</span>
               <select value={it.status} style={{ width: 90 }} onChange={(e) => set({ inspection: input.inspection.map((x, k) => (k === i ? { ...x, status: e.target.value as typeof x.status } : x)) })}>
                 <option>OK</option><option>No OK</option><option>N/A</option>
               </select>
@@ -235,7 +235,7 @@ export function TruckScaleReportPage() {
             </div>
           )}
           <div className="table-wrap">
-            <table style={{ fontSize: "0.84rem", minWidth: 560 }}>
+            <table style={{ minWidth: 560 }}>
               <thead><tr><th>Pesas ({u})</th><th>Sustitución</th><th>Carga</th><th>Lectura asc.</th><th>Lectura desc.</th><th>E.M.T.</th><th /></tr></thead>
               <tbody>
                 {input.weighing.map((s, i) => {
@@ -244,10 +244,10 @@ export function TruckScaleReportPage() {
                     <tr key={i}>
                       <td>{numberInput(s.weights, (v) => updateStep(i, { weights: v ?? 0 }))}</td>
                       <td>{numberInput(s.substitution, (v) => updateStep(i, { substitution: v ?? 0 }), { disabled: !input.substitution })}</td>
-                      <td style={{ fontWeight: 700 }}>{num(s.load)}</td>
+                      <td className="t-strong">{num(s.load)}</td>
                       <td>{numberInput(s.ascending, (v) => updateStep(i, { ascending: v ?? 0 }))}</td>
                       <td>{numberInput(s.descending, (v) => updateStep(i, { descending: v }))}</td>
-                      <td style={{ color: r ? (r.pass ? "#2E6B1F" : "var(--lc-danger)") : undefined, fontWeight: 700 }}>{r ? `± ${num(r.mpe)} ${r.pass ? "✓" : "✗"}` : "—"}</td>
+                      <td className="t-strong" style={{ color: r ? (r.pass ? "#2E6B1F" : "var(--lc-danger)") : undefined }}>{r ? `± ${num(r.mpe)} ${r.pass ? "✓" : "✗"}` : "—"}</td>
                       <td><button type="button" className="btn ghost compact" onClick={() => set({ weighing: input.weighing.filter((_, k) => k !== i) })}>✕</button></td>
                     </tr>
                   );
@@ -297,7 +297,7 @@ export function TruckScaleReportPage() {
             {(input.eccentricity?.positions ?? []).map((p, i) => {
               const r = evaluation?.eccentricity[i];
               return (
-                <label key={p.position} style={{ fontSize: "0.8rem", background: r ? (r.pass ? "#E3F1DA" : "#FCE8E6") : undefined, padding: 4, borderRadius: 4 }}>{p.position}
+                <label key={p.position} style={{ background: r ? (r.pass ? "#E3F1DA" : "#FCE8E6") : undefined, padding: 4, borderRadius: 4 }}>{p.position}
                   {numberInput(p.reading, (v) => set({ eccentricity: { ...input.eccentricity!, positions: input.eccentricity!.positions.map((x, k) => (k === i ? { ...x, reading: v ?? 0 } : x)) } }))}
                 </label>
               );
@@ -327,7 +327,7 @@ export function TruckScaleReportPage() {
       </fieldset>
 
       {evaluation && (
-        <section className="card pad stack" style={{ gap: 8, position: "sticky", bottom: 0, boxShadow: "0 -4px 12px rgba(0,0,0,0.06)" }}>
+        <section className="card pad stack" style={{ gap: 8, position: "sticky", bottom: 0 }}>
           <div className="row" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
             <strong style={{ color: evaluation.conforming ? "#2E6B1F" : "var(--lc-danger)" }}>
               {evaluation.conforming ? "CONFORME" : "NO CONFORME"} · {evaluation.standardShort}
@@ -339,12 +339,12 @@ export function TruckScaleReportPage() {
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
             {evaluation.requirements.map((r) => (
-              <span key={r.key} title={`${r.paragraph} · ${r.name}`} style={{ fontSize: "0.76rem", padding: "2px 8px", borderRadius: 10, color: VERDICT[r.verdict].color, background: VERDICT[r.verdict].bg, border: "1px solid var(--lc-line)" }}>
+              <span className="t-small" key={r.key} title={`${r.paragraph} · ${r.name}`} style={{ padding: "2px 8px", borderRadius: 10, color: VERDICT[r.verdict].color, background: VERDICT[r.verdict].bg, border: "1px solid var(--lc-line)" }}>
                 {r.name}: {VERDICT[r.verdict].text}
               </span>
             ))}
           </div>
-          {evaluation.warnings.length > 0 && <ul style={{ margin: 0, paddingLeft: 18, color: "#9a5b00", fontSize: "0.8rem" }}>{evaluation.warnings.map((w) => <li key={w}>{w}</li>)}</ul>}
+          {evaluation.warnings.length > 0 && <ul className="t-small" style={{ margin: 0, paddingLeft: 18, color: "#9a5b00" }}>{evaluation.warnings.map((w) => <li key={w}>{w}</li>)}</ul>}
         </section>
       )}
     </div>

@@ -150,7 +150,7 @@ export function QualityDocumentDetailPage() {
   };
 
   if (loading && !data) return <div className="workspace-page pad">Cargando {code}…</div>;
-  if (error) return <div className="workspace-page pad" style={{ color: "var(--lc-danger)" }}>{error}</div>;
+  if (error) return <div className="workspace-page pad t-danger">{error}</div>;
   if (!data) return null;
 
   const d = data.document;
@@ -161,9 +161,9 @@ export function QualityDocumentDetailPage() {
     <div className="workspace-page pad">
       <div className="page-head" style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <div>
-          <Link to="/calidad/documentos" style={{ fontSize: 13 }}>← Árbol documental</Link>
+          <Link className="t-small" to="/calidad/documentos">← Árbol documental</Link>
           <h1 style={{ margin: "8px 0 0" }}>{d.displayCode} · {d.title}</h1>
-          <p style={{ color: "var(--lc-ink-3)", marginTop: 6 }}>
+          <p className="muted" style={{ marginTop: 6 }}>
             {d.type} · {labelOf(QUALITY_DOC_STATUS, d.status)}
             {d.recordKind ? ` · ${d.recordKind}` : ""}
             {d.iso17025Clauses ? ` · ISO ${d.iso17025Clauses}` : ""}
@@ -195,11 +195,7 @@ export function QualityDocumentDetailPage() {
       {(actionMsg || actionError) && (
         <div
           className="card pad"
-          style={{
-            marginTop: 12,
-            background: actionError ? "var(--lc-danger-bg)" : "var(--lc-ok-bg)",
-            color: actionError ? "var(--lc-danger)" : "var(--lc-ok)"
-          }}
+          style={{ marginTop: 12, color: actionError ? "var(--lc-danger)" : "var(--lc-ok)" }}
         >
           {actionError || actionMsg}
         </div>
@@ -207,8 +203,8 @@ export function QualityDocumentDetailPage() {
 
       {canAttachRecords && (
         <div className="card pad" style={{ marginTop: 16 }}>
-          <h3 style={{ marginTop: 0 }}>Registros asociados</h3>
-          <p style={{ margin: "0 0 12px", color: "var(--lc-ink-3)", fontSize: 13 }}>
+          <h3>Registros asociados</h3>
+          <p className="muted t-small" style={{ margin: "0 0 12px" }}>
             Elegí un registro del sistema (formato ya existente) para colgarlo de este documento.
             No se inventan pantallas nuevas: solo se arma el árbol.
           </p>
@@ -233,12 +229,12 @@ export function QualityDocumentDetailPage() {
               })}
             </ul>
           ) : (
-            <p style={{ color: "var(--lc-ink-3)", fontSize: 13 }}>Todavía no hay registros bajo este documento.</p>
+            <p className="muted t-small">Todavía no hay registros bajo este documento.</p>
           )}
 
           {availableRecords.length > 0 ? (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end" }}>
-              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13, flex: 1, minWidth: 260 }}>
+              <label style={{ flexDirection: "column", gap: 4, flex: 1, minWidth: 260 }}>
                 Agregar registro
                 <select
                   value={recordToAdd}
@@ -263,7 +259,7 @@ export function QualityDocumentDetailPage() {
               </button>
             </div>
           ) : (
-            <p style={{ margin: 0, fontSize: 13, color: "var(--lc-ink-3)" }}>
+            <p className="muted t-small" style={{ margin: 0 }}>
               {recordsForParentDocument(d.code).length === 0
                 ? "No hay tipos de registro del sistema definidos para este código todavía."
                 : "Ya están agregados todos los registros disponibles para este documento."}
@@ -275,7 +271,7 @@ export function QualityDocumentDetailPage() {
       <div className="card pad" style={{ marginTop: 16 }}>
         <h3>Gestión de versión</h3>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end", marginTop: 8 }}>
-          <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
+          <label style={{ flexDirection: "column", gap: 4 }}>
             Versión
             <select
               value={selected?.version ?? ""}
@@ -290,7 +286,7 @@ export function QualityDocumentDetailPage() {
             </select>
           </label>
 
-          <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
+          <label style={{ flexDirection: "column", gap: 4 }}>
             PDF publicado
             <input
               type="file"
@@ -304,7 +300,7 @@ export function QualityDocumentDetailPage() {
             />
           </label>
 
-          <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
+          <label style={{ flexDirection: "column", gap: 4 }}>
             Fuente (.docx / .xlsx)
             <input
               type="file"
@@ -318,7 +314,7 @@ export function QualityDocumentDetailPage() {
             />
           </label>
 
-          <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
+          <label style={{ flexDirection: "column", gap: 4 }}>
             Revisor (aprobación)
             <input
               value={reviewedBy}
@@ -340,7 +336,7 @@ export function QualityDocumentDetailPage() {
         </div>
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end", marginTop: 16 }}>
-          <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13, flex: 1, minWidth: 220 }}>
+          <label style={{ flexDirection: "column", gap: 4, flex: 1, minWidth: 220 }}>
             Resumen de cambio (nueva versión)
             <input
               value={changeSummary}
@@ -355,7 +351,7 @@ export function QualityDocumentDetailPage() {
         </div>
 
         {selected && (
-          <p style={{ marginTop: 12, fontSize: 13, color: "var(--lc-ink-3)" }}>
+          <p className="muted t-small" style={{ marginTop: 12 }}>
             Seleccionada: v{selected.version} · {labelOf(QUALITY_DOC_STATUS, selected.status)}
             {selected.publishedFileId ? " · tiene PDF" : " · sin PDF"}
             {selected.sourceFileId ? " · tiene fuente" : ""}
@@ -386,8 +382,7 @@ export function QualityDocumentDetailPage() {
                   <td>
                     <button
                       type="button"
-                      className="btn"
-                      style={{ padding: "2px 8px" }}
+                      className="btn compact"
                       onClick={() => setTargetVersion(v.version)}
                     >
                       v{v.version}
@@ -402,30 +397,28 @@ export function QualityDocumentDetailPage() {
                     {v.publishedFileId ? (
                       <button
                         type="button"
-                        className="btn"
-                        style={{ padding: "2px 8px" }}
+                        className="btn compact"
                         disabled={busy}
                         onClick={() => void openFile(v.publishedFileId!, "open", "PDF abierto.")}
                       >
                         PDF
                       </button>
                     ) : (
-                      <span style={{ color: "var(--lc-ink-3)" }}>Sin publicar</span>
+                      <span className="muted">Sin publicar</span>
                     )}
                   </td>
                   <td>
                     {v.sourceFileId ? (
                       <button
                         type="button"
-                        className="btn"
-                        style={{ padding: "2px 8px" }}
+                        className="btn compact"
                         disabled={busy}
                         onClick={() => void openFile(v.sourceFileId!, "download", "Fuente descargada.")}
                       >
                         Fuente
                       </button>
                     ) : (
-                      <span style={{ color: "var(--lc-ink-3)" }}>—</span>
+                      <span className="muted">—</span>
                     )}
                   </td>
                 </tr>

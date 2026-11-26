@@ -280,7 +280,7 @@ export function QualityPg07R01Page() {
     <div className="workspace-page pad">
       <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
         <div>
-          <Link to="/calidad/documentos/PG07-R01" style={{ fontSize: 13 }}>← Procedimiento PG07</Link>
+          <Link className="t-small" to="/calidad/documentos/PG07-R01">← Procedimiento PG07</Link>
           <h1 style={{ margin: "8px 0 0" }}>PG07-R1 · NC, TNC, Riesgos y Oportunidades</h1>
           <p className="muted">NC y TNC comparten el seguimiento por causas. Riesgos y oportunidades siguen su propia matriz de valoración.</p>
         </div>
@@ -302,12 +302,12 @@ export function QualityPg07R01Page() {
             onClick={() => setFilter(value)}>{label}</button>)}
       </div>
 
-      {(error || message) && <div className="card pad" style={{ marginTop: 12, background: error ? "var(--lc-danger-bg)" : "var(--lc-ok-bg)", color: error ? "var(--lc-danger)" : "var(--lc-ok)" }}>{error || message}</div>}
+      {(error || message) && <div className="card pad" style={{ marginTop: 12, color: error ? "var(--lc-danger)" : "var(--lc-ok)" }}>{error || message}</div>}
 
       {showForm && <form className="card pad" style={{ marginTop: 16 }} onSubmit={(event) => void onCreate(event)}>
-        <h2 style={{ marginTop: 0 }}>{ratingStep ? "Valoración y criterio" : "Identificación y acciones"}</h2>
+        <h2>{ratingStep ? "Valoración y criterio" : "Identificación y acciones"}</h2>
         {!ratingStep ? <>
-          {complaint && fromComplaint && <div className="card pad" style={{ marginBottom: 14, background: "var(--lc-info-bg)" }}>
+          {complaint && fromComplaint && <div className="card pad" style={{ marginBottom: 14 }}>
             <strong>Datos de la queja {complaint.number}</strong>
             <div>{complaint.partyName} · {complaint.partyContact || "Sin contacto"} · {complaint.channel} · {dateLabel(complaint.receivedAt)}</div>
             <p style={{ whiteSpace: "pre-wrap", marginBottom: 0 }}>{complaint.description}</p>
@@ -337,7 +337,7 @@ export function QualityPg07R01Page() {
             <textarea value={isMatrixKind ? controls : immediateAction}
               onChange={(event) => isMatrixKind ? setControls(event.target.value) : setImmediateAction(event.target.value)} rows={2} />
           </label>
-          {!isMatrixKind && <p className="muted" style={{ fontSize: 13 }}>Luego podrás agregar una causa y acción correctiva por cada situación detectada, con su fecha de implementación.</p>}
+          {!isMatrixKind && <p className="muted t-small">Luego podrás agregar una causa y acción correctiva por cada situación detectada, con su fecha de implementación.</p>}
         </> : <>
           <p>{description}</p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
@@ -345,7 +345,7 @@ export function QualityPg07R01Page() {
             <label>{kind === "Opportunity" ? "Impacto / beneficio" : "Impacto"} (1–5)
               <input type="number" min={1} max={5} required value={impact} onChange={(event) => setImpact(event.target.value)} /></label>
           </div>
-          {rating && <div className="card pad" style={{ marginTop: 14, background: rating.level <= 2 ? "var(--lc-ok-bg)" : rating.level >= 15 ? "var(--lc-danger-bg)" : "var(--lc-warn-bg)" }}>
+          {rating && <div className="card pad" style={{ marginTop: 14 }}>
             <strong>Nivel {rating.level} · {rating.valuation}</strong>
             <p style={{ marginBottom: 0 }}>Criterio: {rating.criterion}</p>
           </div>}
@@ -371,7 +371,7 @@ export function QualityPg07R01Page() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(330px, 1fr))", gap: 16, marginTop: 16, alignItems: "start" }}>
         <section className="card pad">
-          <h2 style={{ marginTop: 0 }}>Registros ({filtered.length})</h2>
+          <h2>Registros ({filtered.length})</h2>
           {loading ? <p>Cargando…</p> : !filtered.length ? <p className="muted">No hay registros con este filtro.</p> :
             <div className="table-wrap"><table className="table"><thead><tr>
               <th>Nº</th><th>Tipo</th><th>Estado</th><th>Próxima implementación</th>
@@ -384,17 +384,17 @@ export function QualityPg07R01Page() {
         </section>
         <section className="card pad">
           {!selected ? <p className="muted">Seleccioná un registro para ver el seguimiento.</p> : <>
-            <h2 style={{ marginTop: 0 }}>{selected.number} · {KIND_LABEL[selected.kind] || selected.kind}</h2>
+            <h2>{selected.number} · {KIND_LABEL[selected.kind] || selected.kind}</h2>
             <p className="muted">{STATUS_LABEL[selected.status] || selected.status}{selected.isOverdue ? " · implementación vencida" : ""}</p>
             <Link className="btn btn-outline compact" to={`/calidad/registros/nc/${selected.id}/pdf`}>Exportar PDF</Link>
-            {selected.sourceComplaintId && complaint?.id === selected.sourceComplaintId && <div className="card pad" style={{ marginTop: 14, background: "var(--lc-info-bg)" }}>
+            {selected.sourceComplaintId && complaint?.id === selected.sourceComplaintId && <div className="card pad" style={{ marginTop: 14 }}>
               <strong>Queja origen: {complaint.number}</strong>
               <div>{complaint.partyName} · {complaint.partyContact || "Sin contacto"} · {complaint.channel} · {dateLabel(complaint.receivedAt)}</div>
               <p style={{ whiteSpace: "pre-wrap", marginBottom: 0 }}>{complaint.description}</p>
             </div>}
             <h3>Descripción</h3><p style={{ whiteSpace: "pre-wrap" }}>{selected.description}</p>
             {selected.immediateAction && <p><strong>Corrección inmediata:</strong> {selected.immediateAction}</p>}
-            {selectedIsMatrix && selected.rating && <div className="card pad" style={{ marginTop: 12, background: selected.rating.level <= 2 ? "var(--lc-ok-bg)" : "var(--lc-warn-bg)" }}>
+            {selectedIsMatrix && selected.rating && <div className="card pad" style={{ marginTop: 12 }}>
               <strong>Probabilidad {selected.probability} × {selected.kind === "Opportunity" ? "beneficio" : "impacto"} {selected.impact} = {selected.rating.level}</strong>
               <p>{selected.rating.valuation} · {selected.rating.criterion}</p>
               {selected.controls && <p>Acciones propuestas: {selected.controls}</p>}
@@ -419,7 +419,7 @@ export function QualityPg07R01Page() {
               const evaluation = evaluationDrafts[action.id] || { result: "Pending" as const, check: "" };
               const canEvaluate = !!action.implementationDate && !!action.action &&
                 dateInput(action.implementationDate) <= todayAr();
-              return <article key={action.id} className="card pad" style={{ marginTop: 10, background: "var(--lc-surface-2)" }}>
+              return <article key={action.id} className="card pad" style={{ marginTop: 10 }}>
                 <strong>{action.replacesActionId ? "Acción sucesora" : `Causa / acción ${index + 1}`}</strong>
                 <span style={{ marginLeft: 8, color: action.effectivenessResult === "NotEffective" ? "#b91c1c" : "#475569" }}>{actionStatus(action)}</span>
                 {!selectedIsMatrix && <p><strong>Causa:</strong> {action.cause || "—"}</p>}
@@ -452,7 +452,7 @@ export function QualityPg07R01Page() {
                       }))} /></label>
                     <button type="button" className="btn btn-primary compact" disabled={busy} onClick={() => evaluate(action)}>Registrar evaluación</button>
                   </div>}
-                  {!canEvaluate && action.implementationDate && <p className="muted" style={{ fontSize: 13 }}>La verificación se habilita al llegar la fecha de implementación.</p>}
+                  {!canEvaluate && action.implementationDate && <p className="muted t-small">La verificación se habilita al llegar la fecha de implementación.</p>}
                 </> : <>
                   <p>{action.action || "—"} · {action.responsible || "Sin responsable"} · implementación {dateLabel(action.implementationDate)}</p>
                   {action.effectivenessCheck && <p><strong>Verificación:</strong> {action.effectivenessCheck} · {dateLabel(action.evaluatedAtUtc)}</p>}
@@ -474,7 +474,7 @@ export function QualityPg07R01Page() {
               </form>}
               <button type="button" className="btn ghost" style={{ marginTop: 12, marginLeft: 8 }} disabled={busy} onClick={() => void cancel()}>Anular registro</button>
             </>}
-            {selected.status === "Closed" && selected.actions.length > 0 && <p style={{ color: "var(--lc-ok)", fontWeight: 700 }}>Todas las causas tienen una acción final eficaz. Registro cerrado.</p>}
+            {selected.status === "Closed" && selected.actions.length > 0 && <p className="t-ok t-strong">Todas las causas tienen una acción final eficaz. Registro cerrado.</p>}
             <QualityAuditHistory entityType="NonConformity" entityId={selected.id} />
           </>}
         </section>

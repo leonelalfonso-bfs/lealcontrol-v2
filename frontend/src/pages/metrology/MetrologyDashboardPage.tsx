@@ -41,13 +41,13 @@ export function MetrologyDashboardPage() {
     <div className="page-wide">
       <div className="page-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div>
-          <span className="eyebrow" style={{ color: "var(--lc-accent-strong)", fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.08em" }}>
+          <span className="eyebrow t-accent t-strong t-caps t-small" style={{ letterSpacing: "0.08em" }}>
             Laboratorio de Ensayos
           </span>
-          <h1 style={{ margin: "2px 0 0", fontSize: "1.75rem", fontWeight: 800 }}>
+          <h1 style={{ margin: "2px 0 0" }}>
             ⚖️ Metrología Legal
           </h1>
-          <p className="muted" style={{ margin: 0, fontSize: "0.88rem" }}>
+          <p className="muted" style={{ margin: 0 }}>
             Gestión de equipos, pesas patrón trazables y emisión de informes técnicos de ensayo
           </p>
         </div>
@@ -56,7 +56,7 @@ export function MetrologyDashboardPage() {
           <button type="button" className="btn ghost" onClick={loadData} title="Refrescar">
             🔄 Actualizar
           </button>
-          <Link to="/metrologia/ensayos/nuevo" className="btn" style={{ background: "linear-gradient(135deg, var(--lc-accent), var(--lc-accent))", color: "#fff" }}>
+          <Link to="/metrologia/ensayos/nuevo" className="btn">
             ➕ Nuevo Ensayo
           </Link>
         </div>
@@ -66,34 +66,34 @@ export function MetrologyDashboardPage() {
       <div className="kpi kpi-4" style={{ marginBottom: 24 }}>
         <div className="card pad" style={{ borderLeft: "4px solid var(--lc-accent)" }}>
           <div className="muted">Equipos Registrados</div>
-          <strong style={{ fontSize: "1.8rem" }}>{totalEquipments}</strong>
-          <div style={{ fontSize: "0.78rem", color: "var(--ok)", fontWeight: 700, marginTop: 4 }}>
+          <strong className="t-xl">{totalEquipments}</strong>
+          <div className="t-small t-strong" style={{ color: "var(--ok)", marginTop: 4 }}>
             ✓ {activeEquipments} operativos en clientes
           </div>
         </div>
 
         <div className="card pad" style={{ borderLeft: "4px solid var(--lc-warn)" }}>
           <div className="muted">Ensayos Vencidos</div>
-          <strong style={{ fontSize: "1.8rem", color: expiredEquipments > 0 ? "#dc2626" : "inherit" }}>
+          <strong className="t-xl" style={{ color: expiredEquipments > 0 ? "#dc2626" : "inherit" }}>
             {expiredEquipments}
           </strong>
-          <div style={{ fontSize: "0.78rem", color: expiredEquipments > 0 ? "#dc2626" : "var(--ink-soft)", fontWeight: 600, marginTop: 4 }}>
+          <div className="t-small t-strong" style={{ color: expiredEquipments > 0 ? "#dc2626" : "var(--ink-soft)", marginTop: 4 }}>
             {expiredEquipments > 0 ? "⚠️ Requieren nuevo ensayo" : "✓ Al día"}
           </div>
         </div>
 
         <div className="card pad" style={{ borderLeft: "4px solid var(--lc-info)" }}>
           <div className="muted">Pesas Patrón</div>
-          <strong style={{ fontSize: "1.8rem" }}>{totalWeights}</strong>
-          <div style={{ fontSize: "0.78rem", color: "var(--lc-info)", fontWeight: 700, marginTop: 4 }}>
+          <strong className="t-xl">{totalWeights}</strong>
+          <div className="t-small t-info t-strong" style={{ marginTop: 4 }}>
             🛡️ {validWeights} con trazabilidad vigente
           </div>
         </div>
 
         <div className="card pad" style={{ borderLeft: "4px solid var(--lc-violet)" }}>
           <div className="muted">Informes de Ensayo</div>
-          <strong style={{ fontSize: "1.8rem" }}>{totalReports}</strong>
-          <div style={{ fontSize: "0.78rem", color: "var(--lc-violet)", fontWeight: 700, marginTop: 4 }}>
+          <strong className="t-xl">{totalReports}</strong>
+          <div className="t-small t-violet t-strong" style={{ marginTop: 4 }}>
             📋 Informes técnicos emitidos
           </div>
         </div>
@@ -104,8 +104,8 @@ export function MetrologyDashboardPage() {
         <div className="card pad" style={{ gridColumn: "1 / -1" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
             <div>
-              <strong style={{ fontSize: "0.95rem" }}>Alcance de Metrología Legal</strong>
-              <div className="muted" style={{ fontSize: "0.78rem", marginTop: 2 }}>
+              <strong>Alcance de Metrología Legal</strong>
+              <div className="muted t-small" style={{ marginTop: 2 }}>
                 {activityMode === "Laboratory"
                   ? "Laboratorio de ensayos: solo verificación periódica y verificación primitiva."
                   : "Reparador: calibración, verificación periódica, verificación primitiva y verificación posterior a la reparación."}
@@ -120,40 +120,40 @@ export function MetrologyDashboardPage() {
         </div>
         <div className="card pad" style={{ cursor: "pointer", transition: "transform 0.15s ease" }} onClick={() => navigate("/metrologia/equipos")}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: "1.8rem" }}>🏢</span>
+            <span className="t-xl">🏢</span>
             <div>
-              <strong style={{ display: "block", fontSize: "0.95rem" }}>Gestión de Equipos</strong>
-              <span className="muted" style={{ fontSize: "0.78rem" }}>Ficha técnica de balanzas e instrumentos</span>
+              <strong style={{ display: "block" }}>Gestión de Equipos</strong>
+              <span className="muted t-small">Ficha técnica de balanzas e instrumentos</span>
             </div>
           </div>
         </div>
 
         <div className="card pad" style={{ cursor: "pointer", transition: "transform 0.15s ease" }} onClick={() => navigate("/metrologia/patrones")}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: "1.8rem" }}>⚖️</span>
+            <span className="t-xl">⚖️</span>
             <div>
-              <strong style={{ display: "block", fontSize: "0.95rem" }}>Gestión de Pesas Patrón</strong>
-              <span className="muted" style={{ fontSize: "0.78rem" }}>Masas nominales y certificados de calibración</span>
+              <strong style={{ display: "block" }}>Gestión de Pesas Patrón</strong>
+              <span className="muted t-small">Masas nominales y certificados de calibración</span>
             </div>
           </div>
         </div>
 
         <div className="card pad" style={{ cursor: "pointer", transition: "transform 0.15s ease" }} onClick={() => navigate("/metrologia/ensayos/nuevo")}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: "1.8rem" }}>📝</span>
+            <span className="t-xl">📝</span>
             <div>
-              <strong style={{ display: "block", fontSize: "0.95rem" }}>Nuevo Ensayo</strong>
-              <span className="muted" style={{ fontSize: "0.78rem" }}>Carga de pruebas y cálculo de EMT en vivo</span>
+              <strong style={{ display: "block" }}>Nuevo Ensayo</strong>
+              <span className="muted t-small">Carga de pruebas y cálculo de EMT en vivo</span>
             </div>
           </div>
         </div>
 
         <div className="card pad" style={{ cursor: "pointer", transition: "transform 0.15s ease" }} onClick={() => navigate("/metrologia/informes")}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: "1.8rem" }}>📋</span>
+            <span className="t-xl">📋</span>
             <div>
-              <strong style={{ display: "block", fontSize: "0.95rem" }}>Informes de Ensayo</strong>
-              <span className="muted" style={{ fontSize: "0.78rem" }}>Historial e impresión de informes emitidos</span>
+              <strong style={{ display: "block" }}>Informes de Ensayo</strong>
+              <span className="muted t-small">Historial e impresión de informes emitidos</span>
             </div>
           </div>
         </div>
@@ -162,16 +162,16 @@ export function MetrologyDashboardPage() {
       {/* Tabla de Actividad Reciente */}
       <div className="card pad">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-          <h3 style={{ margin: 0, fontSize: "1.1rem" }}>Últimos Informes de Ensayo Emitidos</h3>
+          <h3 style={{ margin: 0 }}>Últimos Informes de Ensayo Emitidos</h3>
           <Link to="/metrologia/informes" className="btn ghost compact">
             Ver Todos →
           </Link>
         </div>
 
         {loading ? (
-          <div className="muted" style={{ padding: 20, textAlign: "center" }}>Cargando actividad reciente...</div>
+          <div className="muted t-center" style={{ padding: 20 }}>Cargando actividad reciente...</div>
         ) : recentReports.length === 0 ? (
-          <div className="muted" style={{ padding: 20, textAlign: "center" }}>
+          <div className="muted t-center" style={{ padding: 20 }}>
             No hay ensayos registrados recientemente.
           </div>
         ) : (
@@ -185,7 +185,7 @@ export function MetrologyDashboardPage() {
                   <th>Cliente</th>
                   <th>Verificador</th>
                   <th>Dictamen</th>
-                  <th style={{ textAlign: "right" }}>Acciones</th>
+                  <th className="t-right">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -205,7 +205,7 @@ export function MetrologyDashboardPage() {
                           {isOk ? "✓ Apto" : "✗ No Apto"}
                         </span>
                       </td>
-                      <td style={{ textAlign: "right" }}>
+                      <td className="t-right">
                         <Link to={`/metrologia/informes/${r.id}/imprimir`} className="btn ghost compact">
                           🖨️ Ver / Imprimir
                         </Link>

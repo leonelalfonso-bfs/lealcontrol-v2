@@ -102,34 +102,34 @@ export function CalibrationReportsPage() {
     <div className="page-wide">
       <div className="page-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div>
-          <span className="eyebrow" style={{ color: "var(--lc-accent-strong)", fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.08em" }}>
+          <span className="eyebrow t-accent t-strong t-caps t-small" style={{ letterSpacing: "0.08em" }}>
             Laboratorio de Ensayos
           </span>
-          <h1 style={{ margin: "2px 0 0", fontSize: "1.75rem", fontWeight: 800 }}>
+          <h1 style={{ margin: "2px 0 0" }}>
             Informes de Ensayo
           </h1>
-          <p className="muted" style={{ margin: 0, fontSize: "0.88rem" }}>
+          <p className="muted" style={{ margin: 0 }}>
             Historial de protocolos e informes técnicos · aprobación y enmienda PG09 R2 por Director Técnico
           </p>
         </div>
 
         <div className="toolbar">
           <Link to="/metrologia/informes/camionera/nuevo" className="btn">🚛 Informe de camionera</Link>
-          <Link to="/metrologia/ensayos/nuevo" className="btn" style={{ background: "linear-gradient(135deg, var(--lc-accent), var(--lc-accent))", color: "#fff" }}>
+          <Link to="/metrologia/ensayos/nuevo" className="btn">
             Nuevo Ensayo
           </Link>
         </div>
       </div>
 
       {error && (
-        <div className="card pad" style={{ marginBottom: 12, background: "var(--lc-danger-bg)", color: "var(--lc-danger)" }}>{error}</div>
+        <div className="card pad t-danger" style={{ marginBottom: 12 }}>{error}</div>
       )}
 
       <div className="card pad">
         {loading ? (
-          <div className="muted" style={{ padding: 20, textAlign: "center" }}>Cargando informes de ensayo...</div>
+          <div className="muted t-center" style={{ padding: 20 }}>Cargando informes de ensayo...</div>
         ) : reports.length === 0 ? (
-          <div className="muted" style={{ padding: 24, textAlign: "center" }}>
+          <div className="muted t-center" style={{ padding: 24 }}>
             No hay informes de ensayo registrados aún.
           </div>
         ) : (
@@ -145,7 +145,7 @@ export function CalibrationReportsPage() {
                   <th>Verificador</th>
                   <th>DT</th>
                   <th>Dictamen</th>
-                  <th style={{ textAlign: "right" }}>Acciones</th>
+                  <th className="t-right">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -160,14 +160,14 @@ export function CalibrationReportsPage() {
                   return (
                     <tr key={r.id}>
                       <td>
-                        <strong style={{ color: "var(--lc-accent-strong)" }}>{certNumberOf(r)}</strong>
+                        <strong className="t-accent">{certNumberOf(r)}</strong>
                         {(r as { instructionCode?: string }).instructionCode && (
-                          <div className="muted" style={{ fontSize: "0.74rem" }}>
+                          <div className="muted t-small">
                             {(r as { instructionCode?: string }).instructionCode}
                           </div>
                         )}
                         {isAmendment && (
-                          <div className="muted" style={{ fontSize: "0.72rem", marginTop: 2 }}>
+                          <div className="muted t-small" style={{ marginTop: 2 }}>
                             Enmienda PG09 R2
                             {r.supersedesReportId && (
                               <>
@@ -180,7 +180,7 @@ export function CalibrationReportsPage() {
                           </div>
                         )}
                         {amendment && (
-                          <div style={{ fontSize: "0.72rem", marginTop: 2 }}>
+                          <div className="t-small" style={{ marginTop: 2 }}>
                             <Link to={`/metrologia/informes/${amendment.id}/imprimir`} target="_blank">
                               Enmienda: {certNumberOf(amendment)}
                             </Link>
@@ -190,11 +190,11 @@ export function CalibrationReportsPage() {
                       <td>{new Date(r.calibrationDate).toLocaleDateString("es-AR")}</td>
                       <td>
                         <strong>{r.equipmentCode}</strong>
-                        <div className="muted" style={{ fontSize: "0.76rem" }}>{r.equipmentDescription}</div>
+                        <div className="muted t-small">{r.equipmentDescription}</div>
                       </td>
                       <td>
                         <div>{r.customerName || "—"}</div>
-                        <div className="muted" style={{ fontSize: "0.74rem" }}>{r.location || "—"}</div>
+                        <div className="muted t-small">{r.location || "—"}</div>
                       </td>
                       <td>
                         <span className={`badge ${statusBadgeClass(status)}`}>
@@ -208,7 +208,7 @@ export function CalibrationReportsPage() {
                           {verdictOf(r)}
                         </span>
                       </td>
-                      <td style={{ textAlign: "right", display: "flex", gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
+                      <td className="t-right" style={{ display: "flex", gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
                         {isDraft && canApprove && (
                           <button
                             type="button"

@@ -447,11 +447,11 @@ export function QualityPg06Page() {
     <div className="workspace-page pad">
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "flex-start" }}>
         <div>
-          <Link to={`/calidad/documentos/${plantillaCode}`} style={{ fontSize: 13 }}>
+          <Link className="t-small" to={`/calidad/documentos/${plantillaCode}`}>
             ← Plantilla {plantillaCode}
           </Link>
           <h1 style={{ margin: "4px 0 0" }}>PG06 · Personal (capacitaciones, autorizaciones, competencias y roles)</h1>
-          <p style={{ marginTop: 6, color: "var(--lc-ink-3)", maxWidth: 680 }}>
+          <p className="muted" style={{ marginTop: 6, maxWidth: 680 }}>
             Registros estructurados del procedimiento de personal. La pestaña R02 (autorizaciones por método) requiere firma del
             Director Técnico.
           </p>
@@ -466,10 +466,10 @@ export function QualityPg06Page() {
         </div>
       </div>
 
-      {error && <p style={{ color: "var(--lc-danger)" }}>{error}</p>}
-      {msg && <p style={{ color: "var(--lc-ok)" }}>{msg}</p>}
+      {error && <p className="t-danger">{error}</p>}
+      {msg && <p className="t-ok">{msg}</p>}
 
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "12px 0", fontSize: 13 }}>
+      <div className="t-small" style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "12px 0" }}>
         <span className="card pad" style={{ padding: "6px 10px" }}>
           Capacitaciones abiertas: <strong>{summary?.trainingOpen ?? 0}</strong>
         </span>
@@ -500,7 +500,7 @@ export function QualityPg06Page() {
 
       {showForm && tab === "r01" && (
         <form className="card pad" onSubmit={(e) => void onCreateTraining(e)} style={{ marginBottom: 16 }}>
-          <h3 style={{ marginTop: 0 }}>Planificar capacitación</h3>
+          <h3>Planificar capacitación</h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
             <label>
               Año
@@ -516,12 +516,12 @@ export function QualityPg06Page() {
             </label>
             <label>Tipo de capacitación<select value={tType} onChange={(e) => setTType(e.target.value as "Internal" | "External")}><option value="Internal">Interna</option><option value="External">Externa</option></select></label>
           </div>
-          <label style={{ display: "block", marginTop: 12 }}>
+          <label style={{ marginTop: 12 }}>
             Tema
             <input value={tTopic} onChange={(e) => setTTopic(e.target.value)} style={{ width: "100%" }} required />
           </label>
-          <label style={{ display: "block", marginTop: 8 }}>Personal interviniente<input value={tPeople} onChange={(e) => setTPeople(e.target.value)} style={{ width: "100%" }} placeholder="Nombres de quienes participan" /></label>
-          <label style={{ display: "block", marginTop: 8 }}>
+          <label style={{ marginTop: 8 }}>Personal interviniente<input value={tPeople} onChange={(e) => setTPeople(e.target.value)} style={{ width: "100%" }} placeholder="Nombres de quienes participan" /></label>
+          <label style={{ marginTop: 8 }}>
             Notas
             <textarea value={tNotes} onChange={(e) => setTNotes(e.target.value)} rows={2} style={{ width: "100%" }} />
           </label>
@@ -533,7 +533,7 @@ export function QualityPg06Page() {
 
       {showForm && tab === "r02" && (
         <form className="card pad" onSubmit={(e) => void onCreateAuth(e)} style={{ marginBottom: 16 }}>
-          <h3 style={{ marginTop: 0 }}>Nueva autorización (borrador)</h3>
+          <h3>Nueva autorización (borrador)</h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
             <label>
               Persona
@@ -563,11 +563,11 @@ export function QualityPg06Page() {
               <input type="date" value={aStart} onChange={(e) => setAStart(e.target.value)} />
             </label>
           </div>
-          <label style={{ display: "block", marginTop: 12 }}>
+          <label style={{ marginTop: 12 }}>
             Evidencia de entrenamiento
             <textarea value={aEvidence} onChange={(e) => setAEvidence(e.target.value)} rows={2} style={{ width: "100%" }} />
           </label>
-          <label style={{ display: "block", marginTop: 8 }}>
+          <label style={{ marginTop: 8 }}>
             Acciones utilizadas para el entrenamiento
             <textarea value={aActions} onChange={(e) => setAActions(e.target.value)} rows={2} style={{ width: "100%" }} />
           </label>
@@ -579,7 +579,7 @@ export function QualityPg06Page() {
 
       {showForm && tab === "r03" && (
         <form className="card pad" onSubmit={(e) => void onCreateComp(e)} style={{ marginBottom: 16 }}>
-          <h3 style={{ marginTop: 0 }}>Nueva evaluación de competencias</h3>
+          <h3>Nueva evaluación de competencias</h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
             <label>
               Persona
@@ -609,11 +609,11 @@ export function QualityPg06Page() {
               <input type="number" min={1} max={5} value={cPers} onChange={(e) => setCPers(e.target.value)} />
             </label>
           </div>
-          <label style={{ display: "block", marginTop: 12 }}>
+          <label style={{ marginTop: 12 }}>
             Conclusiones
             <textarea value={cConclusions} onChange={(e) => setCConclusions(e.target.value)} rows={2} style={{ width: "100%" }} />
           </label>
-          <label style={{ display: "block", marginTop: 8 }}>
+          <label style={{ marginTop: 8 }}>
             Notas
             <textarea value={cNotes} onChange={(e) => setCNotes(e.target.value)} rows={2} style={{ width: "100%" }} />
           </label>
@@ -625,7 +625,7 @@ export function QualityPg06Page() {
 
       {showForm && tab === "r04" && (
         <form className="card pad" onSubmit={(e) => void onCreateRole(e)} style={{ marginBottom: 16 }}>
-          <h3 style={{ marginTop: 0 }}>Asignar rol / función</h3>
+          <h3>Asignar rol / función</h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
             <label>
               Rol
@@ -659,7 +659,7 @@ export function QualityPg06Page() {
             </label>
             <label>Hasta<input type="date" min={rSince} value={rUntil} onChange={(e) => setRUntil(e.target.value)} /></label>
           </div>
-          <label style={{ display: "block", marginTop: 12 }}>
+          <label style={{ marginTop: 12 }}>
             Notas
             <textarea value={rNotes} onChange={(e) => setRNotes(e.target.value)} rows={2} style={{ width: "100%" }} />
           </label>
@@ -678,7 +678,7 @@ export function QualityPg06Page() {
               <p className="muted">Sin capacitaciones.</p>
             ) : (
               <div style={{ overflowX: "auto" }}>
-                <table className="data-table" style={{ width: "100%", fontSize: 13 }}>
+                <table className="data-table">
                   <thead>
                     <tr>
                       <th>Número</th>
@@ -693,7 +693,7 @@ export function QualityPg06Page() {
                       <tr
                         key={r.id}
                         onClick={() => setSelectedId(r.id)}
-                        style={{ cursor: "pointer", background: selectedId === r.id ? "#e0f2fe" : undefined }}
+                        style={{ cursor: "pointer", background: selectedId === r.id ? "var(--lc-accent-soft)" : undefined }}
                       >
                         <td>{r.number}</td>
                         <td>{r.programYear}</td>
@@ -713,7 +713,7 @@ export function QualityPg06Page() {
               <p className="muted">Sin autorizaciones.</p>
             ) : (
               <div style={{ overflowX: "auto" }}>
-                <table className="data-table" style={{ width: "100%", fontSize: 13 }}>
+                <table className="data-table">
                   <thead>
                     <tr>
                       <th>Número</th>
@@ -752,7 +752,7 @@ export function QualityPg06Page() {
               <p className="muted">Sin evaluaciones.</p>
             ) : (
               <div style={{ overflowX: "auto" }}>
-                <table className="data-table" style={{ width: "100%", fontSize: 13 }}>
+                <table className="data-table">
                   <thead>
                     <tr>
                       <th>Número</th>
@@ -768,7 +768,7 @@ export function QualityPg06Page() {
                       <tr
                         key={r.id}
                         onClick={() => setSelectedId(r.id)}
-                        style={{ cursor: "pointer", background: selectedId === r.id ? "#e0f2fe" : undefined }}
+                        style={{ cursor: "pointer", background: selectedId === r.id ? "var(--lc-accent-soft)" : undefined }}
                       >
                         <td>{r.number}</td>
                         <td>{r.personName}</td>
@@ -786,7 +786,7 @@ export function QualityPg06Page() {
             <p className="muted">Sin asignaciones de rol.</p>
           ) : (
             <div style={{ overflowX: "auto" }}>
-              <table className="data-table" style={{ width: "100%", fontSize: 13 }}>
+              <table className="data-table">
                 <thead>
                   <tr>
                     <th>Número</th>
@@ -803,7 +803,7 @@ export function QualityPg06Page() {
                     <tr
                       key={r.id}
                       onClick={() => setSelectedId(r.id)}
-                      style={{ cursor: "pointer", background: selectedId === r.id ? "#e0f2fe" : undefined }}
+                      style={{ cursor: "pointer", background: selectedId === r.id ? "var(--lc-accent-soft)" : undefined }}
                     >
                       <td>{r.number}</td>
                       <td>{r.role}</td>
@@ -826,17 +826,17 @@ export function QualityPg06Page() {
               <p className="muted">Seleccioná una capacitación.</p>
             ) : (
               <>
-                <h3 style={{ marginTop: 0 }}>{selectedTraining.number}</h3>
-                <p style={{ marginTop: 0, color: "var(--lc-ink-3)", fontSize: 13 }}>
+                <h3>{selectedTraining.number}</h3>
+                <p className="muted t-small" style={{ marginTop: 0 }}>
                   {TRAINING_STATUS[selectedTraining.status] ?? selectedTraining.status} · {selectedTraining.programYear}
                 </p>
-                <p style={{ fontSize: 13 }}>{selectedTraining.topic}</p>
-                <p style={{ fontSize: 13 }}>Tipo: {selectedTraining.trainingType === "External" ? "Externa" : "Interna"} · Personal interviniente: {selectedTraining.interveningPersonnel || "—"}</p>
+                <p className="t-small">{selectedTraining.topic}</p>
+                <p className="t-small">Tipo: {selectedTraining.trainingType === "External" ? "Externa" : "Interna"} · Personal interviniente: {selectedTraining.interveningPersonnel || "—"}</p>
                 {selectedTraining.status !== "Cancelled" && selectedTraining.status !== "Done" && (
                   <>
-                    <label style={{ display: "block", marginBottom: 8 }}>Tipo de capacitación<select value={tType} onChange={(e) => setTType(e.target.value as "Internal" | "External")}><option value="Internal">Interna</option><option value="External">Externa</option></select></label>
-                    <label style={{ display: "block", marginBottom: 8 }}>Personal interviniente<input value={tPeople} onChange={(e) => setTPeople(e.target.value)} style={{ width: "100%" }} /></label>
-                    <label style={{ display: "block", marginBottom: 8 }}>
+                    <label>Tipo de capacitación<select value={tType} onChange={(e) => setTType(e.target.value as "Internal" | "External")}><option value="Internal">Interna</option><option value="External">Externa</option></select></label>
+                    <label>Personal interviniente<input value={tPeople} onChange={(e) => setTPeople(e.target.value)} style={{ width: "100%" }} /></label>
+                    <label>
                       Fecha realización
                       <input type="date" value={tDoneDate} onChange={(e) => setTDoneDate(e.target.value)} />
                     </label>
@@ -920,7 +920,7 @@ export function QualityPg06Page() {
                   </>
                 )}
                 {(selectedTraining.status === "Done" || selectedTraining.status === "Cancelled") && (
-                  <div style={{ fontSize: 13, color: "var(--lc-ink-3)" }}>
+                  <div className="muted t-small">
                     <div>
                       <strong>Realizada:</strong> {fmtDate(selectedTraining.doneDate)}
                     </div>
@@ -934,8 +934,8 @@ export function QualityPg06Page() {
               <p className="muted">Seleccioná una autorización. Solo el Director Técnico puede firmar.</p>
             ) : (
               <>
-                <h3 style={{ marginTop: 0 }}>{selectedAuth.number}</h3>
-                <p style={{ marginTop: 0, color: "var(--lc-ink-3)", fontSize: 13 }}>
+                <h3>{selectedAuth.number}</h3>
+                <p className="muted t-small" style={{ marginTop: 0 }}>
                   {AUTH_STATUS[selectedAuth.status] ?? selectedAuth.status}
                   {selectedAuth.isExpired ? " · vencida" : ""} · {selectedAuth.personName}
                 </p>
@@ -949,7 +949,7 @@ export function QualityPg06Page() {
                 </p>
                 {selectedAuth.status !== "Cancelled" && (
                   <>
-                    <label style={{ display: "block", marginBottom: 8 }}>
+                    <label>
                       Método
                       <input
                         value={aMethod}
@@ -958,20 +958,20 @@ export function QualityPg06Page() {
                         disabled={selectedAuth.status === "Authorized"}
                       />
                     </label>
-                    <label style={{ display: "block", marginBottom: 8 }}>Inicio del entrenamiento<input type="date" value={aStart} onChange={(e) => setAStart(e.target.value)} style={{ width: "100%" }} /></label>
-                    <label style={{ display: "block", marginBottom: 8 }}>
+                    <label>Inicio del entrenamiento<input type="date" value={aStart} onChange={(e) => setAStart(e.target.value)} style={{ width: "100%" }} /></label>
+                    <label>
                       Evidencia de entrenamiento
                       <textarea value={aEvidence} onChange={(e) => setAEvidence(e.target.value)} rows={2} style={{ width: "100%" }} />
                     </label>
-                    <label style={{ display: "block", marginBottom: 8 }}>
+                    <label>
                       Supervisado por
                       <input value={aSupervised} onChange={(e) => setASupervised(e.target.value)} style={{ width: "100%" }} disabled={selectedAuth.status === "Authorized"} />
                     </label>
-                    <label style={{ display: "block", marginBottom: 8 }}>
+                    <label>
                       Vigente desde
                       <input type="date" value={aValidFrom} onChange={(e) => setAValidFrom(e.target.value)} />
                     </label>
-                    <label style={{ display: "block", marginBottom: 8 }}>
+                    <label>
                       Acciones utilizadas para el entrenamiento
                       <textarea value={aActions} onChange={(e) => setAActions(e.target.value)} rows={2} style={{ width: "100%" }} />
                     </label>
@@ -1084,7 +1084,7 @@ export function QualityPg06Page() {
                       </button>
                     </div>
                     {selectedAuth.authorizedByName ? (
-                      <p style={{ fontSize: 12, color: "var(--lc-ink-3)", marginTop: 12 }}>
+                      <p className="muted t-small" style={{ marginTop: 12 }}>
                         Firmada por {selectedAuth.authorizedByName}
                         {selectedAuth.authorizedAt ? ` · ${fmtDate(selectedAuth.authorizedAt)}` : ""}
                       </p>
@@ -1099,14 +1099,14 @@ export function QualityPg06Page() {
               <p className="muted">Seleccioná una evaluación.</p>
             ) : (
               <>
-                <h3 style={{ marginTop: 0 }}>{selectedComp.number}</h3>
-                <p style={{ marginTop: 0, color: "var(--lc-ink-3)", fontSize: 13 }}>
+                <h3>{selectedComp.number}</h3>
+                <p className="muted t-small" style={{ marginTop: 0 }}>
                   {COMP_STATUS[selectedComp.status] ?? selectedComp.status} · {selectedComp.personName} ·{" "}
                   {selectedComp.reviewYear}
                 </p>
                 {selectedComp.status === "Draft" && (
                   <>
-                    <label style={{ display: "block", marginBottom: 8 }}>
+                    <label>
                       Evaluador
                       <input value={cEvaluator} onChange={(e) => setCEvaluator(e.target.value)} style={{ width: "100%" }} />
                     </label>
@@ -1120,7 +1120,7 @@ export function QualityPg06Page() {
                         <input type="number" min={1} max={5} value={cPers} onChange={(e) => setCPers(e.target.value)} />
                       </label>
                     </div>
-                    <label style={{ display: "block", marginBottom: 8 }}>
+                    <label>
                       Conclusiones
                       <textarea
                         value={cConclusions}
@@ -1210,7 +1210,7 @@ export function QualityPg06Page() {
                   </>
                 )}
                 {selectedComp.status !== "Draft" && (
-                  <div style={{ fontSize: 13, color: "var(--lc-ink-3)" }}>
+                  <div className="muted t-small">
                     <div>
                       <strong>Evaluador:</strong> {selectedComp.evaluator || "—"}
                     </div>
@@ -1231,11 +1231,11 @@ export function QualityPg06Page() {
               <p className="muted">Seleccioná una asignación de rol.</p>
             ) : (
               <>
-                <h3 style={{ marginTop: 0 }}>{selectedRole.number}</h3>
-                <p style={{ marginTop: 0, color: "var(--lc-ink-3)", fontSize: 13 }}>
+                <h3>{selectedRole.number}</h3>
+                <p className="muted t-small" style={{ marginTop: 0 }}>
                   {ROLE_STATUS[selectedRole.status] ?? selectedRole.status} · {selectedRole.role}
                 </p>
-                <p style={{ fontSize: 13 }}>
+                <p className="t-small">
                   Titular: <strong>{selectedRole.personName}</strong>
                   {selectedRole.substituteName ? (
                     <>
@@ -1249,7 +1249,7 @@ export function QualityPg06Page() {
                 </p>
                 {selectedRole.status === "Active" && (
                   <>
-                  <label style={{ display: "block", marginBottom: 8 }}>Hasta<input type="date" min={selectedRole.since.slice(0, 10)} value={rUntil} onChange={(e) => setRUntil(e.target.value)} style={{ width: "100%" }} /></label>
+                  <label>Hasta<input type="date" min={selectedRole.since.slice(0, 10)} value={rUntil} onChange={(e) => setRUntil(e.target.value)} style={{ width: "100%" }} /></label>
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     <button type="button" className="btn btn-outline" disabled={busy || !rUntil} onClick={() => void (async () => {
                       setBusy(true); setError(null);

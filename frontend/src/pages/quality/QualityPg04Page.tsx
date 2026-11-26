@@ -105,7 +105,7 @@ export function QualityPg04Page() {
 
   return <div className="workspace-page pad">
     <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-      <div><Link to="/calidad/documentos/PG04-R01" style={{ fontSize: 13 }}>← PG04-R01</Link>
+      <div><Link className="t-small" to="/calidad/documentos/PG04-R01">← PG04-R01</Link>
         <h1 style={{ margin: "8px 0 0" }}>PG04 · Programa de auditorías internas</h1>
         <p className="muted">Programá auditorías, registrá cuándo se realizaron y adjuntá luego los respaldos R02, R03 y R04.</p></div>
       <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
@@ -114,9 +114,9 @@ export function QualityPg04Page() {
           {showForm ? "Cerrar alta" : "Programar auditoría"}</button>
       </div>
     </div>
-    {(error || message) && <div className="card pad" style={{ marginTop: 12, color: error ? "var(--lc-danger)" : "var(--lc-ok)", background: error ? "var(--lc-danger-bg)" : "var(--lc-ok-bg)" }}>{error || message}</div>}
+    {(error || message) && <div className="card pad" style={{ marginTop: 12, color: error ? "var(--lc-danger)" : "var(--lc-ok)" }}>{error || message}</div>}
     {showForm && <form className="card pad" style={{ marginTop: 16 }} onSubmit={(event) => void create(event)}>
-      <h2 style={{ marginTop: 0 }}>Nueva programación · PG04-R01</h2>
+      <h2>Nueva programación · PG04-R01</h2>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
         <label>Año *<input type="number" min="2001" required value={programYear} onChange={(event) => setProgramYear(event.target.value)} /></label>
         <label>Fecha programada *<input type="date" required value={plannedDate} onChange={(event) => setPlannedDate(event.target.value)} /></label>
@@ -138,7 +138,7 @@ export function QualityPg04Page() {
       <span className="muted" style={{ marginLeft: "auto" }}>{filtered.length} auditorías</span>
     </div>
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 16, marginTop: 16, alignItems: "start" }}>
-      <section className="card pad"><h2 style={{ marginTop: 0 }}>Programación · PG04-R01</h2>
+      <section className="card pad"><h2>Programación · PG04-R01</h2>
         {loading ? <p>Cargando…</p> : !filtered.length ? <p className="muted">No hay auditorías con este filtro.</p> :
           <div className="table-wrap"><table className="table"><thead><tr>
             <th>Nº</th><th>Programada</th><th>Alcance</th><th>Auditor</th><th>Estado</th>
@@ -149,7 +149,7 @@ export function QualityPg04Page() {
           </tr>)}</tbody></table></div>}
       </section>
       <section className="card pad">{!selected ? <p className="muted">Seleccioná una auditoría para ver su programación y respaldos.</p> : <>
-        <h2 style={{ marginTop: 0 }}>{selected.number}</h2>
+        <h2>{selected.number}</h2>
         <p><strong>Estado:</strong> {selected.status === "Done" ? "Realizada" : "Programada"}</p>
         <p><strong>Fecha programada:</strong> {dateLabel(selected.plannedDate)} · <strong>Año:</strong> {selected.programYear}</p>
         {selected.executedDate && <p><strong>Fecha realizada:</strong> {dateLabel(selected.executedDate)}</p>}
@@ -158,7 +158,7 @@ export function QualityPg04Page() {
         {selected.notes && <p><strong>Notas:</strong> {selected.notes}</p>}
         <Link className="btn btn-outline compact" to={`/calidad/registros/auditorias/${selected.id}/pdf`}>Exportar PDF del programa</Link>
         {selected.status === "Planned" && <div className="card pad" style={{ marginTop: 16 }}>
-          <h3 style={{ marginTop: 0 }}>Registrar realización</h3>
+          <h3>Registrar realización</h3>
           <label>Fecha de realización *<input type="date" required value={executedDate} onChange={(event) => setExecutedDate(event.target.value)} /></label>
           <button type="button" className="btn btn-primary" disabled={busy || !executedDate} style={{ marginTop: 10 }} onClick={() => void markDone()}>
             Marcar como realizada</button>

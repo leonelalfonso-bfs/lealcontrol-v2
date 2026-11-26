@@ -100,7 +100,7 @@ export function QualityPg01R02Page() {
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
         <div>
           <Link to="/calidad/documentos">← Documentos</Link>
-          <h1 style={{ marginTop: 8 }}>PG01-R02 · Lista de documentos externos</h1>
+          <h1>PG01-R02 · Lista de documentos externos</h1>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button type="button" className="btn btn-primary" disabled={busy || !data} onClick={() => setShowForm(true)}>Nuevo documento</button>
@@ -108,8 +108,8 @@ export function QualityPg01R02Page() {
           <button type="button" className="btn btn-outline" disabled={busy || !data?.rows.length} onClick={() => void exportExcel()}>Exportar Excel</button>
         </div>
       </div>
-      {error && <p role="alert" style={{ color: "var(--lc-danger)" }}>{error}</p>}
-      {message && <p role="status" style={{ color: "var(--lc-ok)" }}>{message}</p>}
+      {error && <p className="t-danger" role="alert">{error}</p>}
+      {message && <p className="t-ok" role="status">{message}</p>}
       {showForm && (
         <form className="card pad" onSubmit={event => void create(event)} style={{ marginTop: 12 }}>
           <h2>Nuevo documento externo</h2>

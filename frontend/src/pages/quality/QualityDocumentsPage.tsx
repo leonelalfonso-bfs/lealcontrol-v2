@@ -67,38 +67,18 @@ function TreeNode({
           onSelect(node.code);
           if (hasChildren) setOpen((v) => !v);
         }}
-        style={{
-          display: "flex",
-          width: "100%",
-          alignItems: "center",
-          gap: 8,
-          textAlign: "left",
-          padding: "6px 8px",
-          paddingLeft: 8 + depth * 14,
-          border: "none",
-          borderRadius: 8,
-          cursor: "pointer",
-          background: selected ? "rgba(15, 118, 110, 0.12)" : "transparent",
-          color: "var(--lc-ink)",
-          fontWeight: selected ? 700 : 500
-        }}
+        style={{ display: "flex", width: "100%", alignItems: "center", gap: 8, padding: "6px 8px", paddingLeft: 8 + depth * 14, border: "none", borderRadius: 8, cursor: "pointer", background: selected ? "rgba(15, 118, 110, 0.12)" : "transparent", fontWeight: selected ? 700 : 500 }}
       >
-        <span style={{ width: 14, color: "var(--lc-ink-3)", fontSize: 12 }}>{hasChildren ? (open ? "▾" : "▸") : "·"}</span>
-        <span
-          style={{
-            fontSize: 10,
-            fontWeight: 800,
-            letterSpacing: "0.04em",
-            color: "var(--lc-accent-strong)",
-            minWidth: 28
-          }}
+        <span className="muted t-small" style={{ width: 14 }}>{hasChildren ? (open ? "▾" : "▸") : "·"}</span>
+        <span className="t-strong t-accent"
+          style={{ fontSize: 10, letterSpacing: "0.04em", minWidth: 28 }}
         >
           {typeLabel(node.type)}
         </span>
-        <span style={{ flex: 1, fontSize: 13 }}>
+        <span className="t-small" style={{ flex: 1 }}>
           <strong>{node.displayCode}</strong> · {node.title}
         </span>
-        <span style={{ fontSize: 11, color: statusColor(node.status) }}>{labelOf(QUALITY_DOC_STATUS, node.status)}</span>
+        <span className="t-small" style={{ color: statusColor(node.status) }}>{labelOf(QUALITY_DOC_STATUS, node.status)}</span>
       </button>
       {open &&
         hasChildren &&
@@ -266,7 +246,7 @@ export function QualityDocumentsPage() {
   if (error) {
     return (
       <div className="workspace-page pad">
-        <p style={{ color: "var(--lc-danger)" }}>Error: {error}</p>
+        <p className="t-danger">Error: {error}</p>
       </div>
     );
   }
@@ -275,11 +255,11 @@ export function QualityDocumentsPage() {
     <div className="workspace-page pad">
       <div className="page-head" style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "flex-start" }}>
         <div>
-          <span className="eyebrow" style={{ color: "var(--lc-accent-strong)", fontWeight: 800, letterSpacing: "0.08em" }}>
+          <span className="eyebrow t-accent t-strong" style={{ letterSpacing: "0.08em" }}>
             ISO/IEC 17025 · SGC
           </span>
           <h1 style={{ margin: "4px 0 0" }}>Documentación del sistema de calidad</h1>
-          <p style={{ margin: "6px 0 0", color: "var(--lc-ink-3)", maxWidth: 720 }}>
+          <p className="muted" style={{ margin: "6px 0 0", maxWidth: 720 }}>
             Árbol documental con la nomenclatura oficial (MC / PG / IT / R). Los registros generados
             PG01-R01 y PG01-R02 se calculan desde este catálogo.
           </p>
@@ -291,10 +271,10 @@ export function QualityDocumentsPage() {
 
       {dashboard && (
         <div className="grid-4" style={{ marginBottom: 16, display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 12 }}>
-          <div className="card pad"><div style={{ fontSize: 12, color: "var(--lc-ink-3)" }}>Documentos</div><div style={{ fontSize: 28, fontWeight: 800 }}>{dashboard.totalDocuments}</div></div>
-          <div className="card pad"><div style={{ fontSize: 12, color: "var(--lc-ink-3)" }}>Vigentes</div><div style={{ fontSize: 28, fontWeight: 800, color: "var(--lc-accent-strong)" }}>{dashboard.current}</div></div>
-          <div className="card pad"><div style={{ fontSize: 12, color: "var(--lc-ink-3)" }}>Borradores</div><div style={{ fontSize: 28, fontWeight: 800, color: "var(--lc-warn)" }}>{dashboard.draft}</div></div>
-          <div className="card pad"><div style={{ fontSize: 12, color: "var(--lc-ink-3)" }}>Revisión vencida</div><div style={{ fontSize: 28, fontWeight: 800, color: dashboard.overdueReview ? "var(--lc-danger)" : "var(--lc-accent-strong)" }}>{dashboard.overdueReview}</div></div>
+          <div className="card pad"><div className="muted t-small">Documentos</div><div className="t-strong t-xl">{dashboard.totalDocuments}</div></div>
+          <div className="card pad"><div className="muted t-small">Vigentes</div><div className="t-strong t-accent t-xl">{dashboard.current}</div></div>
+          <div className="card pad"><div className="muted t-small">Borradores</div><div className="t-strong t-warn t-xl">{dashboard.draft}</div></div>
+          <div className="card pad"><div className="muted t-small">Revisión vencida</div><div className="t-strong t-xl" style={{ color: dashboard.overdueReview ? "var(--lc-danger)" : "var(--lc-accent-strong)" }}>{dashboard.overdueReview}</div></div>
         </div>
       )}
 
@@ -302,10 +282,10 @@ export function QualityDocumentsPage() {
         <div className="card pad" style={{ maxHeight: "70vh", overflow: "auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
             <strong>Árbol documental</strong>
-            <Link to="/calidad/registros" style={{ fontSize: 12 }}>Registros</Link>
+            <Link className="t-small" to="/calidad/registros">Registros</Link>
           </div>
           {tree.length === 0 ? (
-            <div style={{ color: "var(--lc-ink-3)", fontSize: 13, lineHeight: 1.5 }}>
+            <div className="muted t-small" style={{ lineHeight: 1.5 }}>
               <p style={{ marginTop: 0 }}>
                 El SGC arranca vacío. Usá <strong>Nuevo documento</strong> para cargar tu Manual (MC),
                 Procedimientos (PG) e Instrucciones (IT) desde sus archivos Word/PDF.
@@ -329,7 +309,7 @@ export function QualityDocumentsPage() {
 
         <div className="card pad">
           {!selected ? (
-            <p style={{ color: "var(--lc-ink-3)" }}>
+            <p className="muted">
               {tree.length === 0
                 ? "Todavía no hay documentos. Creá el primero con «Nuevo documento»."
                 : "Seleccioná un documento del árbol."}
@@ -338,9 +318,9 @@ export function QualityDocumentsPage() {
             <>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "start" }}>
                 <div>
-                  <div style={{ fontSize: 12, color: "var(--lc-accent-strong)", fontWeight: 800 }}>{selected.displayCode}</div>
+                  <div className="t-accent t-strong t-small">{selected.displayCode}</div>
                   <h2 style={{ margin: "4px 0 0" }}>{selected.title}</h2>
-                  <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap", fontSize: 12 }}>
+                  <div className="t-small" style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
                     <span className="pill">{selected.type}</span>
                     <span className="pill" style={{ color: statusColor(selected.status) }}>{labelOf(QUALITY_DOC_STATUS, selected.status)}</span>
                     {selected.recordKind && <span className="pill">Registro: {selected.recordKind}</span>}
@@ -365,27 +345,27 @@ export function QualityDocumentsPage() {
 
               <div style={{ marginTop: 20, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
-                  <div style={{ fontSize: 12, color: "var(--lc-ink-3)" }}>Versión vigente</div>
-                  <div style={{ fontWeight: 700 }}>
+                  <div className="muted t-small">Versión vigente</div>
+                  <div className="t-strong">
                     {selected.currentVersion ? `v${selected.currentVersion.version}` : "—"}
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 12, color: "var(--lc-ink-3)" }}>Próxima revisión</div>
-                  <div style={{ fontWeight: 700 }}>
+                  <div className="muted t-small">Próxima revisión</div>
+                  <div className="t-strong">
                     {selected.nextReviewDate ? new Date(selected.nextReviewDate).toLocaleDateString("es-AR") : "—"}
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 12, color: "var(--lc-ink-3)" }}>Elaboró / Revisó / Aprobó</div>
-                  <div style={{ fontSize: 13 }}>
+                  <div className="muted t-small">Elaboró / Revisó / Aprobó</div>
+                  <div className="t-small">
                     {selected.currentVersion?.elaboratedBy || "—"} / {selected.currentVersion?.reviewedBy || "—"} /{" "}
                     {selected.currentVersion?.approvedBy || "—"}
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 12, color: "var(--lc-ink-3)" }}>Cláusulas ISO 17025</div>
-                  <div style={{ fontWeight: 600 }}>{selected.iso17025Clauses || "—"}</div>
+                  <div className="muted t-small">Cláusulas ISO 17025</div>
+                  <div className="t-strong">{selected.iso17025Clauses || "—"}</div>
                 </div>
               </div>
 
@@ -397,8 +377,8 @@ export function QualityDocumentsPage() {
                       <li key={c.id} style={{ marginBottom: 4 }}>
                         <button
                           type="button"
-                          className="btn-link"
-                          style={{ background: "none", border: "none", color: "var(--lc-accent-strong)", cursor: "pointer", padding: 0 }}
+                          className="btn-link t-accent"
+                          style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
                           onClick={() => setSelectedCode(c.code)}
                         >
                           {c.displayCode} — {c.title}
@@ -442,13 +422,13 @@ export function QualityDocumentsPage() {
             </div>
 
             {wizardError && (
-              <div className="card pad" style={{ marginTop: 12, background: "var(--lc-danger-bg)", color: "var(--lc-danger)" }}>
+              <div className="card pad t-danger" style={{ marginTop: 12 }}>
                 {wizardError}
               </div>
             )}
 
             <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
-              <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <label style={{ flexDirection: "column", gap: 4 }}>
                 Tipo *
                 <select
                   value={wizard.type}
@@ -459,7 +439,7 @@ export function QualityDocumentsPage() {
                   ))}
                 </select>
               </label>
-              <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <label style={{ flexDirection: "column", gap: 4 }}>
                 Código *
                 <input
                   required
@@ -468,7 +448,7 @@ export function QualityDocumentsPage() {
                   placeholder="MC01, PG01, IT01…"
                 />
               </label>
-              <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <label style={{ flexDirection: "column", gap: 4 }}>
                 Título *
                 <input
                   required
@@ -477,7 +457,7 @@ export function QualityDocumentsPage() {
                   placeholder="Nombre del documento"
                 />
               </label>
-              <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <label style={{ flexDirection: "column", gap: 4 }}>
                 Display code
                 <input
                   value={wizard.displayCode}
@@ -487,9 +467,9 @@ export function QualityDocumentsPage() {
               </label>
             </div>
 
-            <h3 style={{ marginTop: 20, marginBottom: 8 }}>Encabezado</h3>
+            <h3 style={{ marginBottom: 8 }}>Encabezado</h3>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
-              <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <label style={{ flexDirection: "column", gap: 4 }}>
                 Versión
                 <input
                   type="number"
@@ -498,36 +478,36 @@ export function QualityDocumentsPage() {
                   onChange={(e) => setWizard((w) => ({ ...w, versionNumber: Number(e.target.value) || 1 }))}
                 />
               </label>
-              <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <label style={{ flexDirection: "column", gap: 4 }}>
                 Elaboró
                 <input value={wizard.elaboratedBy} onChange={(e) => setWizard((w) => ({ ...w, elaboratedBy: e.target.value }))} />
               </label>
-              <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <label style={{ flexDirection: "column", gap: 4 }}>
                 Fecha elaboración
                 <input type="date" value={wizard.elaboratedAt} onChange={(e) => setWizard((w) => ({ ...w, elaboratedAt: e.target.value }))} />
               </label>
-              <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <label style={{ flexDirection: "column", gap: 4 }}>
                 Revisó
                 <input value={wizard.reviewedBy} onChange={(e) => setWizard((w) => ({ ...w, reviewedBy: e.target.value }))} />
               </label>
-              <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <label style={{ flexDirection: "column", gap: 4 }}>
                 Fecha revisión
                 <input type="date" value={wizard.reviewedAt} onChange={(e) => setWizard((w) => ({ ...w, reviewedAt: e.target.value }))} />
               </label>
-              <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <label style={{ flexDirection: "column", gap: 4 }}>
                 Aprobó
                 <input value={wizard.approvedBy} onChange={(e) => setWizard((w) => ({ ...w, approvedBy: e.target.value }))} />
               </label>
-              <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <label style={{ flexDirection: "column", gap: 4 }}>
                 Fecha aprobación
                 <input type="date" value={wizard.approvedAt} onChange={(e) => setWizard((w) => ({ ...w, approvedAt: e.target.value }))} />
               </label>
-              <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <label style={{ flexDirection: "column", gap: 4 }}>
                 Fecha vigencia
                 <input type="date" value={wizard.effectiveFrom} onChange={(e) => setWizard((w) => ({ ...w, effectiveFrom: e.target.value }))} />
               </label>
             </div>
-            <label style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 12 }}>
+            <label style={{ flexDirection: "column", gap: 4, marginTop: 12 }}>
               Resumen del cambio
               <input
                 value={wizard.changeSummary}
@@ -536,7 +516,7 @@ export function QualityDocumentsPage() {
               />
             </label>
 
-            <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12 }}>
+            <label style={{ alignItems: "center", gap: 8, marginTop: 12 }}>
               <input
                 type="checkbox"
                 checked={wizard.markCurrent}
@@ -545,9 +525,9 @@ export function QualityDocumentsPage() {
               Marcar como vigente
             </label>
 
-            <h3 style={{ marginTop: 20, marginBottom: 8 }}>Archivos</h3>
+            <h3 style={{ marginBottom: 8 }}>Archivos</h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <label style={{ flexDirection: "column", gap: 4 }}>
                 PDF publicado (opcional)
                 <input
                   type="file"
@@ -555,7 +535,7 @@ export function QualityDocumentsPage() {
                   onChange={(e) => setWizard((w) => ({ ...w, publishedFile: e.target.files?.[0] ?? null }))}
                 />
               </label>
-              <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <label style={{ flexDirection: "column", gap: 4 }}>
                 Fuente Word/Excel (opcional)
                 <input
                   type="file"

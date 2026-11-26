@@ -295,11 +295,11 @@ export function QualityPg09R03Page() {
     <div className="workspace-page pad">
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "flex-start" }}>
         <div>
-          <Link to="/calidad/documentos/PG09-R03" style={{ fontSize: 13 }}>
+          <Link className="t-small" to="/calidad/documentos/PG09-R03">
             ← Plantilla PG09-R03
           </Link>
           <h1 style={{ margin: "4px 0 0" }}>PG09-R03 · Encuesta de satisfacción</h1>
-          <p style={{ marginTop: 6, color: "var(--lc-ink-3)", maxWidth: 640 }}>
+          <p className="muted" style={{ marginTop: 6, maxWidth: 640 }}>
             Cada encuesta se <strong>genera en el sistema</strong> (ENC-AAAA-NNNN). Puntajes 1–5 y vínculo
             opcional al informe de ensayo.
           </p>
@@ -314,9 +314,9 @@ export function QualityPg09R03Page() {
         </div>
       </div>
 
-      {error && <p style={{ color: "var(--lc-danger)" }}>{error}</p>}
-      {msg && <p style={{ color: "var(--lc-ok)" }}>{msg}</p>}
-      <p style={{ fontSize: 13, color: "var(--lc-ink-3)" }}>
+      {error && <p className="t-danger">{error}</p>}
+      {msg && <p className="t-ok">{msg}</p>}
+      <p className="muted t-small">
         Borradores: <strong>{draftCount}</strong> · Recibidas: <strong>{receivedCount}</strong>
         {averageOverall != null ? (
           <>
@@ -329,7 +329,7 @@ export function QualityPg09R03Page() {
 
       {showForm && (
         <form className="card pad" onSubmit={(e) => void onCreate(e)} style={{ marginBottom: 16 }}>
-          <h3 style={{ marginTop: 0 }}>Nueva encuesta de satisfacción</h3>
+          <h3>Nueva encuesta de satisfacción</h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
             <label>
               Cliente *
@@ -387,11 +387,11 @@ export function QualityPg09R03Page() {
               {scoreSelect(scoreOverall, setScoreOverall)}
             </label>
           </div>
-          <label style={{ display: "block", marginTop: 12 }}>
+          <label style={{ marginTop: 12 }}>
             Comentarios
             <textarea value={comments} onChange={(e) => setComments(e.target.value)} rows={2} style={{ width: "100%" }} />
           </label>
-          <label style={{ display: "block", marginTop: 8 }}>
+          <label style={{ marginTop: 8 }}>
             Notas internas
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} style={{ width: "100%" }} />
           </label>
@@ -419,13 +419,13 @@ export function QualityPg09R03Page() {
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "minmax(280px, 1fr) minmax(320px, 1.2fr)", gap: 16 }}>
           <div className="card pad" style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <table>
               <thead>
-                <tr style={{ textAlign: "left", borderBottom: "1px solid var(--lc-line)" }}>
-                  <th style={{ padding: "6px 4px" }}>Número</th>
-                  <th style={{ padding: "6px 4px" }}>Cliente</th>
-                  <th style={{ padding: "6px 4px" }}>Prom.</th>
-                  <th style={{ padding: "6px 4px" }}>Estado</th>
+                <tr>
+                  <th>Número</th>
+                  <th>Cliente</th>
+                  <th>Prom.</th>
+                  <th>Estado</th>
                 </tr>
               </thead>
               <tbody>
@@ -433,21 +433,17 @@ export function QualityPg09R03Page() {
                   <tr
                     key={r.id}
                     onClick={() => setSelectedId(r.id)}
-                    style={{
-                      cursor: "pointer",
-                      background: selectedId === r.id ? "#f1f5f9" : undefined,
-                      borderBottom: "1px solid var(--lc-surface-2)"
-                    }}
+                    style={{ cursor: "pointer", background: selectedId === r.id ? "#f1f5f9" : undefined }}
                   >
-                    <td style={{ padding: "8px 4px" }}>{r.number}</td>
-                    <td style={{ padding: "8px 4px" }}>{r.customerName}</td>
-                    <td style={{ padding: "8px 4px" }}>{r.averageScore != null ? r.averageScore.toFixed(1) : "—"}</td>
-                    <td style={{ padding: "8px 4px" }}>{statusLabel(r.status)}</td>
+                    <td>{r.number}</td>
+                    <td>{r.customerName}</td>
+                    <td>{r.averageScore != null ? r.averageScore.toFixed(1) : "—"}</td>
+                    <td>{statusLabel(r.status)}</td>
                   </tr>
                 ))}
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={4} style={{ padding: 12, color: "var(--lc-ink-3)" }}>
+                    <td className="muted" colSpan={4}>
                       Sin encuestas.
                     </td>
                   </tr>
@@ -458,13 +454,13 @@ export function QualityPg09R03Page() {
 
           <div className="card pad">
             {!selected ? (
-              <p style={{ color: "var(--lc-ink-3)", margin: 0 }}>Seleccioná una encuesta para ver el detalle.</p>
+              <p className="muted" style={{ margin: 0 }}>Seleccioná una encuesta para ver el detalle.</p>
             ) : (
               <>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
                   <div>
                     <h3 style={{ margin: 0 }}>{selected.number}</h3>
-                    <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--lc-ink-3)" }}>
+                    <p className="muted t-small" style={{ margin: "4px 0 0" }}>
                       {statusLabel(selected.status)}
                       {selected.averageScore != null ? ` · promedio ${selected.averageScore.toFixed(2)}` : ""}
                     </p>
@@ -546,11 +542,11 @@ export function QualityPg09R03Page() {
                         {scoreSelect(editScoreOverall, setEditScoreOverall)}
                       </label>
                     </div>
-                    <label style={{ display: "block", marginTop: 12 }}>
+                    <label style={{ marginTop: 12 }}>
                       Comentarios
                       <textarea value={editComments} onChange={(e) => setEditComments(e.target.value)} rows={3} style={{ width: "100%" }} />
                     </label>
-                    <label style={{ display: "block", marginTop: 8 }}>
+                    <label style={{ marginTop: 8 }}>
                       Notas
                       <textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={2} style={{ width: "100%" }} />
                     </label>
@@ -564,14 +560,8 @@ export function QualityPg09R03Page() {
                     </div>
                   </>
                 ) : (
-                  <dl
-                    style={{
-                      marginTop: 12,
-                      fontSize: 13,
-                      display: "grid",
-                      gridTemplateColumns: "auto 1fr",
-                      gap: "6px 12px"
-                    }}
+                  <dl className="t-small"
+                    style={{ marginTop: 12, display: "grid", gridTemplateColumns: "auto 1fr", gap: "6px 12px" }}
                   >
                     <dt>Cliente</dt>
                     <dd style={{ margin: 0 }}>{selected.customerName}</dd>

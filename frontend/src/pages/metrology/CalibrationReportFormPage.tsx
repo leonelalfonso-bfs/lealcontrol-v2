@@ -797,36 +797,36 @@ export function CalibrationReportFormPage() {
     return (
       <div style={{ background: "rgba(0,0,0,0.015)", border: "1px solid var(--surface-border)", borderRadius: 8, padding: 10, marginBottom: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, borderBottom: "1px solid rgba(0,0,0,0.06)", paddingBottom: 6 }}>
-          <strong style={{ fontSize: "0.86rem", color: "var(--lc-accent-strong)" }}>{title}</strong>
-          <span className="muted" style={{ fontSize: "0.78rem" }}>
+          <strong className="t-accent">{title}</strong>
+          <span className="muted t-small">
             Carga Base Ref: <strong>{block.refLoad.toFixed(0)} {selectedEquipment?.unit}</strong> · EMT: <strong>±{block.targetEmt} {selectedEquipment?.unit}</strong>
           </span>
         </div>
 
         <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+          <table>
             <thead>
-              <tr style={{ background: "rgba(0,0,0,0.02)", textAlign: "left" }}>
-                <th style={{ padding: "6px 8px", width: 70 }}>Pasada</th>
-                <th style={{ padding: "6px 8px", width: 95, textAlign: "right" }}>Cero Inicial</th>
-                <th style={{ padding: "6px 8px", width: 110, textAlign: "right" }}>Indicación (I)</th>
-                <th style={{ padding: "6px 8px", width: 95, textAlign: "right" }}>Cero Final</th>
-                <th style={{ padding: "6px 8px", width: 100, textAlign: "right" }}>ΔL hasta +e</th>
-                <th style={{ padding: "6px 8px", width: 100, textAlign: "right" }}>P (Corregida)</th>
-                <th style={{ padding: "6px 8px", width: 90, textAlign: "right" }}>Error (E)</th>
-                <th style={{ padding: "6px 8px", width: 70, textAlign: "center" }}>EMT</th>
-                <th style={{ padding: "6px 8px", width: 90, textAlign: "center" }}>Estado</th>
+              <tr>
+                <th style={{ width: 70 }}>Pasada</th>
+                <th className="t-right" style={{ width: 95 }}>Cero Inicial</th>
+                <th className="t-right" style={{ width: 110 }}>Indicación (I)</th>
+                <th className="t-right" style={{ width: 95 }}>Cero Final</th>
+                <th className="t-right" style={{ width: 100 }}>ΔL hasta +e</th>
+                <th className="t-right" style={{ width: 100 }}>P (Corregida)</th>
+                <th className="t-right" style={{ width: 90 }}>Error (E)</th>
+                <th className="t-center" style={{ width: 70 }}>EMT</th>
+                <th className="t-center" style={{ width: 90 }}>Estado</th>
               </tr>
             </thead>
             <tbody>
               {block.computedRows.map((r, idx) => {
                 return (
-                  <tr key={idx} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
-                    <td style={{ padding: "6px 8px", fontWeight: 700 }}>
-                      Pasada #{idx + 1} {idx === 0 && <span style={{ fontSize: "0.68rem", color: "var(--lc-info)" }}>(Ref.)</span>}
+                  <tr key={idx}>
+                    <td className="t-strong">
+                      Pasada #{idx + 1} {idx === 0 && <span className="t-info" style={{ fontSize: "0.68rem" }}>(Ref.)</span>}
                     </td>
-                    <td style={{ padding: "4px 8px", textAlign: "right" }}>
-                      <input
+                    <td className="t-right">
+                      <input className="t-right"
                         type="number"
                         step="1"
                         value={trials[idx].initialZero}
@@ -835,11 +835,11 @@ export function CalibrationReportFormPage() {
                           copy[idx].initialZero = e.target.value;
                           setter(copy);
                         }}
-                        style={{ width: "100%", maxWidth: "85px", textAlign: "right", padding: "4px 6px", borderRadius: 4, border: "1px solid var(--surface-border)" }}
+                        style={{ width: "100%", maxWidth: "85px" }}
                       />
                     </td>
-                    <td style={{ padding: "4px 8px", textAlign: "right" }}>
-                      <input
+                    <td className="t-right">
+                      <input className="t-right t-strong"
                         type="number"
                         step="1"
                         value={trials[idx].indication}
@@ -849,11 +849,11 @@ export function CalibrationReportFormPage() {
                           setter(copy);
                         }}
                         placeholder="—"
-                        style={{ width: "100%", maxWidth: "100px", textAlign: "right", fontWeight: 700, padding: "4px 6px", borderRadius: 4, border: "1px solid var(--surface-border)" }}
+                        style={{ width: "100%", maxWidth: "100px" }}
                       />
                     </td>
-                    <td style={{ padding: "4px 8px", textAlign: "right" }}>
-                      <input
+                    <td className="t-right">
+                      <input className="t-right"
                         type="number"
                         step="1"
                         value={trials[idx].finalZero}
@@ -862,11 +862,11 @@ export function CalibrationReportFormPage() {
                           copy[idx].finalZero = e.target.value;
                           setter(copy);
                         }}
-                        style={{ width: "100%", maxWidth: "85px", textAlign: "right", padding: "4px 6px", borderRadius: 4, border: "1px solid var(--surface-border)" }}
+                        style={{ width: "100%", maxWidth: "85px" }}
                       />
                     </td>
-                    <td style={{ padding: "4px 8px", textAlign: "right" }}>
-                      <input
+                    <td className="t-right">
+                      <input className="t-right"
                         type="number"
                         step="1"
                         value={trials[idx].deltaL}
@@ -875,53 +875,32 @@ export function CalibrationReportFormPage() {
                           copy[idx].deltaL = e.target.value;
                           setter(copy);
                         }}
-                        style={{ width: "100%", maxWidth: "90px", textAlign: "right", padding: "4px 6px", borderRadius: 4, border: "1px solid var(--surface-border)" }}
+                        style={{ width: "100%", maxWidth: "90px" }}
                       />
                     </td>
-                    <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "monospace", fontWeight: 600 }}>
+                    <td className="t-right t-mono t-strong">
                       {r.corrected !== null ? r.corrected.toFixed(0) : "—"}
                     </td>
-                    <td
-                      style={{
-                        padding: "6px 8px",
-                        textAlign: "right",
-                        fontFamily: "monospace",
-                        fontWeight: 700,
-                        color: r.error === null ? "inherit" : Math.abs(r.error) <= (block.targetEmt || 20) ? "#047857" : "#b91c1c"
-                      }}
+                    <td className="t-right t-mono t-strong"
+                      style={{ color: r.error === null ? "inherit" : Math.abs(r.error) <= (block.targetEmt || 20) ? "#047857" : "#b91c1c" }}
                     >
                       {r.error !== null ? (r.error >= 0 ? `+${r.error.toFixed(0)}` : r.error.toFixed(0)) : "—"}
                     </td>
-                    <td style={{ padding: "6px 8px", textAlign: "center", fontFamily: "monospace" }}>
+                    <td className="t-center t-mono">
                       {r.hasValue ? `±${block.targetEmt}` : "—"}
                     </td>
-                    <td style={{ padding: "6px 8px", textAlign: "center" }}>
+                    <td className="t-center">
                       {r.hasValue ? (
                         r.ok ? (
                           <span
-                            className="badge ok"
-                            style={{
-                              background: "rgba(16, 185, 129, 0.15)",
-                              color: "var(--lc-ok)",
-                              fontWeight: 700,
-                              padding: "2px 8px",
-                              borderRadius: 10,
-                              fontSize: "0.76rem"
-                            }}
+                            className="badge ok t-ok t-strong t-small"
+                            style={{ background: "rgba(16, 185, 129, 0.15)", padding: "2px 8px", borderRadius: 10 }}
                           >
                             CUMPLE
                           </span>
                         ) : (
                           <span
-                            className="badge prio-high"
-                            style={{
-                              background: "rgba(239, 68, 68, 0.15)",
-                              color: "var(--lc-danger)",
-                              fontWeight: 700,
-                              padding: "2px 8px",
-                              borderRadius: 10,
-                              fontSize: "0.76rem"
-                            }}
+                            className="badge prio-high alert t-strong t-small"
                           >
                             NO CUMPLE
                           </span>
@@ -938,29 +917,18 @@ export function CalibrationReportFormPage() {
         </div>
 
         {/* Footer Statistics */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginTop: 8,
-            padding: "8px 12px",
-            background: "rgba(0,0,0,0.03)",
-            borderRadius: 6,
-            fontSize: "0.82rem",
-            flexWrap: "wrap",
-            gap: 10
-          }}
+        <div className="t-small"
+          style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, padding: "8px 12px", background: "rgba(0,0,0,0.03)", borderRadius: 6, flexWrap: "wrap", gap: 10 }}
         >
           <div>
             <strong>Desviación Estándar (s):</strong>{" "}
-            <span style={{ color: "var(--lc-info)", fontWeight: 700 }}>
+            <span className="t-info t-strong">
               {block.stdDev.toFixed(2)} {selectedEquipment?.unit}
             </span>
           </div>
           <div>
             <strong>Diferencia Máxima:</strong>{" "}
-            <span style={{ fontWeight: 700 }}>
+            <span className="t-strong">
               {block.maxDiff.toFixed(0)} {selectedEquipment?.unit}
             </span>{" "}
             <span className="muted">(EMT: ±{block.targetEmt})</span>
@@ -1007,12 +975,12 @@ export function CalibrationReportFormPage() {
       {(supersedesReportIdParam || amendmentReasonParam) && (
         <div
           className="card pad"
-          style={{ marginBottom: 16, background: "var(--lc-warn-bg)", border: "1px solid #fdba74", color: "#9a3412" }}
+          style={{ marginBottom: 16, color: "#9a3412" }}
         >
           <strong>Enmienda PG09 R2</strong>
           {amendmentReasonParam && <> — Motivo: {amendmentReasonParam}</>}
           {supersedesReportIdParam && (
-            <div style={{ marginTop: 4, fontSize: "0.88rem" }}>
+            <div style={{ marginTop: 4 }}>
               Sustituye al informe{" "}
               <Link to={`/metrologia/informes/${supersedesReportIdParam}/imprimir`} target="_blank">
                 {supersedesReportIdParam}
@@ -1054,35 +1022,13 @@ export function CalibrationReportFormPage() {
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id as FormTab)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "10px 16px",
-                borderRadius: "8px 8px 0 0",
-                border: "none",
-                borderBottom: isActive ? "3px solid #0d9488" : "3px solid transparent",
-                background: isActive ? "rgba(13, 148, 136, 0.12)" : "rgba(0,0,0,0.02)",
-                color: isActive ? "#06574c" : "var(--text-color, #333)",
-                fontWeight: isActive ? 800 : 600,
-                fontSize: "0.88rem",
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-                transition: "all 0.15s ease"
-              }}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 16px", borderRadius: "8px 8px 0 0", border: "none", borderBottom: isActive ? "3px solid #0d9488" : "3px solid transparent", background: isActive ? "rgba(13, 148, 136, 0.12)" : "rgba(0,0,0,0.02)", color: isActive ? "#06574c" : "var(--text-color, #333)", fontWeight: isActive ? 800 : 600, cursor: "pointer", whiteSpace: "nowrap", transition: "all 0.15s ease" }}
             >
               <span>{tab.icon}</span>
               <span>{tab.label}</span>
               {tab.ok && (
-                <span
-                  style={{
-                    fontSize: "0.72rem",
-                    background: "var(--lc-ok)",
-                    color: "#fff",
-                    padding: "1px 6px",
-                    borderRadius: 10,
-                    fontWeight: 800
-                  }}
+                <span className="t-small t-strong"
+                  style={{ background: "var(--lc-ok)", color: "#fff", padding: "1px 6px", borderRadius: 10 }}
                 >
                   ✓
                 </span>
@@ -1097,7 +1043,7 @@ export function CalibrationReportFormPage() {
         {activeTab === "general" && (
           <>
             <div className="card pad">
-              <h3 style={{ margin: "0 0 12px 0", fontSize: "1.1rem" }}>1. Instrumento y Datos Generales</h3>
+              <h3 style={{ margin: "0 0 12px 0" }}>1. Instrumento y Datos Generales</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 14 }}>
                 <label>
                   Instrumento a Calibrar *
@@ -1181,7 +1127,7 @@ export function CalibrationReportFormPage() {
               )}
 
               {/* Environmental Conditions */}
-              <h4 style={{ margin: "14px 0 8px 0", fontSize: "0.95rem" }}>Condiciones Ambientales</h4>
+              <h4 style={{ margin: "14px 0 8px 0" }}>Condiciones Ambientales</h4>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14, marginBottom: 10 }}>
                 <label style={{ gridColumn: "1 / -1" }}>
                   Termómetro (PG16)
@@ -1217,7 +1163,7 @@ export function CalibrationReportFormPage() {
 
             {/* Inspección Visual y Funcional (Sin cero, ya que cuenta con pestaña y ensayo exclusivo) */}
             <div className="card pad">
-              <h3 style={{ margin: "0 0 12px 0", fontSize: "1.1rem" }}>Inspección Visual y Funcional</h3>
+              <h3 style={{ margin: "0 0 12px 0" }}>Inspección Visual y Funcional</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, marginBottom: 12 }}>
                 <label style={{ flexDirection: "row", alignItems: "center", gap: 8, cursor: "pointer" }}>
                   <input
@@ -1264,12 +1210,12 @@ export function CalibrationReportFormPage() {
             <div className="card pad">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: "1.1rem" }}>2. Ensayo de Puesta a Cero (Rango 4% Max)</h3>
-                  <p className="muted" style={{ margin: "2px 0 0", fontSize: "0.76rem" }}>
+                  <h3 style={{ margin: 0 }}>2. Ensayo de Puesta a Cero (Rango 4% Max)</h3>
+                  <p className="muted t-small" style={{ margin: "2px 0 0" }}>
                     Resolución SCyNEI 2307/80: Rango máximo de puesta a cero $\le 4\%$ de la Capacidad Máxima ($\pm 2\%$ Max). Error a cero $\le \pm 0.25e$.
                   </p>
                 </div>
-                <span className="tag" style={{ background: "rgba(13, 148, 136, 0.1)", color: "var(--lc-accent-strong)", fontWeight: 700 }}>
+                <span className="tag t-accent t-strong" style={{ background: "rgba(13, 148, 136, 0.1)" }}>
                   Límite 4% Max = {zero4PctLimit.toLocaleString("es-AR")} {selectedEquipment?.unit || "kg"}
                 </span>
               </div>
@@ -1277,11 +1223,11 @@ export function CalibrationReportFormPage() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 14, marginBottom: 14 }}>
                 {/* Test 1: Puesta a cero dentro del rango */}
                 <div style={{ background: "rgba(0,0,0,0.02)", padding: 12, borderRadius: 8, border: "1px solid var(--surface-border)" }}>
-                  <strong style={{ fontSize: "0.85rem", color: "var(--lc-accent-strong)" }}>A. Puesta a Cero Dentro del Rango</strong>
-                  <p className="muted" style={{ fontSize: "0.74rem", margin: "4px 0 8px" }}>
+                  <strong className="t-small t-accent">A. Puesta a Cero Dentro del Rango</strong>
+                  <p className="muted t-small" style={{ margin: "4px 0 8px" }}>
                     Carga aplicada menor al 4% Max donde el dispositivo debe poner a cero efectivamente.
                   </p>
-                  <label style={{ fontSize: "0.8rem" }}>
+                  <label>
                     Carga de prueba aplicada ({selectedEquipment?.unit})
                     <input
                       type="number"
@@ -1296,17 +1242,17 @@ export function CalibrationReportFormPage() {
                       checked={zeroInRangeOk}
                       onChange={(e) => setZeroInRangeOk(e.target.checked)}
                     />
-                    <span style={{ fontSize: "0.82rem", fontWeight: 600 }}>Puesta a cero efectiva (Indicador regresa a 0)</span>
+                    <span className="t-small t-strong">Puesta a cero efectiva (Indicador regresa a 0)</span>
                   </label>
                 </div>
 
                 {/* Test 2: Bloqueo fuera del rango del 4% */}
                 <div style={{ background: "rgba(0,0,0,0.02)", padding: 12, borderRadius: 8, border: "1px solid var(--surface-border)" }}>
-                  <strong style={{ fontSize: "0.85rem", color: "var(--lc-accent-strong)" }}>B. Bloqueo Fuera del Rango (&gt; 4% Max)</strong>
-                  <p className="muted" style={{ fontSize: "0.74rem", margin: "4px 0 8px" }}>
+                  <strong className="t-small t-accent">B. Bloqueo Fuera del Rango (&gt; 4% Max)</strong>
+                  <p className="muted t-small" style={{ margin: "4px 0 8px" }}>
                     Carga superior a {zero4PctLimit} {selectedEquipment?.unit} donde el indicador DEBE bloquear la puesta a cero.
                   </p>
-                  <label style={{ fontSize: "0.8rem" }}>
+                  <label>
                     Carga excesiva de prueba ({selectedEquipment?.unit})
                     <input
                       type="number"
@@ -1321,7 +1267,7 @@ export function CalibrationReportFormPage() {
                       checked={zeroOverLimitBlocked}
                       onChange={(e) => setZeroOverLimitBlocked(e.target.checked)}
                     />
-                    <span style={{ fontSize: "0.82rem", fontWeight: 600 }}>Puesta a cero rechazada / bloqueada fuera de rango</span>
+                    <span className="t-small t-strong">Puesta a cero rechazada / bloqueada fuera de rango</span>
                   </label>
                 </div>
               </div>
@@ -1350,38 +1296,38 @@ export function CalibrationReportFormPage() {
             <div className="card pad">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: "1.1rem" }}>3. Ensayo de Movilidad / Discriminación (Sobrecarga 1.4d)</h3>
-                  <p className="muted" style={{ margin: "2px 0 0", fontSize: "0.76rem" }}>
+                  <h3 style={{ margin: 0 }}>3. Ensayo de Movilidad / Discriminación (Sobrecarga 1.4d)</h3>
+                  <p className="muted t-small" style={{ margin: "2px 0 0" }}>
                     Al aplicar suavemente una sobrecarga adicional de $1.4 \times d$ ({Math.round(dInterval * 1.4 * 100) / 100} {selectedEquipment?.unit}) sobre el receptor en equilibrio, la indicación debe variar al menos $1 \times d$ ({dInterval} {selectedEquipment?.unit}).
                   </p>
                 </div>
-                <span className="tag" style={{ background: "rgba(13, 148, 136, 0.1)", color: "var(--lc-accent-strong)", fontWeight: 700 }}>
+                <span className="tag t-accent t-strong" style={{ background: "rgba(13, 148, 136, 0.1)" }}>
                   Sobrecarga = 1.4 × d = {Math.round(dInterval * 1.4 * 100) / 100} {selectedEquipment?.unit || "kg"}
                 </span>
               </div>
 
               <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+                <table>
                   <thead>
-                    <tr style={{ background: "rgba(0,0,0,0.02)", textAlign: "left" }}>
-                      <th style={{ padding: "6px 8px" }}>Nivel de Carga</th>
-                      <th style={{ padding: "6px 8px", textAlign: "right" }}>Carga Base ({selectedEquipment?.unit})</th>
-                      <th style={{ padding: "6px 8px", textAlign: "right" }}>Sobrecarga (1.4d)</th>
-                      <th style={{ padding: "6px 8px", textAlign: "right" }}>Indicación Inicial (I₁)</th>
-                      <th style={{ padding: "6px 8px", textAlign: "right" }}>Indicación Final (I₂)</th>
-                      <th style={{ padding: "6px 8px", textAlign: "right" }}>Variación (ΔI)</th>
-                      <th style={{ padding: "6px 8px", textAlign: "center" }}>Mínimo Requerido</th>
-                      <th style={{ padding: "6px 8px", textAlign: "center" }}>Estado</th>
+                    <tr>
+                      <th>Nivel de Carga</th>
+                      <th className="t-right">Carga Base ({selectedEquipment?.unit})</th>
+                      <th className="t-right">Sobrecarga (1.4d)</th>
+                      <th className="t-right">Indicación Inicial (I₁)</th>
+                      <th className="t-right">Indicación Final (I₂)</th>
+                      <th className="t-right">Variación (ΔI)</th>
+                      <th className="t-center">Mínimo Requerido</th>
+                      <th className="t-center">Estado</th>
                     </tr>
                   </thead>
                   <tbody>
                     {mobilityPoints.map((p, idx) => {
                       const comp = mobilityComputed[idx];
                       return (
-                        <tr key={idx} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
-                          <td style={{ padding: "6px 8px", fontWeight: 700 }}>{p.loadName}</td>
-                          <td style={{ padding: "4px 8px", textAlign: "right" }}>
-                            <input
+                        <tr key={idx}>
+                          <td className="t-strong">{p.loadName}</td>
+                          <td className="t-right">
+                            <input className="t-right"
                               type="number"
                               step="1"
                               value={p.load}
@@ -1390,11 +1336,11 @@ export function CalibrationReportFormPage() {
                                 copy[idx].load = e.target.value;
                                 setMobilityPoints(copy);
                               }}
-                              style={{ width: 100, textAlign: "right" }}
+                              style={{ width: 100 }}
                             />
                           </td>
-                          <td style={{ padding: "4px 8px", textAlign: "right" }}>
-                            <input
+                          <td className="t-right">
+                            <input className="t-right"
                               type="number"
                               step="0.1"
                               value={p.overload}
@@ -1403,11 +1349,11 @@ export function CalibrationReportFormPage() {
                                 copy[idx].overload = e.target.value;
                                 setMobilityPoints(copy);
                               }}
-                              style={{ width: 85, textAlign: "right" }}
+                              style={{ width: 85 }}
                             />
                           </td>
-                          <td style={{ padding: "4px 8px", textAlign: "right" }}>
-                            <input
+                          <td className="t-right">
+                            <input className="t-right t-strong"
                               type="number"
                               step="1"
                               value={p.initialIndication}
@@ -1416,11 +1362,11 @@ export function CalibrationReportFormPage() {
                                 copy[idx].initialIndication = e.target.value;
                                 setMobilityPoints(copy);
                               }}
-                              style={{ width: 100, textAlign: "right", fontWeight: 700 }}
+                              style={{ width: 100 }}
                             />
                           </td>
-                          <td style={{ padding: "4px 8px", textAlign: "right" }}>
-                            <input
+                          <td className="t-right">
+                            <input className="t-right t-strong"
                               type="number"
                               step="1"
                               value={p.finalIndication}
@@ -1429,16 +1375,16 @@ export function CalibrationReportFormPage() {
                                 copy[idx].finalIndication = e.target.value;
                                 setMobilityPoints(copy);
                               }}
-                              style={{ width: 100, textAlign: "right", fontWeight: 700 }}
+                              style={{ width: 100 }}
                             />
                           </td>
-                          <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "monospace", fontWeight: 700, color: comp.ok ? "var(--lc-ok)" : "var(--lc-danger)" }}>
+                          <td className="t-right t-mono t-strong" style={{ color: comp.ok ? "var(--lc-ok)" : "var(--lc-danger)" }}>
                             +{comp.delta.toFixed(0)} {selectedEquipment?.unit}
                           </td>
-                          <td style={{ padding: "6px 8px", textAlign: "center", fontFamily: "monospace" }}>
+                          <td className="t-center t-mono">
                             ≥ {dInterval} {selectedEquipment?.unit}
                           </td>
-                          <td style={{ padding: "6px 8px", textAlign: "center" }}>
+                          <td className="t-center">
                             <span className={`badge ${comp.ok ? "ok" : "prio-high"}`}>
                               {comp.ok ? "✓ CUMPLE" : "✗ NO CUMPLE"}
                             </span>
@@ -1478,17 +1424,17 @@ export function CalibrationReportFormPage() {
           <div className="card pad">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: "1.15rem" }}>
+                <h3 style={{ margin: 0 }}>
                   4. {is2307 ? "Ensayo de Fidelidad" : "Ensayo de Repetibilidad"}
                 </h3>
-                <p className="muted" style={{ margin: "2px 0 0", fontSize: "0.78rem" }}>
+                <p className="muted t-small" style={{ margin: "2px 0 0" }}>
                   Baja Carga: {lowAppliedLoad.toFixed(0)} {selectedEquipment?.unit} (EMT: ±{lowEmt}) · Alta Carga: {highAppliedLoad.toFixed(0)} {selectedEquipment?.unit} (EMT: ±{highEmt})
                 </p>
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
                 {truckFidelity && (
                   <>
-                    <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.8rem", fontWeight: 600, margin: 0, cursor: "pointer" }}>
+                    <label style={{ alignItems: "center", gap: 6, margin: 0, cursor: "pointer" }}>
                       <input
                         type="checkbox"
                         checked={fidelitySingleDirection}
@@ -1500,7 +1446,6 @@ export function CalibrationReportFormPage() {
                       <select
                         value={fidelityActiveSense}
                         onChange={(e) => setFidelityActiveSense(e.target.value as "inbound" | "outbound")}
-                        style={{ fontSize: "0.8rem" }}
                       >
                         <option value="inbound">Ingreso (entrada)</option>
                         <option value="outbound">Egreso (salida)</option>
@@ -1535,7 +1480,7 @@ export function CalibrationReportFormPage() {
             {/* Low Load Section */}
             {(fidelityTab === "low" || fidelityTab === "both") && (
               <div style={{ marginBottom: 16 }}>
-                <h4 style={{ margin: "0 0 8px", color: "var(--lc-accent-strong)", fontSize: "0.95rem" }}>
+                <h4 style={{ margin: "0 0 8px" }}>
                   🔹 Fidelidad en Baja Carga (~30% / 12.5t)
                 </h4>
                 {truckFidelity ? (
@@ -1569,7 +1514,7 @@ export function CalibrationReportFormPage() {
             {/* High Load Section */}
             {(fidelityTab === "high" || fidelityTab === "both") && (
               <div style={{ marginBottom: 14 }}>
-                <h4 style={{ margin: "0 0 8px", color: "var(--lc-accent-strong)", fontSize: "0.95rem" }}>
+                <h4 style={{ margin: "0 0 8px" }}>
                   🔸 Fidelidad en Alta Carga (~60%-100% / 25t)
                 </h4>
                 {truckFidelity ? (
@@ -1633,12 +1578,12 @@ export function CalibrationReportFormPage() {
           <div className="card pad">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: "1.1rem" }}>5. Ensayo de Excentricidad de Carga</h3>
-                <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
+                <h3 style={{ margin: 0 }}>5. Ensayo de Excentricidad de Carga</h3>
+                <p className="muted t-small" style={{ margin: 0 }}>
                   Carga de ensayo: <strong>{eccTestLoad} {selectedEquipment?.unit}</strong> ({eccentricityConfig?.description})
                 </p>
               </div>
-              <span className="tag" style={{ background: "rgba(13, 148, 136, 0.1)", color: "var(--lc-accent-strong)", fontWeight: 700 }}>
+              <span className="tag t-accent t-strong" style={{ background: "rgba(13, 148, 136, 0.1)" }}>
                 EMT = ±{eccentricityConfig?.emt || 20} {selectedEquipment?.unit || "kg"}
               </span>
             </div>
@@ -1654,18 +1599,18 @@ export function CalibrationReportFormPage() {
                 />
               </label>
               <div style={{ border: "1px dashed var(--lc-ink-3)", borderRadius: 10, padding: 10, background: "rgba(59,130,246,0.03)" }}>
-                <strong style={{ fontSize: "0.8rem" }}>Croquis de enumeración de apoyos · frente / acceso ↑</strong>
+                <strong className="t-small">Croquis de enumeración de apoyos · frente / acceso ↑</strong>
                 {/* Fila superior (enfrente: 2, 4, 6, 8...) */}
                 <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.ceil(eccPositions.length / 2)}, minmax(36px, 1fr))`, gap: 6, marginTop: 8 }}>
                   {Array.from({ length: Math.ceil(eccPositions.length / 2) }, (_, i) => 2 * (i + 1))
                     .filter((num) => num <= eccPositions.length)
                     .map((num) => (
-                      <span key={`top-${num}`} className="tag" style={{ textAlign: "center", fontWeight: 700, background: "var(--lc-info-bg)", color: "var(--lc-info)" }}>
+                      <span key={`top-${num}`} className="tag t-center t-strong t-info" style={{ background: "var(--lc-info-bg)" }}>
                         {num}
                       </span>
                     ))}
                 </div>
-                <div style={{ height: 18, borderLeft: "2px solid var(--lc-ink-3)", borderRight: "2px solid var(--lc-ink-3)", margin: "5px 10px", textAlign: "center", fontSize: "0.68rem", color: "var(--lc-ink-3)", fontWeight: 600 }}>
+                <div className="t-center muted t-strong" style={{ height: 18, borderLeft: "2px solid var(--lc-ink-3)", borderRight: "2px solid var(--lc-ink-3)", margin: "5px 10px", fontSize: "0.68rem" }}>
                   PLATAFORMA
                 </div>
                 {/* Fila inferior (frente / acceso: 1, 3, 5, 7...) */}
@@ -1673,7 +1618,7 @@ export function CalibrationReportFormPage() {
                   {Array.from({ length: Math.ceil(eccPositions.length / 2) }, (_, i) => 2 * i + 1)
                     .filter((num) => num <= eccPositions.length)
                     .map((num) => (
-                      <span key={`bottom-${num}`} className="tag" style={{ textAlign: "center", fontWeight: 700, background: "var(--lc-info-bg)", color: "var(--lc-info)" }}>
+                      <span key={`bottom-${num}`} className="tag t-center t-strong t-info" style={{ background: "var(--lc-info-bg)" }}>
                         {num}
                       </span>
                     ))}
@@ -1688,9 +1633,9 @@ export function CalibrationReportFormPage() {
                 const ok = eccentricityConfig ? err <= (eccentricityConfig.emt || 20) : true;
                 return (
                   <div key={p.pos} style={{ background: "rgba(0,0,0,0.02)", padding: 10, borderRadius: 8, border: "1px solid var(--surface-border)" }}>
-                    <label style={{ fontSize: "0.8rem", fontWeight: 700 }}>
+                    <label>
                       {p.label}
-                      <span className="muted" style={{ display: "block", fontSize: "0.7rem" }}>Indicación I</span>
+                      <span className="muted t-small" style={{ display: "block" }}>Indicación I</span>
                       <input
                         type="number"
                         step="1"
@@ -1701,7 +1646,7 @@ export function CalibrationReportFormPage() {
                           setEccPositions(copy);
                         }}
                       />
-                      <span className="muted" style={{ display: "block", fontSize: "0.7rem", marginTop: 4 }}>ΔL hasta +e</span>
+                      <span className="muted t-small" style={{ display: "block", marginTop: 4 }}>ΔL hasta +e</span>
                       <input
                         type="number"
                         step="1"
@@ -1713,7 +1658,7 @@ export function CalibrationReportFormPage() {
                         }}
                       />
                     </label>
-                    <div style={{ marginTop: 6, fontSize: "0.75rem", display: "flex", justifyContent: "space-between" }}>
+                    <div className="t-small" style={{ marginTop: 6, display: "flex", justifyContent: "space-between" }}>
                       <span>Error: <strong>{correctedError >= 0 ? `+${correctedError.toFixed(0)}` : correctedError.toFixed(0)}</strong></span>
                       <span className={`badge ${ok ? "ok" : "prio-high"}`}>{ok ? "✓ Conforme" : "✗ Fuera"}</span>
                     </div>
@@ -1734,16 +1679,15 @@ export function CalibrationReportFormPage() {
           <div className="card pad">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: "1.1rem" }}>6. Ensayo de Exactitud y Linealidad</h3>
-                <p className="muted" style={{ margin: "2px 0 0", fontSize: "0.75rem" }}>
+                <h3 style={{ margin: 0 }}>6. Ensayo de Exactitud y Linealidad</h3>
+                <p className="muted t-small" style={{ margin: "2px 0 0" }}>
                   Determinación de errores con cargas crecientes (↗) y decrecientes (↘), pesas patrón, cargas auxiliares y redondeo (ΔL)
                 </p>
               </div>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <button
                   type="button"
-                  className="btn btn-outline"
-                  style={{ fontSize: "0.78rem", padding: "4px 10px" }}
+                  className="btn btn-outline compact"
                   onClick={() => {
                     setLinRows((prev) => [
                       ...prev,
@@ -1761,28 +1705,28 @@ export function CalibrationReportFormPage() {
                 >
                   + Agregar Renglón
                 </button>
-                <span className="tag" style={{ background: "rgba(13, 148, 136, 0.1)", color: "var(--lc-accent-strong)", fontWeight: 700 }}>
+                <span className="tag t-accent t-strong" style={{ background: "rgba(13, 148, 136, 0.1)" }}>
                   {linRows.length} Renglones de Carga
                 </span>
               </div>
             </div>
 
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+              <table>
                 <thead>
-                  <tr style={{ background: "var(--lc-surface-2)", borderBottom: "2px solid rgba(0,0,0,0.06)", textAlign: "left" }}>
-                    <th style={{ padding: "8px 6px", width: 90 }}>Pesas</th>
-                    <th style={{ padding: "8px 6px", width: 95 }}>Carga Auxiliar</th>
-                    <th style={{ padding: "8px 6px", width: 110 }}>Lectura Ascendente</th>
-                    <th style={{ padding: "8px 6px", width: 100 }}>Redondeo Ascendente</th>
-                    <th style={{ padding: "8px 6px", width: 115, textAlign: "right" }}>Lectura Corregida Ascendente</th>
-                    <th style={{ padding: "8px 6px", width: 90, textAlign: "right" }}>Error Ascendente</th>
-                    <th style={{ padding: "8px 6px", width: 110 }}>Lectura Descendente</th>
-                    <th style={{ padding: "8px 6px", width: 100 }}>Redondeo Descendente</th>
-                    <th style={{ padding: "8px 6px", width: 115, textAlign: "right" }}>Lectura Corregida Descendente</th>
-                    <th style={{ padding: "8px 6px", width: 90, textAlign: "right" }}>Error Descendente</th>
-                    <th style={{ padding: "8px 6px", width: 70, textAlign: "center" }}>EMT</th>
-                    <th style={{ padding: "8px 6px", width: 90, textAlign: "center" }}>Estado</th>
+                  <tr>
+                    <th style={{ width: 90 }}>Pesas</th>
+                    <th style={{ width: 95 }}>Carga Auxiliar</th>
+                    <th style={{ width: 110 }}>Lectura Ascendente</th>
+                    <th style={{ width: 100 }}>Redondeo Ascendente</th>
+                    <th className="t-right" style={{ width: 115 }}>Lectura Corregida Ascendente</th>
+                    <th className="t-right" style={{ width: 90 }}>Error Ascendente</th>
+                    <th style={{ width: 110 }}>Lectura Descendente</th>
+                    <th style={{ width: 100 }}>Redondeo Descendente</th>
+                    <th className="t-right" style={{ width: 115 }}>Lectura Corregida Descendente</th>
+                    <th className="t-right" style={{ width: 90 }}>Error Descendente</th>
+                    <th className="t-center" style={{ width: 70 }}>EMT</th>
+                    <th className="t-center" style={{ width: 90 }}>Estado</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1794,8 +1738,8 @@ export function CalibrationReportFormPage() {
                     const descOk = comp.descError !== null ? Math.abs(comp.descError) <= comp.emt : true;
 
                     return (
-                      <tr key={r.step} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)", background: !comp.hasAnyData ? undefined : comp.conform ? "rgba(16, 185, 129, 0.04)" : "rgba(239, 68, 68, 0.05)" }}>
-                        <td style={{ padding: "4px 6px" }}>
+                      <tr key={r.step} style={{ background: !comp.hasAnyData ? undefined : comp.conform ? "rgba(16, 185, 129, 0.04)" : "rgba(239, 68, 68, 0.05)" }}>
+                        <td>
                           <input
                             type="number"
                             step="1"
@@ -1806,10 +1750,10 @@ export function CalibrationReportFormPage() {
                               copy[idx].pesas = e.target.value;
                               setLinRows(copy);
                             }}
-                            style={{ width: "100%", padding: "5px 8px", borderRadius: 16 }}
+                            style={{ width: "100%" }}
                           />
                         </td>
-                        <td style={{ padding: "4px 6px" }}>
+                        <td>
                           <input
                             type="number"
                             step="1"
@@ -1820,11 +1764,11 @@ export function CalibrationReportFormPage() {
                               copy[idx].auxLoad = e.target.value;
                               setLinRows(copy);
                             }}
-                            style={{ width: "100%", padding: "5px 8px", borderRadius: 16 }}
+                            style={{ width: "100%" }}
                           />
                         </td>
-                        <td style={{ padding: "4px 6px" }}>
-                          <input
+                        <td>
+                          <input className="t-strong"
                             type="number"
                             step="1"
                             placeholder="—"
@@ -1834,10 +1778,10 @@ export function CalibrationReportFormPage() {
                               copy[idx].ascIndication = e.target.value;
                               setLinRows(copy);
                             }}
-                            style={{ width: "100%", padding: "5px 8px", borderRadius: 16, fontWeight: 700 }}
+                            style={{ width: "100%" }}
                           />
                         </td>
-                        <td style={{ padding: "4px 6px" }}>
+                        <td>
                           <input
                             type="number"
                             step="1"
@@ -1848,17 +1792,17 @@ export function CalibrationReportFormPage() {
                               copy[idx].ascDeltaL = e.target.value;
                               setLinRows(copy);
                             }}
-                            style={{ width: "100%", padding: "5px 8px", borderRadius: 16 }}
+                            style={{ width: "100%" }}
                           />
                         </td>
-                        <td style={{ padding: "4px 6px", textAlign: "right", fontFamily: "monospace", fontWeight: 600 }}>
+                        <td className="t-right t-mono t-strong">
                           {comp.ascCorrected !== null ? comp.ascCorrected.toLocaleString("es-AR") : "-"}
                         </td>
-                        <td style={{ padding: "4px 6px", textAlign: "right", fontFamily: "monospace", fontWeight: 700, color: comp.ascError === null ? "inherit" : ascOk ? "#047857" : "#b91c1c" }}>
+                        <td className="t-right t-mono t-strong" style={{ color: comp.ascError === null ? "inherit" : ascOk ? "#047857" : "#b91c1c" }}>
                           {ascErrStr}
                         </td>
-                        <td style={{ padding: "4px 6px" }}>
-                          <input
+                        <td>
+                          <input className="t-strong"
                             type="number"
                             step="1"
                             placeholder="—"
@@ -1868,10 +1812,10 @@ export function CalibrationReportFormPage() {
                               copy[idx].descIndication = e.target.value;
                               setLinRows(copy);
                             }}
-                            style={{ width: "100%", padding: "5px 8px", borderRadius: 16, fontWeight: 700 }}
+                            style={{ width: "100%" }}
                           />
                         </td>
-                        <td style={{ padding: "4px 6px" }}>
+                        <td>
                           <input
                             type="number"
                             step="1"
@@ -1882,19 +1826,19 @@ export function CalibrationReportFormPage() {
                               copy[idx].descDeltaL = e.target.value;
                               setLinRows(copy);
                             }}
-                            style={{ width: "100%", padding: "5px 8px", borderRadius: 16 }}
+                            style={{ width: "100%" }}
                           />
                         </td>
-                        <td style={{ padding: "4px 6px", textAlign: "right", fontFamily: "monospace", fontWeight: 600 }}>
+                        <td className="t-right t-mono t-strong">
                           {comp.descCorrected !== null ? comp.descCorrected.toLocaleString("es-AR") : "-"}
                         </td>
-                        <td style={{ padding: "4px 6px", textAlign: "right", fontFamily: "monospace", fontWeight: 700, color: comp.descError === null ? "inherit" : descOk ? "#047857" : "#b91c1c" }}>
+                        <td className="t-right t-mono t-strong" style={{ color: comp.descError === null ? "inherit" : descOk ? "#047857" : "#b91c1c" }}>
                           {descErrStr}
                         </td>
-                        <td style={{ padding: "4px 6px", textAlign: "center", fontFamily: "monospace", fontWeight: 700, color: "var(--lc-accent-strong)" }}>
+                        <td className="t-center t-mono t-strong t-accent">
                           {comp.hasAnyData || comp.totalLoad > 0 ? `±${comp.emt}` : "—"}
                         </td>
-                        <td style={{ padding: "4px 6px", textAlign: "center" }}>
+                        <td className="t-center">
                           {!comp.hasAnyData ? (
                             <span className="muted">—</span>
                           ) : (
@@ -1945,12 +1889,11 @@ export function CalibrationReportFormPage() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: "1.2rem" }}>🔒</span>
-                  <h3 style={{ margin: 0, fontSize: "1.1rem" }}>Control y Registro de Precintos Metrológicos</h3>
+                  <h3 style={{ margin: 0 }}>Control y Registro de Precintos Metrológicos</h3>
                 </div>
                 <button
                   type="button"
                   className="btn btn-outline compact"
-                  style={{ fontSize: "0.78rem" }}
                   onClick={() => {
                     setSeals((prev) => [
                       ...prev,
@@ -1969,20 +1912,20 @@ export function CalibrationReportFormPage() {
               </div>
 
               <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+                <table>
                   <thead>
-                    <tr style={{ background: "rgba(0,0,0,0.02)", textAlign: "left" }}>
-                      <th style={{ padding: "6px 8px", width: "30%" }}>Ubicación del Precinto</th>
-                      <th style={{ padding: "6px 8px", width: "25%" }}>N° de Precinto / Código</th>
-                      <th style={{ padding: "6px 8px", width: "22%" }}>Tipo de Precinto</th>
-                      <th style={{ padding: "6px 8px", width: "18%" }}>Observaciones</th>
-                      <th style={{ padding: "6px 8px", width: 45, textAlign: "center" }}>Acción</th>
+                    <tr>
+                      <th style={{ width: "30%" }}>Ubicación del Precinto</th>
+                      <th style={{ width: "25%" }}>N° de Precinto / Código</th>
+                      <th style={{ width: "22%" }}>Tipo de Precinto</th>
+                      <th style={{ width: "18%" }}>Observaciones</th>
+                      <th className="t-center" style={{ width: 45 }}>Acción</th>
                     </tr>
                   </thead>
                   <tbody>
                     {seals.map((s, idx) => (
-                      <tr key={s.id} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
-                        <td style={{ padding: "4px 8px" }}>
+                      <tr key={s.id}>
+                        <td>
                           <input
                             type="text"
                             value={s.location}
@@ -1992,11 +1935,11 @@ export function CalibrationReportFormPage() {
                               copy[idx].location = e.target.value;
                               setSeals(copy);
                             }}
-                            style={{ width: "100%", padding: "5px 8px", borderRadius: 16 }}
+                            style={{ width: "100%" }}
                           />
                         </td>
-                        <td style={{ padding: "4px 8px" }}>
-                          <input
+                        <td>
+                          <input className="t-strong"
                             type="text"
                             value={s.code}
                             placeholder="Ej. 17741"
@@ -2005,10 +1948,10 @@ export function CalibrationReportFormPage() {
                               copy[idx].code = e.target.value;
                               setSeals(copy);
                             }}
-                            style={{ width: "100%", padding: "5px 8px", borderRadius: 16, fontWeight: 700 }}
+                            style={{ width: "100%" }}
                           />
                         </td>
-                        <td style={{ padding: "4px 8px" }}>
+                        <td>
                           <input
                             type="text"
                             value={s.type}
@@ -2018,10 +1961,10 @@ export function CalibrationReportFormPage() {
                               copy[idx].type = e.target.value;
                               setSeals(copy);
                             }}
-                            style={{ width: "100%", padding: "5px 8px", borderRadius: 16 }}
+                            style={{ width: "100%" }}
                           />
                         </td>
-                        <td style={{ padding: "4px 8px" }}>
+                        <td>
                           <input
                             type="text"
                             value={s.notes}
@@ -2031,14 +1974,13 @@ export function CalibrationReportFormPage() {
                               copy[idx].notes = e.target.value;
                               setSeals(copy);
                             }}
-                            style={{ width: "100%", padding: "5px 8px", borderRadius: 16 }}
+                            style={{ width: "100%" }}
                           />
                         </td>
-                        <td style={{ padding: "4px 8px", textAlign: "center" }}>
+                        <td className="t-center">
                           <button
                             type="button"
-                            className="btn ghost compact"
-                            style={{ color: "var(--lc-danger)", padding: "4px 6px" }}
+                            className="btn ghost compact btn-outline danger"
                             title="Eliminar precinto"
                             onClick={() => {
                               setSeals(seals.filter((_, i) => i !== idx));
@@ -2058,8 +2000,8 @@ export function CalibrationReportFormPage() {
             <div className="card pad">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: "1.1rem" }}>Patrones Metrológicos Utilizados</h3>
-                  <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
+                  <h3 style={{ margin: 0 }}>Patrones Metrológicos Utilizados</h3>
+                  <p className="muted t-small" style={{ margin: 0 }}>
                     {selectedWeightIds.length} patrones vinculados al ensayo
                   </p>
                 </div>
@@ -2078,7 +2020,7 @@ export function CalibrationReportFormPage() {
 
             {/* Checklist de Aptitud de Ensayos */}
             <div className="card pad">
-              <h3 style={{ margin: "0 0 12px 0", fontSize: "1.1rem" }}>Resumen Metrológico de Ensayos</h3>
+              <h3 style={{ margin: "0 0 12px 0" }}>Resumen Metrológico de Ensayos</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", padding: 8, background: "rgba(0,0,0,0.02)", borderRadius: 6 }}>
                   <span>📋 Inspección Visual & Precintos</span>
@@ -2109,10 +2051,10 @@ export function CalibrationReportFormPage() {
 
             {/* Final Observations & Verdict */}
             <div className="card pad" style={{ borderLeft: allAssaysPass ? "4px solid #10b981" : "4px solid #ef4444" }}>
-              <h3 style={{ margin: "0 0 12px 0", fontSize: "1.1rem" }}>7. Dictamen Final y Emisión</h3>
+              <h3 style={{ margin: "0 0 12px 0" }}>7. Dictamen Final y Emisión</h3>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
                 <div>
-                  <div style={{ fontSize: "1.3rem", fontWeight: 800, color: allAssaysPass ? "var(--lc-ok)" : "var(--lc-danger)" }}>
+                  <div className="t-strong" style={{ fontSize: "1.3rem", color: allAssaysPass ? "var(--lc-ok)" : "var(--lc-danger)" }}>
                     Dictamen Técnico: {finalResult.toUpperCase()}
                   </div>
                 </div>
@@ -2146,7 +2088,7 @@ export function CalibrationReportFormPage() {
                   value={observations}
                   onChange={(e) => setObservations(e.target.value)}
                   placeholder="Notas metrológicas adicionales, estado del indicador, precintos colocados..."
-                  style={{ width: "100%", borderRadius: 6, border: "1px solid var(--surface-border)", padding: 8 }}
+                  style={{ width: "100%" }}
                 />
               </label>
             </div>
@@ -2169,7 +2111,6 @@ export function CalibrationReportFormPage() {
               type="button"
               className="btn btn-outline"
               onClick={goToPrevTab}
-              style={{ fontWeight: 600 }}
             >
               ← Anterior: {tabLabels[tabOrder[tabOrder.indexOf(activeTab) - 1]]}
             </button>
@@ -2182,7 +2123,6 @@ export function CalibrationReportFormPage() {
               type="button"
               className="btn btn-primary"
               onClick={goToNextTab}
-              style={{ fontWeight: 700, padding: "8px 20px" }}
             >
               Siguiente: {tabLabels[tabOrder[tabOrder.indexOf(activeTab) + 1]]} →
             </button>
@@ -2191,7 +2131,6 @@ export function CalibrationReportFormPage() {
               type="submit"
               className="btn btn-primary"
               disabled={saving || !selectedEquipment}
-              style={{ fontWeight: 800, padding: "10px 28px", fontSize: "1rem" }}
             >
               {saving ? "Emitiendo Informe..." : "💾 Emitir Informe"}
             </button>
@@ -2239,15 +2178,7 @@ export function CalibrationReportFormPage() {
                   return (
                     <label
                       key={w.id}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 10,
-                        padding: "8px 12px",
-                        borderBottom: "1px solid rgba(0,0,0,0.04)",
-                        cursor: "pointer",
-                        background: checked ? "rgba(13, 148, 136, 0.05)" : "transparent"
-                      }}
+                      style={{ alignItems: "center", gap: 10, padding: "8px 12px", borderBottom: "1px solid rgba(0,0,0,0.04)", cursor: "pointer", background: checked ? "rgba(13, 148, 136, 0.05)" : "transparent" }}
                     >
                       <input
                         type="checkbox"
@@ -2257,11 +2188,11 @@ export function CalibrationReportFormPage() {
                           else setDraftWeightIds(draftWeightIds.filter((id) => id !== w.id));
                         }}
                       />
-                      <span style={{ fontWeight: 600 }}>{w.code}</span>
+                      <span className="t-strong">{w.code}</span>
                       <span>
                         ({w.nominalValue} {w.unit} Cl.{w.accuracyClass})
                       </span>
-                      <span className="muted" style={{ marginLeft: "auto", fontSize: "0.78rem" }}>
+                      <span className="muted t-small" style={{ marginLeft: "auto" }}>
                         Cert: {w.certificateNumber || "—"}
                       </span>
                     </label>

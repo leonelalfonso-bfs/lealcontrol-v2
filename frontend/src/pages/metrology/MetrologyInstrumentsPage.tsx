@@ -52,16 +52,16 @@ export function MetrologyInstrumentsPage() {
     <div className="page-wide">
       <div className="page-head" style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <div>
-          <span className="eyebrow" style={{ color: "var(--lc-accent-strong)", fontWeight: 800, fontSize: "0.75rem" }}>METROLOGÍA</span>
+          <span className="eyebrow t-accent t-strong t-small">METROLOGÍA</span>
           <h1 style={{ margin: "4px 0 0" }}>Instrumentos auxiliares</h1>
           <p className="muted" style={{ margin: 0 }}>Termómetros y otros instrumentos de medición (PG14 / PG16)</p>
         </div>
-        <Link to="/metrologia/instrumentos/nuevo" className="btn" style={{ background: "linear-gradient(135deg, var(--lc-accent), var(--lc-accent))", color: "#fff" }}>
+        <Link to="/metrologia/instrumentos/nuevo" className="btn">
           Nuevo termómetro
         </Link>
       </div>
 
-      {error && <div className="card pad" style={{ marginTop: 12, background: "var(--lc-danger-bg)", color: "var(--lc-danger)" }}>{error}</div>}
+      {error && <div className="card pad t-danger" style={{ marginTop: 12 }}>{error}</div>}
 
       <div className="card pad" style={{ marginTop: 16 }}>
         {loading ? (
@@ -90,13 +90,13 @@ export function MetrologyInstrumentsPage() {
                     <td>{i.code}</td>
                     <td>
                       {i.description || "—"}
-                      <div className="muted" style={{ fontSize: 12 }}>{[i.brand, i.model, i.serialNumber].filter(Boolean).join(" · ")}</div>
+                      <div className="muted t-small">{[i.brand, i.model, i.serialNumber].filter(Boolean).join(" · ")}</div>
                     </td>
                     <td>{i.certificateNumber || "—"}</td>
                     <td>{i.calibrationDate ? new Date(i.calibrationDate).toLocaleDateString("es-AR") : "—"}</td>
                     <td>{i.expirationDate ? new Date(i.expirationDate).toLocaleDateString("es-AR") : "—"}</td>
                     <td><span className={`badge ${i.status === "Valid" ? "ok" : "warn"}`}>{i.status}</span></td>
-                    <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                    <td className="t-right" style={{ whiteSpace: "nowrap" }}>
                       <Link to={`/metrologia/instrumentos/${i.id}`} className="btn ghost compact">Editar</Link>
                       <button type="button" className="btn ghost compact" onClick={() => void onDelete(i.id, i.code)}>Eliminar</button>
                     </td>
@@ -180,9 +180,9 @@ export function MetrologyInstrumentFormPage() {
 
   return (
     <div className="page-wide">
-      <Link to="/metrologia/instrumentos" style={{ fontSize: 13 }}>← Instrumentos</Link>
-      <h1 style={{ marginTop: 8 }}>{isNew ? "Nuevo termómetro" : `Editar ${form.code}`}</h1>
-      {error && <div className="card pad" style={{ background: "var(--lc-danger-bg)", color: "var(--lc-danger)", marginTop: 12 }}>{error}</div>}
+      <Link className="t-small" to="/metrologia/instrumentos">← Instrumentos</Link>
+      <h1>{isNew ? "Nuevo termómetro" : `Editar ${form.code}`}</h1>
+      {error && <div className="card pad t-danger" style={{ marginTop: 12 }}>{error}</div>}
       <form className="card pad" style={{ marginTop: 16 }} onSubmit={(e) => void onSubmit(e)}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
           <label>N.º interno (PG14)<input value={form.internalCode} onChange={(e) => set("internalCode", e.target.value)} placeholder="Se asigna solo: EQ-0001" /></label>
@@ -211,13 +211,13 @@ export function MetrologyInstrumentFormPage() {
             </select>
           </label>
         </div>
-        <label style={{ display: "block", marginTop: 12 }}>
+        <label style={{ marginTop: 12 }}>
           Notas
           <textarea value={form.notes} onChange={(e) => set("notes", e.target.value)} rows={3} style={{ width: "100%" }} />
         </label>
         <div style={{ marginTop: 16, justifyContent: "flex-end", display: "flex", gap: 8 }}>
           <button type="button" className="btn ghost" onClick={() => navigate("/metrologia/instrumentos")}>Cancelar</button>
-          <button type="submit" className="btn" disabled={saving} style={{ background: "var(--lc-accent)", color: "#fff" }}>
+          <button type="submit" className="btn" disabled={saving}>
             {saving ? "Guardando…" : "Guardar"}
           </button>
         </div>
