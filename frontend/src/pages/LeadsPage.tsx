@@ -170,7 +170,7 @@ export function LeadsPage() {
           </div>
 
           <div style={{ marginTop: 14, padding: "10px 14px", background: "var(--surface-sunken)", borderRadius: 8 }}>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 600 }}>
+            <label style={{ alignItems: "center", gap: 8, cursor: "pointer" }}>
               <input
                 type="checkbox"
                 checked={openOpportunityAfter}
@@ -202,13 +202,13 @@ export function LeadsPage() {
               <th>Prospecto / Empresa</th>
               <th>Origen</th>
               <th>Contacto</th>
-              <th style={{ textAlign: "right" }}>Acciones</th>
+              <th className="t-right">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {leads.length === 0 ? (
               <tr>
-                <td colSpan={4} style={{ textAlign: "center", padding: 24 }} className="muted">
+                <td colSpan={4} className="muted t-center">
                   No hay prospectos pendientes de calificar.
                 </td>
               </tr>
@@ -221,7 +221,7 @@ export function LeadsPage() {
                   </td>
                   <td>{label(l.source)}</td>
                   <td>{l.contactName ?? l.phone ?? "—"}</td>
-                  <td style={{ textAlign: "right" }}>
+                  <td className="t-right">
                     <div className="row" style={{ justifyContent: "flex-end", gap: 6 }}>
                       <Link
                         to={`/clientes/nuevo?name=${encodeURIComponent(l.name || "")}&phone=${encodeURIComponent(l.phone || "")}`}

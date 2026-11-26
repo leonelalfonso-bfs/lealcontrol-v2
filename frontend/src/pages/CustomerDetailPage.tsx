@@ -135,7 +135,7 @@ export function CustomerDetailPage() {
     return entries.sort((a, b) => b.at - a.at);
   }, [timeline, customerConversations, opps, quotes]);
 
-  if (!customer) return error ? <div className="alert">{error}</div> : <div className="card pad" style={{ textAlign: "center", padding: "40px" }}><p className="muted">Cargando ficha comercial…</p></div>;
+  if (!customer) return error ? <div className="alert">{error}</div> : <div className="card pad t-center" style={{ padding: "40px" }}><p className="muted">Cargando ficha comercial…</p></div>;
 
   const isPureSupplier = customer.isSupplier && !customer.isCustomer;
   const isBoth = customer.isCustomer && customer.isSupplier;
@@ -187,15 +187,15 @@ export function CustomerDetailPage() {
           <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", marginBottom: "4px" }}>
             <h1 style={{ margin: 0 }}>{customer.legalName}</h1>
             {isBoth ? (
-              <span style={{ padding: "4px 10px", borderRadius: "12px", background: "var(--lc-info-bg)", color: "var(--lc-info)", fontSize: "0.82rem", fontWeight: "bold", border: "1px solid var(--lc-info-bg)" }}>
+              <span className="t-info t-small t-strong" style={{ padding: "4px 10px", borderRadius: "12px", background: "var(--lc-info-bg)", border: "1px solid var(--lc-info-bg)" }}>
                 🤝 Cliente y Proveedor
               </span>
             ) : isPureSupplier ? (
-              <span style={{ padding: "4px 10px", borderRadius: "12px", background: "var(--lc-warn-bg)", color: "var(--lc-warn)", fontSize: "0.82rem", fontWeight: "bold", border: "1px solid var(--lc-warn-bg)" }}>
+              <span className="t-warn t-small t-strong" style={{ padding: "4px 10px", borderRadius: "12px", background: "var(--lc-warn-bg)", border: "1px solid var(--lc-warn-bg)" }}>
                 🏢 Proveedor Oficial
               </span>
             ) : (
-              <span style={{ padding: "4px 10px", borderRadius: "12px", background: "var(--lc-ok-bg)", color: "var(--lc-ok)", fontSize: "0.82rem", fontWeight: "bold", border: "1px solid #a7f3d0" }}>
+              <span className="t-ok t-small t-strong" style={{ padding: "4px 10px", borderRadius: "12px", background: "var(--lc-ok-bg)", border: "1px solid #a7f3d0" }}>
                 👤 Cliente Comercial
               </span>
             )}
@@ -229,7 +229,6 @@ export function CustomerDetailPage() {
             type="button"
             className="btn"
             onClick={() => setShowBcraModal(true)}
-            style={{ background: "linear-gradient(135deg, var(--lc-ink), var(--lc-ink-2))", color: "#fff", fontWeight: 700 }}
           >
             🏛️ Informe BCRA
           </button>
@@ -239,7 +238,7 @@ export function CustomerDetailPage() {
             ← Volver a {returnUrl === "/directorio" ? "Directorio" : isPureSupplier ? "Proveedores" : "Clientes"}
           </Link>
           {waPhone && (
-            <button className="btn" type="button" onClick={() => openWhatsApp(waPhone)} style={{ background: "var(--lc-ok)", color: "white" }}>
+            <button className="btn" type="button" onClick={() => openWhatsApp(waPhone)}>
               💬 WhatsApp
             </button>
           )}
@@ -255,26 +254,26 @@ export function CustomerDetailPage() {
       <div style={{ display: "grid", gridTemplateColumns: isPureSupplier ? "repeat(3, 1fr)" : "repeat(4, 1fr)", gap: "14px", margin: "16px 0 24px 0" }}>
         <div
           className="card pad"
-          style={{ cursor: "pointer", border: tab === "plantas" ? "2px solid var(--primary)" : "1px solid var(--surface-border)" }}
+          style={{ cursor: "pointer" }}
           onClick={() => setTab("plantas")}
         >
-          <div className="muted" style={{ fontSize: "0.8rem", textTransform: "uppercase", fontWeight: "bold" }}>
+          <div className="muted t-small t-caps t-strong">
             {isPureSupplier ? "Plantas / Depósitos" : "Plantas / Sucursales"}
           </div>
-          <div style={{ fontSize: "1.4rem", fontWeight: "bold", color: "var(--brand-accent)", marginTop: "4px" }}>
+          <div className="t-strong t-accent" style={{ fontSize: "1.4rem", marginTop: "4px" }}>
             🏢 {customer.locations.length}
           </div>
         </div>
 
         <div
           className="card pad"
-          style={{ cursor: "pointer", border: tab === "contactos" ? "2px solid var(--primary)" : "1px solid var(--surface-border)" }}
+          style={{ cursor: "pointer" }}
           onClick={() => setTab("contactos")}
         >
-          <div className="muted" style={{ fontSize: "0.8rem", textTransform: "uppercase", fontWeight: "bold" }}>
+          <div className="muted t-small t-caps t-strong">
             Contactos Responsables
           </div>
-          <div style={{ fontSize: "1.4rem", fontWeight: "bold", color: "var(--brand-accent)", marginTop: "4px" }}>
+          <div className="t-strong t-accent" style={{ fontSize: "1.4rem", marginTop: "4px" }}>
             👤 {customer.contacts.length}
           </div>
         </div>
@@ -282,13 +281,13 @@ export function CustomerDetailPage() {
         {!isPureSupplier && (
           <div
             className="card pad"
-            style={{ cursor: "pointer", border: tab === "equipos" ? "2px solid var(--primary)" : "1px solid var(--surface-border)" }}
+            style={{ cursor: "pointer" }}
             onClick={() => setTab("equipos")}
           >
-            <div className="muted" style={{ fontSize: "0.8rem", textTransform: "uppercase", fontWeight: "bold" }}>
+            <div className="muted t-small t-caps t-strong">
               Parque de Equipos
             </div>
-            <div style={{ fontSize: "1.4rem", fontWeight: "bold", color: "var(--brand-accent)", marginTop: "4px" }}>
+            <div className="t-strong t-accent" style={{ fontSize: "1.4rem", marginTop: "4px" }}>
               ⚖️ {(customer.equipments || []).length}
             </div>
           </div>
@@ -297,23 +296,23 @@ export function CustomerDetailPage() {
         {!isPureSupplier ? (
           <div
             className="card pad"
-            style={{ cursor: "pointer", border: tab === "timeline" ? "2px solid var(--primary)" : "1px solid var(--surface-border)" }}
+            style={{ cursor: "pointer" }}
             onClick={() => setTab("timeline")}
           >
-            <div className="muted" style={{ fontSize: "0.8rem", textTransform: "uppercase", fontWeight: "bold" }}>
+            <div className="muted t-small t-caps t-strong">
               Oportunidades CRM
             </div>
-            <div style={{ fontSize: "1.4rem", fontWeight: "bold", color: "var(--lc-info)", marginTop: "4px" }}>
+            <div className="t-strong t-info" style={{ fontSize: "1.4rem", marginTop: "4px" }}>
               💼 {opps.length}
             </div>
           </div>
         ) : (
           <div className="card pad">
-            <div className="muted" style={{ fontSize: "0.8rem", textTransform: "uppercase", fontWeight: "bold" }}>
+            <div className="muted t-small t-caps t-strong">
               Comprobantes de Compra
             </div>
-            <div style={{ fontSize: "0.95rem", fontWeight: "bold", color: "var(--lc-ok)", marginTop: "8px" }}>
-              <Link to={`/compras/facturas?search=${encodeURIComponent(customer.legalName)}`} style={{ textDecoration: "none", color: "var(--lc-ok)" }}>
+            <div className="t-strong t-ok" style={{ marginTop: "8px" }}>
+              <Link className="t-ok" to={`/compras/facturas?search=${encodeURIComponent(customer.legalName)}`} style={{ textDecoration: "none" }}>
                 📑 Ver Facturas Asociadas →
               </Link>
             </div>
@@ -385,13 +384,13 @@ export function CustomerDetailPage() {
       {tab === "ficha" && (
         <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: "20px" }}>
           <div className="card pad" style={{ display: "grid", gap: "14px" }}>
-            <h3 style={{ margin: "0 0 8px 0", fontSize: "1.05rem", color: "var(--brand-accent)" }}>
+            <h3 style={{ margin: "0 0 8px 0" }}>
               Datos Comerciales y de Contacto
             </h3>
 
-            <div style={{ display: "grid", gridTemplateColumns: "140px 1fr", gap: "8px", fontSize: "0.92rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "140px 1fr", gap: "8px" }}>
               <span className="muted">Nombre Fantasía:</span>
-              <strong style={{ color: "var(--ink)" }}>{customer.tradeName || "—"}</strong>
+              <strong>{customer.tradeName || "—"}</strong>
 
               <span className="muted">Email Principal:</span>
               <span>{customer.email ? <a href={`mailto:${customer.email}`}>{customer.email}</a> : "—"}</span>
@@ -402,10 +401,10 @@ export function CustomerDetailPage() {
               <span className="muted">WhatsApp:</span>
               <span>
                 {customer.whatsApp ? (
-                  <button
+                  <button className="t-ok t-strong"
                     type="button"
                     onClick={() => openWhatsApp(customer.whatsApp!)}
-                    style={{ background: "none", border: "none", color: "var(--lc-ok)", cursor: "pointer", fontWeight: "bold", padding: 0 }}
+                    style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
                   >
                     💬 {customer.whatsApp}
                   </button>
@@ -428,18 +427,18 @@ export function CustomerDetailPage() {
               {customer.notes && (
                 <>
                   <span className="muted">Observaciones:</span>
-                  <span style={{ fontStyle: "italic", color: "var(--ink-soft)" }}>{customer.notes}</span>
+                  <span className="muted" style={{ fontStyle: "italic" }}>{customer.notes}</span>
                 </>
               )}
             </div>
           </div>
 
           <div className="card pad">
-            <h3 style={{ margin: "0 0 12px 0", fontSize: "1.05rem", color: "var(--brand-accent)" }}>
+            <h3 style={{ margin: "0 0 12px 0" }}>
               Contactos Destacados
             </h3>
             {customer.contacts.length === 0 ? (
-              <p className="muted" style={{ fontSize: "0.9rem" }}>No hay contactos registrados todavía.</p>
+              <p className="muted">No hay contactos registrados todavía.</p>
             ) : (
               customer.contacts.map((c) => {
                 const locName = customer.locations.find((l) => l.id === c.locationId)?.name;
@@ -448,22 +447,21 @@ export function CustomerDetailPage() {
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div>
                         <strong>{c.name}</strong>
-                        <span className="muted" style={{ fontSize: "0.82rem", marginLeft: "6px" }}>({label(c.role)})</span>
-                        {c.isPrimary && <span style={{ marginLeft: "6px", fontSize: "0.75rem", padding: "2px 6px", borderRadius: "8px", background: "var(--lc-ok-bg)", color: "var(--lc-ok)", fontWeight: "bold" }}>Principal</span>}
-                        {locName && <span style={{ marginLeft: "6px", fontSize: "0.75rem", padding: "2px 6px", borderRadius: "8px", background: "var(--lc-surface-2)", color: "var(--lc-ink-2)" }}>📌 {locName}</span>}
+                        <span className="muted t-small" style={{ marginLeft: "6px" }}>({label(c.role)})</span>
+                        {c.isPrimary && <span className="t-small t-ok t-strong" style={{ marginLeft: "6px", padding: "2px 6px", borderRadius: "8px", background: "var(--lc-ok-bg)" }}>Principal</span>}
+                        {locName && <span className="t-small muted" style={{ marginLeft: "6px", padding: "2px 6px", borderRadius: "8px", background: "var(--lc-surface-2)" }}>📌 {locName}</span>}
                       </div>
                       {(c.whatsApp || c.phone) && (
                         <button
                           type="button"
                           onClick={() => openWhatsApp(c.whatsApp || c.phone || "", undefined, c.name)}
-                          className="btn btn-outline"
-                          style={{ padding: "2px 8px", fontSize: "0.78rem" }}
+                          className="btn btn-outline compact"
                         >
                           💬 WA
                         </button>
                       )}
                     </div>
-                    <div className="muted" style={{ fontSize: "0.82rem", marginTop: 4 }}>
+                    <div className="muted t-small" style={{ marginTop: 4 }}>
                       {c.email && `✉️ ${c.email} `}
                       {c.phone && `📞 ${c.phone}`}
                     </div>
@@ -479,7 +477,7 @@ export function CustomerDetailPage() {
       {tab === "plantas" && (
         <section className="card pad">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-            <h3 style={{ margin: 0, fontSize: "1.05rem", color: "var(--brand-accent)" }}>
+            <h3 style={{ margin: 0 }}>
               {isPureSupplier ? "Plantas, Talleres y Depósitos de Entrega" : "Plantas y Sucursales de Entrega"}
             </h3>
           </div>
@@ -488,23 +486,21 @@ export function CustomerDetailPage() {
             <div key={l.id} style={{ marginBottom: 12, padding: "14px 16px", borderRadius: 8, border: "1px solid var(--surface-border)", background: "white" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
-                  <strong style={{ fontSize: "0.95rem" }}>{l.name}</strong> — {l.address.street}, {l.address.city} ({provinceLabel(l.address.province)}) CP {l.address.postalCode}
-                  {l.phone && <div className="muted" style={{ fontSize: "0.85rem", marginTop: 2 }}>Teléfono: {l.phone}</div>}
-                  {l.notes && <div className="muted" style={{ fontSize: "0.85rem", marginTop: 2 }}>Notas: {l.notes}</div>}
+                  <strong>{l.name}</strong> — {l.address.street}, {l.address.city} ({provinceLabel(l.address.province)}) CP {l.address.postalCode}
+                  {l.phone && <div className="muted t-small" style={{ marginTop: 2 }}>Teléfono: {l.phone}</div>}
+                  {l.notes && <div className="muted t-small" style={{ marginTop: 2 }}>Notas: {l.notes}</div>}
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
                   <button
                     type="button"
-                    className="btn btn-outline"
-                    style={{ padding: "4px 10px", fontSize: "0.8rem" }}
+                    className="btn btn-outline compact"
                     onClick={() => setEditingLocation(l)}
                   >
                     ✏️ Editar
                   </button>
                   <button
                     type="button"
-                    className="btn btn-outline"
-                    style={{ padding: "4px 10px", fontSize: "0.8rem", color: "var(--lc-danger)" }}
+                    className="btn btn-outline compact danger"
                     onClick={async () => {
                       if (confirm(`¿Eliminar la planta ${l.name}?`)) {
                         await api.deleteLocation(customer.id, l.id);
@@ -533,7 +529,7 @@ export function CustomerDetailPage() {
       {/* Tab 3: Contactos */}
       {tab === "contactos" && (
         <section className="card pad">
-          <h3 style={{ margin: "0 0 16px 0", fontSize: "1.05rem", color: "var(--brand-accent)" }}>
+          <h3 style={{ margin: "0 0 16px 0" }}>
             {isPureSupplier ? "Contactos Comerciales y Técnicos del Proveedor" : "Contactos Responsables del Cliente"}
           </h3>
 
@@ -543,9 +539,9 @@ export function CustomerDetailPage() {
               <div key={c.id} style={{ marginBottom: 12, padding: "14px 16px", borderRadius: 8, border: "1px solid var(--surface-border)", background: "white" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
-                    <strong style={{ fontSize: "0.95rem" }}>{c.name}</strong> ({label(c.role)}) {c.isPrimary && <span style={{ marginLeft: 6, fontSize: "0.75rem", padding: "2px 6px", borderRadius: 6, background: "var(--lc-ok-bg)", color: "var(--lc-ok)", fontWeight: "bold" }}>Principal</span>}
-                    {locName && <span style={{ marginLeft: 8, fontSize: "0.75rem", padding: "2px 6px", borderRadius: 6, background: "var(--lc-surface-2)", color: "var(--lc-ink-2)" }}>📌 Planta: {locName}</span>}
-                    <div className="muted" style={{ fontSize: "0.85rem", marginTop: 4 }}>
+                    <strong>{c.name}</strong> ({label(c.role)}) {c.isPrimary && <span className="t-small t-ok t-strong" style={{ marginLeft: 6, padding: "2px 6px", borderRadius: 6, background: "var(--lc-ok-bg)" }}>Principal</span>}
+                    {locName && <span className="t-small muted" style={{ marginLeft: 8, padding: "2px 6px", borderRadius: 6, background: "var(--lc-surface-2)" }}>📌 Planta: {locName}</span>}
+                    <div className="muted t-small" style={{ marginTop: 4 }}>
                       {c.email && `✉️ Email: ${c.email} `}
                       {c.phone && `| 📞 Tel: ${c.phone} `}
                       {c.whatsApp && `| 💬 WA: ${c.whatsApp}`}
@@ -555,8 +551,7 @@ export function CustomerDetailPage() {
                     {(c.whatsApp || c.phone) && (
                       <button
                         type="button"
-                        className="btn btn-outline"
-                        style={{ padding: "4px 10px", fontSize: "0.8rem", color: "var(--lc-ok)" }}
+                        className="btn btn-outline compact"
                         onClick={() => openWhatsApp(c.whatsApp || c.phone || "", undefined, c.name)}
                       >
                         💬 WA
@@ -564,16 +559,14 @@ export function CustomerDetailPage() {
                     )}
                     <button
                       type="button"
-                      className="btn btn-outline"
-                      style={{ padding: "4px 10px", fontSize: "0.8rem" }}
+                      className="btn btn-outline compact"
                       onClick={() => setEditingContact(c)}
                     >
                       ✏️ Editar
                     </button>
                     <button
                       type="button"
-                      className="btn btn-outline"
-                      style={{ padding: "4px 10px", fontSize: "0.8rem", color: "var(--lc-danger)" }}
+                      className="btn btn-outline compact danger"
                       onClick={async () => {
                         if (confirm(`¿Eliminar a ${c.name}?`)) {
                           await api.deleteContact(customer.id, c.id);
@@ -604,10 +597,10 @@ export function CustomerDetailPage() {
       {/* Tab 4: Equipos (Solo para clientes o cuentas mixtas) */}
       {!isPureSupplier && tab === "equipos" && (
         <section className="card pad">
-          <h3 style={{ margin: "0 0 6px 0", fontSize: "1.05rem", color: "var(--brand-accent)" }}>
+          <h3 style={{ margin: "0 0 6px 0" }}>
             Parque Instalado de Equipos / Activos
           </h3>
-          <div className="muted" style={{ marginBottom: 16, fontSize: "0.88rem" }}>
+          <div className="muted" style={{ marginBottom: 16 }}>
             Gestión de balanzas, celdas de carga y activos de metrología del cliente.
           </div>
 
@@ -622,7 +615,7 @@ export function CustomerDetailPage() {
                       <span className="badge">{eq.equipmentType}</span>
                       {getCalibrationStatusBadge(eq.nextCalibrationDueDate)}
                     </div>
-                    <div style={{ marginTop: 4, fontWeight: 600 }}>
+                    <div className="t-strong" style={{ marginTop: 4 }}>
                       {eq.brand} {eq.model} · S/N: {eq.serialNumber || "—"}
                     </div>
                     {(eq.maxCapacity || eq.divisionScale) && (
@@ -634,8 +627,7 @@ export function CustomerDetailPage() {
                   </div>
                   <button
                     type="button"
-                    className="btn btn-outline"
-                    style={{ padding: "4px 10px", fontSize: "0.8rem", color: "var(--lc-danger)" }}
+                    className="btn btn-outline compact danger"
                     onClick={async () => {
                       if (confirm(`¿Eliminar equipo ${eq.internalCode}?`)) {
                         await api.deleteEquipment(customer.id, eq.id);
@@ -662,13 +654,13 @@ export function CustomerDetailPage() {
       {/* Tab 5: Fiscal */}
       {tab === "fiscal" && (
         <section className="card pad">
-          <h3 style={{ margin: "0 0 16px 0", fontSize: "1.05rem", color: "var(--brand-accent)" }}>
+          <h3 style={{ margin: "0 0 16px 0" }}>
             Alícuotas Impositivas y Regímenes Especiales (IIBB / Percepciones)
           </h3>
           {customer.fiscalRates.map((r) => (
             <div key={r.jurisdiction} style={{ padding: "12px 16px", borderRadius: 8, border: "1px solid var(--surface-border)", marginBottom: 10, background: "white", display: "flex", justifyContent: "space-between" }}>
               <strong>{label(r.jurisdiction)}</strong>
-              <div className="muted" style={{ fontWeight: 600 }}>
+              <div className="muted t-strong">
                 Perc. {r.perceptionRate}% · Ret. {r.retentionRate}%
                 {r.hasPerceptionExclusion && " · Excl. percepción"}
                 {r.hasRetentionExclusion && " · Excl. retención"}
@@ -676,7 +668,7 @@ export function CustomerDetailPage() {
             </div>
           ))}
           {customer.fiscalRates.length === 0 && (
-            <p className="muted" style={{ fontSize: "0.9rem" }}>No hay alícuotas personalizadas cargadas (aplica régimen general).</p>
+            <p className="muted">No hay alícuotas personalizadas cargadas (aplica régimen general).</p>
           )}
           <RateForm customerId={customer.id} rates={customer.fiscalRates} onCreated={refresh} />
         </section>
@@ -685,7 +677,7 @@ export function CustomerDetailPage() {
       {tab === "timeline" && (
         <section className="card pad">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12 }}>
-            <h3 style={{ margin: 0, fontSize: "1.05rem", color: "var(--brand-accent)" }}>
+            <h3 style={{ margin: 0 }}>
               Historial de la relación
             </h3>
             <div style={{ display: "flex", gap: 8 }}>
@@ -696,7 +688,7 @@ export function CustomerDetailPage() {
           <div className="timeline">
             {story.map((entry) => (
               <div key={entry.id} className={`timeline-item${entry.kind === "conversation" || entry.kind === "opportunity" || entry.kind === "quote" ? " timeline-commercial" : ""}`}>
-                <div className="muted" style={{ fontSize: "0.82rem" }}>
+                <div className="muted t-small">
                   {entry.at ? new Date(entry.at).toLocaleString("es-AR") : "—"} — <strong>{entry.title}</strong>
                 </div>
                 <div style={{ marginTop: 4 }}>
@@ -715,7 +707,7 @@ export function CustomerDetailPage() {
                 )}
               </div>
             ))}
-            {story.length === 0 && <p className="muted" style={{ fontSize: "0.9rem" }}>No hay registros comerciales todavía.</p>}
+            {story.length === 0 && <p className="muted">No hay registros comerciales todavía.</p>}
           </div>
           <ActivityForm customerId={customer.id} onCreated={refresh} />
         </section>
@@ -799,9 +791,9 @@ function ContactForm({
     <form onSubmit={submit} style={{ marginTop: 16, display: "grid", gap: 12 }}>
       <h4 style={{ margin: 0 }}>{initialData ? "✏️ Editar Contacto" : "+ Registrar Nuevo Contacto"}</h4>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-        <label>Nombre y Apellido *<input value={name} onChange={(e) => setName(e.target.value)} required placeholder="Ej: Ing. Carlos Gómez" style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} /></label>
+        <label>Nombre y Apellido *<input value={name} onChange={(e) => setName(e.target.value)} required placeholder="Ej: Ing. Carlos Gómez" style={{ width: "100%" }} /></label>
         <label>Rol / Función
-          <select value={role} onChange={(e) => setRole(e.target.value)} style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }}>
+          <select value={role} onChange={(e) => setRole(e.target.value)} style={{ width: "100%" }}>
             <option value="Commercial">Comercial / Compras</option>
             <option value="Technical">Técnico / Mantenimiento</option>
             <option value="Administrative">Administración / Pagos</option>
@@ -812,18 +804,18 @@ function ContactForm({
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
         <label>Planta Asignada
-          <select value={locationId} onChange={(e) => setLocationId(e.target.value)} style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }}>
+          <select value={locationId} onChange={(e) => setLocationId(e.target.value)} style={{ width: "100%" }}>
             <option value="">(Todas / General)</option>
             {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
           </select>
         </label>
-        <label>Email<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="juan@empresa.com" style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} /></label>
-        <label>Teléfono<input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="3415551234" style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} /></label>
+        <label>Email<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="juan@empresa.com" style={{ width: "100%" }} /></label>
+        <label>Teléfono<input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="3415551234" style={{ width: "100%" }} /></label>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-        <label>WhatsApp Directo<input value={whatsApp} onChange={(e) => setWhatsApp(e.target.value)} placeholder="5493415551234" style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} /></label>
-        <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: "24px" }}>
+        <label>WhatsApp Directo<input value={whatsApp} onChange={(e) => setWhatsApp(e.target.value)} placeholder="5493415551234" style={{ width: "100%" }} /></label>
+        <label style={{ alignItems: "center", gap: 8, marginTop: "24px" }}>
           <input type="checkbox" checked={isPrimary} onChange={(e) => setIsPrimary(e.target.checked)} style={{ width: 18, height: 18 }} />
           Marcar como Contacto Principal
         </label>
@@ -902,10 +894,10 @@ function EquipmentForm({ customerId, locations, onCreated }: { customerId: strin
   return (
     <form onSubmit={submit} style={{ marginTop: 16, display: "grid", gap: 12 }}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
-        <label>Código Interno / ID<input value={internalCode} onChange={(e) => setInternalCode(e.target.value)} required placeholder="Ej. BAL-001" style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} /></label>
-        <label>Tipo de Equipo<input value={equipmentType} onChange={(e) => setEquipmentType(e.target.value)} required placeholder="Ej. Balanza Camionera" style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} /></label>
+        <label>Código Interno / ID<input value={internalCode} onChange={(e) => setInternalCode(e.target.value)} required placeholder="Ej. BAL-001" style={{ width: "100%" }} /></label>
+        <label>Tipo de Equipo<input value={equipmentType} onChange={(e) => setEquipmentType(e.target.value)} required placeholder="Ej. Balanza Camionera" style={{ width: "100%" }} /></label>
         <label>Planta Asignada
-          <select value={locationId} onChange={(e) => setLocationId(e.target.value)} style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }}>
+          <select value={locationId} onChange={(e) => setLocationId(e.target.value)} style={{ width: "100%" }}>
             <option value="">(Sin planta específica)</option>
             {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
           </select>
@@ -913,26 +905,26 @@ function EquipmentForm({ customerId, locations, onCreated }: { customerId: strin
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
-        <label>Marca<input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="Ej. Toledo" style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} /></label>
-        <label>Modelo<input value={model} onChange={(e) => setModel(e.target.value)} placeholder="Ej. 8142" style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} /></label>
-        <label>Nro. de Serie<input value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} /></label>
+        <label>Marca<input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="Ej. Toledo" style={{ width: "100%" }} /></label>
+        <label>Modelo<input value={model} onChange={(e) => setModel(e.target.value)} placeholder="Ej. 8142" style={{ width: "100%" }} /></label>
+        <label>Nro. de Serie<input value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} style={{ width: "100%" }} /></label>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
-        <label>Capacidad Máx.<input value={maxCapacity} onChange={(e) => setMaxCapacity(e.target.value)} placeholder="Ej. 60 tn" style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} /></label>
-        <label>División de Escala<input value={divisionScale} onChange={(e) => setDivisionScale(e.target.value)} placeholder="Ej. 10 kg" style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} /></label>
-        <label>Intervalo Service (meses)<input type="number" value={calibrationIntervalMonths} onChange={(e) => setCalibrationIntervalMonths(Number(e.target.value))} style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} /></label>
+        <label>Capacidad Máx.<input value={maxCapacity} onChange={(e) => setMaxCapacity(e.target.value)} placeholder="Ej. 60 tn" style={{ width: "100%" }} /></label>
+        <label>División de Escala<input value={divisionScale} onChange={(e) => setDivisionScale(e.target.value)} placeholder="Ej. 10 kg" style={{ width: "100%" }} /></label>
+        <label>Intervalo Service (meses)<input type="number" value={calibrationIntervalMonths} onChange={(e) => setCalibrationIntervalMonths(Number(e.target.value))} style={{ width: "100%" }} /></label>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-        <label>Último Service / Calibración<input type="date" value={lastCalibrationDate} onChange={(e) => setLastCalibrationDate(e.target.value)} style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} /></label>
+        <label>Último Service / Calibración<input type="date" value={lastCalibrationDate} onChange={(e) => setLastCalibrationDate(e.target.value)} style={{ width: "100%" }} /></label>
       </div>
 
-      <div style={{ background: "var(--lc-surface-2)", padding: 12, borderRadius: 8, border: "1px dashed var(--surface-border)" }}>
+      <div className="box">
         <strong>+ Atributos Personalizados</strong>
         <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-          <input value={customKey} onChange={(e) => setCustomKey(e.target.value)} placeholder="Nombre del campo" style={{ flex: 1, padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} />
-          <input value={customValue} onChange={(e) => setCustomValue(e.target.value)} placeholder="Valor" style={{ flex: 1, padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} />
+          <input value={customKey} onChange={(e) => setCustomKey(e.target.value)} placeholder="Nombre del campo" style={{ flex: 1 }} />
+          <input value={customValue} onChange={(e) => setCustomValue(e.target.value)} placeholder="Valor" style={{ flex: 1 }} />
           <button type="button" className="btn btn-outline" onClick={addCustomAttr}>+ Añadir</button>
         </div>
         {Object.keys(customAttributes).length > 0 && (
@@ -940,7 +932,7 @@ function EquipmentForm({ customerId, locations, onCreated }: { customerId: strin
             {Object.entries(customAttributes).map(([k, v]) => (
               <span key={k} className="badge" style={{ display: "flex", gap: 6, alignItems: "center" }}>
                 {k}: {v}
-                <button type="button" style={{ background: "none", border: "none", color: "var(--lc-danger)", cursor: "pointer" }} onClick={() => removeCustomAttr(k)}>✕</button>
+                <button className="t-danger" type="button" style={{ background: "none", border: "none", cursor: "pointer" }} onClick={() => removeCustomAttr(k)}>✕</button>
               </span>
             ))}
           </div>
@@ -1003,7 +995,7 @@ function RateForm({ customerId, rates, onCreated }: { customerId: string; rates:
   return (
     <form onSubmit={submit} style={{ marginTop: 16, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "12px", alignItems: "end" }}>
       <label>Jurisdicción
-        <select value={jurisdiction} onChange={(e) => setJurisdiction(e.target.value)} style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }}>
+        <select value={jurisdiction} onChange={(e) => setJurisdiction(e.target.value)} style={{ width: "100%" }}>
           <option value="Arba">ARBA (Bs.As.)</option>
           <option value="Agip">AGIP (CABA)</option>
           <option value="ApiSantaFe">API Santa Fe</option>
@@ -1014,15 +1006,15 @@ function RateForm({ customerId, rates, onCreated }: { customerId: string; rates:
           <option value="Ganancias">Ganancias</option>
         </select>
       </label>
-      <label>Percepción %<input type="number" step="0.01" value={perceptionRate} onChange={(e) => setPerceptionRate(Number(e.target.value))} style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} /></label>
-      <label>Retención %<input type="number" step="0.01" value={retentionRate} onChange={(e) => setRetentionRate(Number(e.target.value))} style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} /></label>
+      <label>Percepción %<input type="number" step="0.01" value={perceptionRate} onChange={(e) => setPerceptionRate(Number(e.target.value))} style={{ width: "100%" }} /></label>
+      <label>Retención %<input type="number" step="0.01" value={retentionRate} onChange={(e) => setRetentionRate(Number(e.target.value))} style={{ width: "100%" }} /></label>
       <label><input type="checkbox" checked={hasPerceptionExclusion} onChange={(e) => setHasPerceptionExclusion(e.target.checked)} /> Excluido de percepción</label>
       {hasPerceptionExclusion && <label>Vencimiento percepción<input type="date" value={perceptionExclusionExpiresOn} onChange={(e) => setPerceptionExclusionExpiresOn(e.target.value)} /></label>}
       <label><input type="checkbox" checked={hasRetentionExclusion} onChange={(e) => setHasRetentionExclusion(e.target.checked)} /> Excluido de retención</label>
       {hasRetentionExclusion && <label>Vencimiento retención<input type="date" value={retentionExclusionExpiresOn} onChange={(e) => setRetentionExclusionExpiresOn(e.target.value)} /></label>}
       {(hasPerceptionExclusion || hasRetentionExclusion) &&
         <label>Número de certificado<input type="text" value={exclusionCertificateNumber} onChange={(e) => setExclusionCertificateNumber(e.target.value)} /></label>}
-      {error && <p role="alert" style={{ color: "var(--lc-danger)", gridColumn: "1 / -1", margin: 0 }}>{error}</p>}
+      {error && <p className="t-danger" role="alert" style={{ gridColumn: "1 / -1", margin: 0 }}>{error}</p>}
       <button className="btn btn-primary" disabled={saving}>{saving ? "Guardando…" : "Guardar alícuota"}</button>
     </form>
   );
@@ -1049,18 +1041,18 @@ function ActivityForm({ customerId, onCreated }: { customerId: string; onCreated
   return (
     <form onSubmit={(e) => void submit(e)} style={{ marginTop: 16, display: "grid", gap: 10 }}>
       <div style={{ display: "flex", gap: 10 }}>
-        <select value={type} onChange={(e) => setType(e.target.value)} style={{ padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }}>
+        <select value={type} onChange={(e) => setType(e.target.value)}>
           <option value="Note">Nota</option>
           <option value="Call">Llamada</option>
           <option value="Meeting">Reunión</option>
           <option value="Visit">Visita</option>
         </select>
-        <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Escribir entrada de chatter…" required style={{ flex: 1, padding: "8px 12px", borderRadius: 6, border: "1px solid var(--surface-border)" }} />
+        <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Escribir entrada de chatter…" required style={{ flex: 1 }} />
       </div>
       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-        <label style={{ display: "flex", gap: 8, alignItems: "center", margin: 0, fontSize: "0.9rem" }}>
+        <label style={{ gap: 8, alignItems: "center", margin: 0 }}>
           Próxima acción
-          <input type="date" value={nextFollowUpOn} onChange={(e) => setNextFollowUpOn(e.target.value)} style={{ padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} />
+          <input type="date" value={nextFollowUpOn} onChange={(e) => setNextFollowUpOn(e.target.value)} />
         </label>
         <button className="btn btn-primary">Publicar</button>
       </div>

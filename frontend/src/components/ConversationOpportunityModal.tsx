@@ -113,7 +113,7 @@ export function ConversationOpportunityModal({ conversation, channel, displayNam
           <form onSubmit={submit} className="stack" style={{ gap: 14 }}>
             <div>
               <h3 style={{ margin: 0 }}>Convertir en oportunidad</h3>
-              <p className="muted" style={{ margin: "4px 0 0", fontSize: "0.85rem" }}>
+              <p className="muted t-small" style={{ margin: "4px 0 0" }}>
                 {channelLabel} de <strong>{displayName}</strong>. La conversación queda dentro de la oportunidad.
               </p>
             </div>
@@ -129,7 +129,7 @@ export function ConversationOpportunityModal({ conversation, channel, displayNam
             </label>
             {matches.length > 0 && (
               <div className="row" style={{ gap: 6, flexWrap: "wrap", marginTop: -6 }}>
-                <span className="muted" style={{ fontSize: "0.8rem" }}>Coincide por teléfono o correo:</span>
+                <span className="muted t-small">Coincide por teléfono o correo:</span>
                 {matches.map((m) => (
                   <button
                     key={m.id}
