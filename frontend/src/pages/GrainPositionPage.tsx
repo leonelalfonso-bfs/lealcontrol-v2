@@ -47,8 +47,8 @@ export function GrainPositionPage() {
             <div
               key={pos.grainType}
               style={{
-                background: "var(--surface-canvas)",
-                border: "1px solid var(--surface-border)",
+                background: "var(--lc-canvas)",
+                border: "1px solid var(--lc-line)",
                 borderRadius: "20px",
                 padding: "24px",
                 display: "flex",

@@ -5,6 +5,25 @@
  * dentro de .ins-sidebar, así sus componentes no necesitan reglas propias para el fondo oscuro.
  */
 
+/* Tokens propios de la estructura: salen del sistema y se redefinen dentro de .ins-sidebar (región grafito),
+   así el mismo componente (menú, buscador, usuario) se ve bien sobre fondo claro u oscuro. */
+:root {
+  --ins-surface: var(--lc-surface);
+  --ins-surface-2: var(--lc-surface-2);
+  --ins-line: var(--lc-line);
+  --ins-line-2: var(--lc-line-2);
+  --ins-ink: var(--lc-ink);
+  --ins-ink-2: var(--lc-ink-2);
+  --ins-ink-3: var(--lc-ink-3);
+  --ins-accent: var(--lc-accent-strong);
+  --ins-accent-soft: var(--lc-accent-soft);
+  --ins-accent-ink: var(--lc-accent-ink);
+  --ins-danger: var(--lc-danger);
+  --ins-shadow-3: var(--lc-raise-3);
+  --ins-font-mono: var(--lc-font-mono);
+  --ins-ease: var(--lc-ease);
+}
+
 .ins-shell {
   display: grid;
   grid-template-columns: 262px minmax(0, 1fr);

@@ -484,7 +484,7 @@ export function EmployeeFormPage() {
           <h2 style={{ margin: 0 }}>👤 Identificación & Datos de Contacto</h2>
 
           <div className="row" style={{ gap: 24, alignItems: "center" }}>
-            <div style={{ width: 100, height: 100, borderRadius: "50%", background: "var(--surface-sunken)", border: "2px dashed var(--lc-line-2)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative" }}>
+            <div style={{ width: 100, height: 100, borderRadius: "50%", background: "var(--lc-surface-sunken)", border: "2px dashed var(--lc-line-2)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative" }}>
               {photoPath ? (
                 <img src={photoPath} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               ) : (

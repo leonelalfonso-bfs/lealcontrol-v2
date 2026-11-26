@@ -329,7 +329,7 @@ export function UsersAndPermissions() {
               </button>
             </div>
             {showExceptions && (
-              <div className="stack" style={{ gap: 8, border: "1px solid var(--line)", borderRadius: 10, padding: 12 }}>
+              <div className="stack" style={{ gap: 8, border: "1px solid var(--lc-line)", borderRadius: 10, padding: 12 }}>
                 <p className="muted t-small" style={{ margin: 0 }}>
                   Solo para este usuario. "Del perfil" toma lo que diga {userProfile?.name ?? "el perfil"}.
                 </p>

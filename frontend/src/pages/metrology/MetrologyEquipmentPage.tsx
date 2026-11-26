@@ -91,7 +91,7 @@ export function MetrologyEquipmentPage() {
         <div className="card pad" style={{ borderLeft: "4px solid var(--lc-accent)" }}>
           <div className="muted">Total Instrumentos</div>
           <strong className="t-xl">{equipments.length}</strong>
-          <div className="t-small t-strong" style={{ color: "var(--ok)", marginTop: 4 }}>
+          <div className="t-small t-strong" style={{ color: "var(--lc-ok)", marginTop: 4 }}>
             ✓ {equipments.filter((e) => e.status === "Active").length} operativos
           </div>
         </div>

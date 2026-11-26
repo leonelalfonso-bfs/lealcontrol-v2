@@ -443,7 +443,7 @@ export function CustomerDetailPage() {
               customer.contacts.map((c) => {
                 const locName = customer.locations.find((l) => l.id === c.locationId)?.name;
                 return (
-                  <div key={c.id} style={{ marginBottom: 12, paddingBottom: 10, borderBottom: "1px solid var(--surface-border)" }}>
+                  <div key={c.id} style={{ marginBottom: 12, paddingBottom: 10, borderBottom: "1px solid var(--lc-line)" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div>
                         <strong>{c.name}</strong>
@@ -483,7 +483,7 @@ export function CustomerDetailPage() {
           </div>
 
           {customer.locations.map((l) => (
-            <div key={l.id} style={{ marginBottom: 12, padding: "14px 16px", borderRadius: 8, border: "1px solid var(--surface-border)", background: "white" }}>
+            <div key={l.id} style={{ marginBottom: 12, padding: "14px 16px", borderRadius: 8, border: "1px solid var(--lc-line)", background: "white" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <strong>{l.name}</strong> — {l.address.street}, {l.address.city} ({provinceLabel(l.address.province)}) CP {l.address.postalCode}
@@ -516,7 +516,7 @@ export function CustomerDetailPage() {
           ))}
           {customer.locations.length === 0 && <p className="muted">No hay plantas cargadas.</p>}
 
-          <hr style={{ margin: "24px 0", borderColor: "var(--surface-border)" }} />
+          <hr style={{ margin: "24px 0", borderColor: "var(--lc-line)" }} />
           <CustomerLocationForm
             customerId={customer.id}
             initialData={editingLocation}
@@ -536,7 +536,7 @@ export function CustomerDetailPage() {
           {customer.contacts.map((c) => {
             const locName = customer.locations.find((l) => l.id === c.locationId)?.name;
             return (
-              <div key={c.id} style={{ marginBottom: 12, padding: "14px 16px", borderRadius: 8, border: "1px solid var(--surface-border)", background: "white" }}>
+              <div key={c.id} style={{ marginBottom: 12, padding: "14px 16px", borderRadius: 8, border: "1px solid var(--lc-line)", background: "white" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
                     <strong>{c.name}</strong> ({label(c.role)}) {c.isPrimary && <span className="t-small t-ok t-strong" style={{ marginLeft: 6, padding: "2px 6px", borderRadius: 6, background: "var(--lc-ok-bg)" }}>Principal</span>}
@@ -583,7 +583,7 @@ export function CustomerDetailPage() {
           })}
           {customer.contacts.length === 0 && <p className="muted">No hay contactos cargados.</p>}
 
-          <hr style={{ margin: "24px 0", borderColor: "var(--surface-border)" }} />
+          <hr style={{ margin: "24px 0", borderColor: "var(--lc-line)" }} />
           <ContactForm
             customerId={customer.id}
             locations={customer.locations}
@@ -607,7 +607,7 @@ export function CustomerDetailPage() {
           {(customer.equipments || []).map((eq) => {
             const locName = customer.locations.find((l) => l.id === eq.locationId)?.name;
             return (
-              <div key={eq.id} style={{ padding: "14px 16px", borderRadius: 8, border: "1px solid var(--surface-border)", marginBottom: 12, background: "white" }}>
+              <div key={eq.id} style={{ padding: "14px 16px", borderRadius: 8, border: "1px solid var(--lc-line)", marginBottom: 12, background: "white" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div>
                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -645,7 +645,7 @@ export function CustomerDetailPage() {
             <p className="muted">No hay equipos registrados en el parque de este cliente.</p>
           )}
 
-          <hr style={{ margin: "24px 0", borderColor: "var(--surface-border)" }} />
+          <hr style={{ margin: "24px 0", borderColor: "var(--lc-line)" }} />
           <h4 style={{ margin: "0 0 12px 0" }}>+ Registrar Nuevo Equipo en Parque</h4>
           <EquipmentForm customerId={customer.id} locations={customer.locations} onCreated={refresh} />
         </section>
@@ -658,7 +658,7 @@ export function CustomerDetailPage() {
             Alícuotas Impositivas y Regímenes Especiales (IIBB / Percepciones)
           </h3>
           {customer.fiscalRates.map((r) => (
-            <div key={r.jurisdiction} style={{ padding: "12px 16px", borderRadius: 8, border: "1px solid var(--surface-border)", marginBottom: 10, background: "white", display: "flex", justifyContent: "space-between" }}>
+            <div key={r.jurisdiction} style={{ padding: "12px 16px", borderRadius: 8, border: "1px solid var(--lc-line)", marginBottom: 10, background: "white", display: "flex", justifyContent: "space-between" }}>
               <strong>{label(r.jurisdiction)}</strong>
               <div className="muted t-strong">
                 Perc. {r.perceptionRate}% · Ret. {r.retentionRate}%

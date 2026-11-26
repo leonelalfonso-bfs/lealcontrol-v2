@@ -267,7 +267,7 @@ export function RemitoFormPage() {
       <form onSubmit={handleSubmit} className="stack" style={{ gap: 20 }}>
         {/* General Info Card */}
         <div className="card pad">
-          <h3 style={{ margin: "0 0 16px", borderBottom: "1px solid var(--border)", paddingBottom: 8 }}>
+          <h3 style={{ margin: "0 0 16px", borderBottom: "1px solid var(--lc-line)", paddingBottom: 8 }}>
             1. Información del Remito y Destino
           </h3>
           <div className="grid-3">

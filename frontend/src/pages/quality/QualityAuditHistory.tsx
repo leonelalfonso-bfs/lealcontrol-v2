@@ -37,7 +37,7 @@ export function QualityAuditHistory({ entityType, entityId, title = "Historial d
   if (!entityId) return null;
 
   return (
-    <div style={{ marginTop: 16, borderTop: "1px solid var(--surface-border)", paddingTop: 12 }}>
+    <div style={{ marginTop: 16, borderTop: "1px solid var(--lc-line)", paddingTop: 12 }}>
       <button
         type="button"
         className="btn btn-outline compact"
@@ -59,10 +59,10 @@ export function QualityAuditHistory({ entityType, entityId, title = "Historial d
                 <div
                   key={r.id}
                   style={{
-                    border: "1px solid var(--surface-border)",
+                    border: "1px solid var(--lc-line)",
                     borderRadius: 8,
                     padding: "8px 10px",
-                    background: "var(--surface-muted)"
+                    background: "var(--lc-surface-2)"
                   }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>

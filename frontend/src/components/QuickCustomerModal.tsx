@@ -259,7 +259,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
         <div
           style={{
             padding: "18px 24px",
-            borderBottom: "1px solid var(--surface-border, var(--lc-line))",
+            borderBottom: "1px solid var(--lc-line, var(--lc-line))",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",

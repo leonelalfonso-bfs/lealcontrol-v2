@@ -44,8 +44,8 @@ export function GrainDeliveriesPage() {
       </div>
 
       <div style={{
-        background: "var(--surface-canvas)",
-        border: "1px solid var(--surface-border)",
+        background: "var(--lc-canvas)",
+        border: "1px solid var(--lc-line)",
         borderRadius: "20px",
         padding: "20px",
         boxShadow: "0 4px 16px rgba(0,0,0,0.03)"
@@ -87,7 +87,7 @@ export function GrainDeliveriesPage() {
                     <div><strong className="t-accent">Neto: {(del.netWeightKg / 1000).toFixed(2)} Tn</strong></div>
                   </td>
                   <td>
-                    <span className="t-strong" style={{ color: del.humidityPercentage > 14.0 ? "#ef4444" : "var(--ink)" }}>
+                    <span className="t-strong" style={{ color: del.humidityPercentage > 14.0 ? "#ef4444" : "var(--lc-ink)" }}>
                       {del.humidityPercentage}%
                     </span>
                   </td>

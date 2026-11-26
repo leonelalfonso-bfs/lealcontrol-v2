@@ -648,7 +648,7 @@ export function InventoryPage() {
                     padding: "7px 16px",
                     borderRadius: 20,
                     fontWeight: isSel ? 700 : 500,
-                    borderColor: isSel ? "var(--color-primary)" : undefined
+                    borderColor: isSel ? "var(--lc-accent)" : undefined
                   }}
                 >
                   {icon} {wh.name} ({whStock.toLocaleString("es-AR")} u.)
@@ -1215,7 +1215,7 @@ export function InventoryPage() {
 
                   <h3 style={{ marginBottom: 4 }}>{wh.name}</h3>
 
-                  <div className="stack t-small" style={{ gap: 4, color: "var(--color-muted)" }}>
+                  <div className="stack t-small" style={{ gap: 4, color: "var(--lc-ink-3)" }}>
                     {wh.address && <div>📍 {wh.address}</div>}
                     {wh.assignedTechnicianName && <div>👤 Técnico: <strong>{wh.assignedTechnicianName}</strong></div>}
                   </div>

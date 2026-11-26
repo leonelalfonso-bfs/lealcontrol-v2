@@ -340,7 +340,7 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
             </div>
           )}
 
-          <div style={{ marginTop: 12, borderTop: "1px dashed var(--surface-border)", paddingTop: 8 }}>
+          <div style={{ marginTop: 12, borderTop: "1px dashed var(--lc-line)", paddingTop: 8 }}>
             <button
               type="button"
               className="btn ghost compact"
@@ -483,7 +483,7 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
             </div>
           )}
 
-          <div style={{ marginTop: 12, borderTop: "1px dashed var(--surface-border)", paddingTop: 8 }}>
+          <div style={{ marginTop: 12, borderTop: "1px dashed var(--lc-line)", paddingTop: 8 }}>
             <button
               type="button"
               className="btn ghost compact"
@@ -518,7 +518,7 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
             </div>
 
             {/* Mode Tabs */}
-            <div style={{ display: "flex", gap: 8, marginBottom: 14, borderBottom: "1px solid var(--surface-border)", paddingBottom: 8 }}>
+            <div style={{ display: "flex", gap: 8, marginBottom: 14, borderBottom: "1px solid var(--lc-line)", paddingBottom: 8 }}>
               <button
                 type="button"
                 className={`btn compact ${metaAuthMode === "token" ? "btn-primary" : "btn-outline"}`}

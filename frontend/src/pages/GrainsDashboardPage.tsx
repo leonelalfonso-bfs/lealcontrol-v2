@@ -111,8 +111,8 @@ export function GrainsDashboardPage() {
               <div
                 key={p.id}
                 style={{
-                  background: "var(--surface-canvas)",
-                  border: "1px solid var(--surface-border)",
+                  background: "var(--lc-canvas)",
+                  border: "1px solid var(--lc-line)",
                   borderRadius: "14px",
                   padding: "14px 18px",
                   display: "flex",
@@ -251,8 +251,8 @@ export function GrainsDashboardPage() {
       <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "24px", alignItems: "start" }}>
         {/* Left Column: Posición Granaria por Cereal */}
         <div style={{
-          background: "var(--surface-canvas)",
-          border: "1px solid var(--surface-border)",
+          background: "var(--lc-canvas)",
+          border: "1px solid var(--lc-line)",
           borderRadius: "20px",
           padding: "24px",
           boxShadow: "0 4px 16px rgba(0,0,0,0.03)"
@@ -276,8 +276,8 @@ export function GrainsDashboardPage() {
                 <div key={pos.grainType} style={{
                   padding: "14px 16px",
                   borderRadius: "14px",
-                  background: "var(--surface-muted)",
-                  border: "1px solid var(--surface-border)"
+                  background: "var(--lc-surface-2)",
+                  border: "1px solid var(--lc-line)"
                 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -317,8 +317,8 @@ export function GrainsDashboardPage() {
 
         {/* Right Column: Contratos Recientes */}
         <div style={{
-          background: "var(--surface-canvas)",
-          border: "1px solid var(--surface-border)",
+          background: "var(--lc-canvas)",
+          border: "1px solid var(--lc-line)",
           borderRadius: "20px",
           padding: "24px",
           boxShadow: "0 4px 16px rgba(0,0,0,0.03)"
@@ -343,8 +343,8 @@ export function GrainsDashboardPage() {
                   style={{
                     padding: "12px 14px",
                     borderRadius: "12px",
-                    background: "var(--surface-muted)",
-                    border: "1px solid var(--surface-border)",
+                    background: "var(--lc-surface-2)",
+                    border: "1px solid var(--lc-line)",
                     textDecoration: "none",
                     color: "inherit",
                     display: "flex",
@@ -368,7 +368,7 @@ export function GrainsDashboardPage() {
 
                   <div className="t-small muted" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span>{c.grainType} · {c.totalTons.toLocaleString("es-AR")} Tn @ {c.currency} {c.pricePerTon}</span>
-                    <span className="t-strong" style={{ color: prog === 100 ? "#10b981" : "var(--ink)" }}>
+                    <span className="t-strong" style={{ color: prog === 100 ? "#10b981" : "var(--lc-ink)" }}>
                       {c.deliveredTons.toLocaleString("es-AR")} Tn ({prog}%)
                     </span>
                   </div>
@@ -383,8 +383,8 @@ export function GrainsDashboardPage() {
       {/* Bottom Section: Últimas Descargas en Balanza con CPE */}
       {data.recentDeliveries && data.recentDeliveries.length > 0 && (
         <div style={{
-          background: "var(--surface-canvas)",
-          border: "1px solid var(--surface-border)",
+          background: "var(--lc-canvas)",
+          border: "1px solid var(--lc-line)",
           borderRadius: "20px",
           padding: "24px",
           boxShadow: "0 4px 16px rgba(0,0,0,0.03)"
@@ -430,7 +430,7 @@ export function GrainsDashboardPage() {
                       <small className="muted">Neto: {(del.netWeightKg / 1000).toFixed(2)} Tn</small>
                     </td>
                     <td>
-                      <span className="t-strong" style={{ color: del.humidityPercentage > 14.0 ? "#ef4444" : "var(--ink)" }}>
+                      <span className="t-strong" style={{ color: del.humidityPercentage > 14.0 ? "#ef4444" : "var(--lc-ink)" }}>
                         {del.humidityPercentage}%
                       </span>
                     </td>

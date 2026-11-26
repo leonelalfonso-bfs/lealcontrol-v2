@@ -40,7 +40,7 @@ export const ThemeSwitcher: React.FC = () => {
 
       {open && (
         <div className="theme-dropdown">
-          <div className="t-small t-strong t-caps" style={{ padding: "6px 8px 4px", color: "var(--sidebar-muted)", letterSpacing: "0.06em" }}>
+          <div className="t-small t-strong t-caps" style={{ padding: "6px 8px 4px", color: "var(--lc-ink-on-dark-3)", letterSpacing: "0.06em" }}>
             Seleccionar Modo
           </div>
 
@@ -64,18 +64,18 @@ export const ThemeSwitcher: React.FC = () => {
                 <div className="t-strong">
                   {m.icon} {m.name} ({m.mode === "dark" ? "Oscuro" : "Claro"})
                 </div>
-                <div className="t-small" style={{ color: "var(--sidebar-muted)" }}>{m.inspiration}</div>
+                <div className="t-small" style={{ color: "var(--lc-ink-on-dark-3)" }}>{m.inspiration}</div>
               </div>
               {mode === m.mode && <span className="t-accent" style={{ fontWeight: 900 }}>✓</span>}
             </button>
           ))}
 
-          <div style={{ borderTop: "1px solid var(--surface-border)", marginTop: 6, paddingTop: 6 }}>
+          <div style={{ borderTop: "1px solid var(--lc-line)", marginTop: 6, paddingTop: 6 }}>
             <Link
               to="/estilos"
               className="theme-option-item t-strong t-small"
               onClick={() => setOpen(false)}
-              style={{ justifyContent: "center", color: "var(--accent)" }}
+              style={{ justifyContent: "center", color: "var(--lc-accent)" }}
             >
               <span>✨ Ver Showcase y Comparador</span>
             </Link>

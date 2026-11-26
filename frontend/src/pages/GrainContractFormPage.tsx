@@ -77,8 +77,8 @@ export function GrainContractFormPage() {
       )}
 
       <form onSubmit={handleSubmit} style={{
-        background: "var(--surface-canvas)",
-        border: "1px solid var(--surface-border)",
+        background: "var(--lc-canvas)",
+        border: "1px solid var(--lc-line)",
         borderRadius: "20px",
         padding: "28px",
         display: "flex",

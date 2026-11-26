@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import type { MyNotices, NoticeSettings } from "../api/types";
 
-const SEVERITY_COLOR = { Critical: "var(--lc-danger)", Warning: "var(--lc-warn)", Info: "var(--ink)" } as const;
+const SEVERITY_COLOR = { Critical: "var(--lc-danger)", Warning: "var(--lc-warn)", Info: "var(--lc-ink)" } as const;
 
 /** Mi perfil → Mis avisos: lo que tengo hoy y qué avisos quiero recibir. */
 export function MyNoticesPage() {
@@ -93,7 +93,7 @@ export function MyNoticesPage() {
             </label>
           ))}
 
-          <div style={{ borderTop: "1px solid var(--line)", paddingTop: 12 }}>
+          <div style={{ borderTop: "1px solid var(--lc-line)", paddingTop: 12 }}>
             <label className="check-label" style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
               <input type="checkbox" checked={settings.emailDigest} disabled={busy} onChange={(e) => void save({ emailDigest: e.target.checked })} />
               Recibir un resumen por correo todos los días a las 7{settings.email ? ` (a ${settings.email})` : ""}

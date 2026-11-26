@@ -322,7 +322,7 @@ export function PurchaseReceptionFormPage() {
               padding: "12px 14px",
               background: "rgba(0,0,0,0.02)",
               borderRadius: "8px",
-              border: "1px solid var(--surface-border)"
+              border: "1px solid var(--lc-line)"
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>

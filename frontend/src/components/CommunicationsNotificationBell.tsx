@@ -95,7 +95,7 @@ export function CommunicationsNotificationBell() {
             flexDirection: "column"
           }}
         >
-          <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--surface-border)" }}>
+          <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--lc-line)" }}>
             <div className="t-strong">Bandeja — alertas</div>
             <div className="muted t-small" style={{ marginTop: 2 }}>
               {summary?.unreadTotal || 0} sin leer · {summary?.needsResponseCount || 0} requieren respuesta
@@ -139,7 +139,7 @@ export function CommunicationsNotificationBell() {
                     setOpen(false);
                     navigate("/comunicaciones", { state: { conversationId: item.id } });
                   }}
-                  style={{ display: "block", width: "100%", padding: "10px 14px", border: "none", borderBottom: "1px solid var(--surface-border)", background: "transparent", cursor: "pointer" }}
+                  style={{ display: "block", width: "100%", padding: "10px 14px", border: "none", borderBottom: "1px solid var(--lc-line)", background: "transparent", cursor: "pointer" }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                     <span className="t-strong" style={{ fontSize: "0.84rem" }}>
@@ -172,7 +172,7 @@ export function CommunicationsNotificationBell() {
             )}
           </div>
 
-          <div style={{ padding: 10, borderTop: "1px solid var(--surface-border)" }}>
+          <div style={{ padding: 10, borderTop: "1px solid var(--lc-line)" }}>
             <Link className="t-center t-small t-strong t-accent"
               to="/comunicaciones"
               onClick={() => setOpen(false)}

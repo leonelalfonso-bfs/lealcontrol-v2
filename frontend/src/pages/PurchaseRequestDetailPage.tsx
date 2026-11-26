@@ -266,7 +266,7 @@ export function PurchaseRequestDetailPage() {
             </div>
             <div>
               <span className="muted">Motivo / Justificación: </span>
-              <p style={{ margin: "4px 0 0 0", background: "var(--lc-surface-2)", padding: "8px", borderRadius: "6px", border: "1px solid var(--surface-border)" }}>
+              <p style={{ margin: "4px 0 0 0", background: "var(--lc-surface-2)", padding: "8px", borderRadius: "6px", border: "1px solid var(--lc-line)" }}>
                 {request.reason}
               </p>
             </div>
@@ -357,7 +357,7 @@ export function PurchaseRequestDetailPage() {
                   <div
                     key={q.id}
                     style={{
-                      border: isWinner ? "2px solid #059669" : "1px solid var(--surface-border)",
+                      border: isWinner ? "2px solid #059669" : "1px solid var(--lc-line)",
                       borderRadius: "12px",
                       padding: "16px",
                       background: isWinner ? "linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%)" : "white",
@@ -639,7 +639,7 @@ export function PurchaseRequestDetailPage() {
                     <label>
                       Total ({currency})
                     </label>
-                    <div className="t-mono t-strong t-ok" style={{ padding: "8px", background: "white", borderRadius: "6px", border: "1px solid var(--surface-border)", fontSize: "1.1rem" }}>
+                    <div className="t-mono t-strong t-ok" style={{ padding: "8px", background: "white", borderRadius: "6px", border: "1px solid var(--lc-line)", fontSize: "1.1rem" }}>
                       $ {calculatedTotalAmount.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                     </div>
                   </div>

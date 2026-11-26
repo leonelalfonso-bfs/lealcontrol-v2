@@ -44,8 +44,8 @@ export function GrainFixationsPage() {
       </div>
 
       <div style={{
-        background: "var(--surface-canvas)",
-        border: "1px solid var(--surface-border)",
+        background: "var(--lc-canvas)",
+        border: "1px solid var(--lc-line)",
         borderRadius: "20px",
         padding: "20px",
         boxShadow: "0 4px 16px rgba(0,0,0,0.03)"

@@ -780,7 +780,7 @@ export function PurchaseInvoiceFormPage() {
                 </div>
               )}
 
-              <div style={{ borderTop: "1px solid var(--surface-border)", paddingTop: "8px", marginTop: "8px" }}>
+              <div style={{ borderTop: "1px solid var(--lc-line)", paddingTop: "8px", marginTop: "8px" }}>
                 <TaxInput label="Percepción IVA" value={ivaPerception} onChange={setIvaPerception} disabled={isX} />
                 <TaxInput label="Percepción Ingresos Brutos (IIBB)" value={iibbPerception} onChange={setIibbPerception} disabled={isX} />
                 <TaxInput label="Percepción Ganancias" value={gananciasPerception} onChange={setGananciasPerception} disabled={isX} />
@@ -789,7 +789,7 @@ export function PurchaseInvoiceFormPage() {
                 <TaxInput label="Otros tributos" value={otherTaxes} onChange={setOtherTaxes} disabled={isX} />
               </div>
 
-              <div style={{ borderTop: "2px solid var(--surface-border)", paddingTop: "10px", display: "flex", justifyContent: "space-between", marginBottom: "16px" }}>
+              <div style={{ borderTop: "2px solid var(--lc-line)", paddingTop: "10px", display: "flex", justifyContent: "space-between", marginBottom: "16px" }}>
                 <span className="t-strong" style={{ fontSize: "1.1rem" }}>Total Factura:</span>
                 <span className="t-strong t-ok t-mono" style={{ fontSize: "1.2rem" }}>
                   $ {grandTotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}

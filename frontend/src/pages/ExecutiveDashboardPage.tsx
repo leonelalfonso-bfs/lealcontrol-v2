@@ -208,8 +208,8 @@ export const ExecutiveDashboardPage: React.FC = () => {
               display: "inline-flex",
               padding: 3,
               borderRadius: 12,
-              background: "var(--surface-muted)",
-              border: "1px solid var(--surface-border)"
+              background: "var(--lc-surface-2)",
+              border: "1px solid var(--lc-line)"
             }}
           >
             {(
@@ -225,7 +225,7 @@ export const ExecutiveDashboardPage: React.FC = () => {
                 key={t.id}
                 type="button"
                 onClick={() => setRange(t.id)}
-                style={{ padding: "6px 14px", borderRadius: 9, border: "none", background: range === t.id ? "var(--primary)" : "transparent", color: range === t.id ? "#ffffff" : "var(--ink)", cursor: "pointer", transition: "all 0.15s ease" }}
+                style={{ padding: "6px 14px", borderRadius: 9, border: "none", background: range === t.id ? "var(--lc-accent)" : "transparent", color: range === t.id ? "#ffffff" : "var(--lc-ink)", cursor: "pointer", transition: "all 0.15s ease" }}
               >
                 {t.label}
               </button>
@@ -301,7 +301,7 @@ export const ExecutiveDashboardPage: React.FC = () => {
                   <div className="card">
                     <div className="muted">Facturación Período</div>
                     <strong>${metrics.totalBilled.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</strong>
-                    <div className="t-small t-strong" style={{ color: "var(--ok)", marginTop: 4 }}>
+                    <div className="t-small t-strong" style={{ color: "var(--lc-ok)", marginTop: 4 }}>
                       ↗ {metrics.invoiceCount} comprobantes emitidos
                     </div>
                   </div>
@@ -317,7 +317,7 @@ export const ExecutiveDashboardPage: React.FC = () => {
                   <div className="card">
                     <div className="muted">Pedidos en Cartera</div>
                     <strong>${metrics.openOrdersValue.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</strong>
-                    <div className="t-small t-strong" style={{ color: "var(--accent)", marginTop: 4 }}>
+                    <div className="t-small t-strong" style={{ color: "var(--lc-accent)", marginTop: 4 }}>
                       📦 {metrics.openOrdersCount} pedidos pendientes de entrega
                     </div>
                   </div>
@@ -338,7 +338,7 @@ export const ExecutiveDashboardPage: React.FC = () => {
                   <div className="card">
                     <div className="muted">Cobranzas Realizadas</div>
                     <strong>${metrics.totalCollected.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</strong>
-                    <div className="t-small t-strong" style={{ color: "var(--ok)", marginTop: 4 }}>
+                    <div className="t-small t-strong" style={{ color: "var(--lc-ok)", marginTop: 4 }}>
                       ✓ Ingresos confirmados
                     </div>
                   </div>
@@ -346,7 +346,7 @@ export const ExecutiveDashboardPage: React.FC = () => {
                   <div className="card">
                     <div className="muted">Cheques en Cartera</div>
                     <strong>${metrics.portfolioChequesTotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</strong>
-                    <div className="t-small t-strong" style={{ color: "var(--warn)", marginTop: 4 }}>
+                    <div className="t-small t-strong" style={{ color: "var(--lc-warn)", marginTop: 4 }}>
                       💳 {metrics.portfolioChequesCount} eCheqs / valores
                     </div>
                   </div>
@@ -383,7 +383,7 @@ export const ExecutiveDashboardPage: React.FC = () => {
                   <div className="card">
                     <div className="muted">Órdenes Pendientes</div>
                     <strong>{metrics.pendingPoCount}</strong>
-                    <div className="t-small t-strong" style={{ color: "var(--warn)", marginTop: 4 }}>
+                    <div className="t-small t-strong" style={{ color: "var(--lc-warn)", marginTop: 4 }}>
                       ⏳ En espera de recepción
                     </div>
                   </div>
@@ -398,8 +398,8 @@ export const ExecutiveDashboardPage: React.FC = () => {
 
                   <div className="card">
                     <div className="muted">Evaluación Proveedores</div>
-                    <strong style={{ color: "var(--ok)" }}>98.4%</strong>
-                    <div className="t-small t-strong" style={{ color: "var(--ok)", marginTop: 4 }}>
+                    <strong style={{ color: "var(--lc-ok)" }}>98.4%</strong>
+                    <div className="t-small t-strong" style={{ color: "var(--lc-ok)", marginTop: 4 }}>
                       Cumplimiento de entrega
                     </div>
                   </div>
@@ -435,10 +435,10 @@ export const ExecutiveDashboardPage: React.FC = () => {
 
                   <div className="card">
                     <div className="muted">Quiebres / Stock Crítico</div>
-                    <strong style={{ color: metrics.criticalStockCount > 0 ? "var(--danger)" : "var(--ok)" }}>
+                    <strong style={{ color: metrics.criticalStockCount > 0 ? "var(--lc-danger)" : "var(--lc-ok)" }}>
                       {metrics.criticalStockCount}
                     </strong>
-                    <div className="t-small t-strong" style={{ color: metrics.criticalStockCount > 0 ? "var(--danger)" : "var(--ok)", marginTop: 4 }}>
+                    <div className="t-small t-strong" style={{ color: metrics.criticalStockCount > 0 ? "var(--lc-danger)" : "var(--lc-ok)", marginTop: 4 }}>
                       {metrics.criticalStockCount > 0 ? "⚠️ Requiere compra urgente" : "✓ Existencias óptimas"}
                     </div>
                   </div>
@@ -459,11 +459,11 @@ export const ExecutiveDashboardPage: React.FC = () => {
                     </div>
                     <div className="t-small" style={{ display: "flex", gap: 14 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span style={{ width: 12, height: 12, borderRadius: 3, background: "var(--primary)" }} />
+                        <span style={{ width: 12, height: 12, borderRadius: 3, background: "var(--lc-accent)" }} />
                         <span className="t-strong">Facturación</span>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span style={{ width: 12, height: 12, borderRadius: 3, background: "var(--accent)" }} />
+                        <span style={{ width: 12, height: 12, borderRadius: 3, background: "var(--lc-accent)" }} />
                         <span className="t-strong">Cobranzas</span>
                       </div>
                     </div>
@@ -484,10 +484,10 @@ export const ExecutiveDashboardPage: React.FC = () => {
                               style={{
                                 width: "38%",
                                 height: billedHeight,
-                                background: "linear-gradient(180deg, var(--primary), var(--primary-hover))",
+                                background: "linear-gradient(180deg, var(--lc-accent), var(--lc-orange-600))",
                                 borderRadius: "6px 6px 0 0",
                                 transition: "height 0.3s ease",
-                                boxShadow: "0 2px 8px var(--primary-glow)"
+                                boxShadow: "0 2px 8px var(--lc-accent-soft)"
                               }}
                             />
                             {/* Bar Collected */}
@@ -496,7 +496,7 @@ export const ExecutiveDashboardPage: React.FC = () => {
                               style={{
                                 width: "38%",
                                 height: collectedHeight,
-                                background: "linear-gradient(180deg, var(--accent), var(--lc-info))",
+                                background: "linear-gradient(180deg, var(--lc-accent), var(--lc-info))",
                                 borderRadius: "6px 6px 0 0",
                                 transition: "height 0.3s ease",
                                 boxShadow: "0 2px 8px rgba(2, 132, 199, 0.25)"
@@ -522,13 +522,13 @@ export const ExecutiveDashboardPage: React.FC = () => {
                     </h3>
                     <div style={{ display: "grid", gap: 10 }}>
                       {[
-                        { label: "Venta Directa (Reventa)", count: products.filter((p) => p.type === "DirectSale" || p.type === "Product").length, icon: "🛍️", color: "var(--primary)" },
-                        { label: "Servicios Intangibles", count: products.filter((p) => p.type === "Service").length, icon: "🛠️", color: "var(--accent)" },
-                        { label: "Repuestos Técnicos", count: products.filter((p) => p.type === "SparePart").length, icon: "🔧", color: "var(--warn)" },
+                        { label: "Venta Directa (Reventa)", count: products.filter((p) => p.type === "DirectSale" || p.type === "Product").length, icon: "🛍️", color: "var(--lc-accent)" },
+                        { label: "Servicios Intangibles", count: products.filter((p) => p.type === "Service").length, icon: "🛠️", color: "var(--lc-accent)" },
+                        { label: "Repuestos Técnicos", count: products.filter((p) => p.type === "SparePart").length, icon: "🔧", color: "var(--lc-warn)" },
                         { label: "Productos Fabricados", count: products.filter((p) => p.type === "Manufactured" || p.type === "Consumable").length, icon: "🏭", color: "var(--lc-violet)" },
                         { label: "Productos Ensamblados", count: products.filter((p) => p.type === "Kit").length, icon: "🧩", color: "#ec4899" }
                       ].map((cat) => (
-                        <div key={cat.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, background: "var(--surface-muted)" }}>
+                        <div key={cat.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, background: "var(--lc-surface-2)" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                             <span>{cat.icon}</span>
                             <span className="t-strong">{cat.label}</span>
@@ -724,8 +724,8 @@ export const ExecutiveDashboardPage: React.FC = () => {
                     justifyContent: "space-between",
                     padding: "10px 14px",
                     borderRadius: 12,
-                    background: widget.visible ? "var(--surface-muted)" : "rgba(0,0,0,0.03)",
-                    border: "1px solid var(--surface-border)",
+                    background: widget.visible ? "var(--lc-surface-2)" : "rgba(0,0,0,0.03)",
+                    border: "1px solid var(--lc-line)",
                     opacity: widget.visible ? 1 : 0.6
                   }}
                 >
@@ -768,7 +768,7 @@ export const ExecutiveDashboardPage: React.FC = () => {
               ))}
             </div>
 
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 22, paddingTop: 14, borderTop: "1px solid var(--surface-border)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 22, paddingTop: 14, borderTop: "1px solid var(--lc-line)" }}>
               <button type="button" onClick={resetWidgets} className="btn btn-outline">
                 Restablecer Predeterminado
               </button>

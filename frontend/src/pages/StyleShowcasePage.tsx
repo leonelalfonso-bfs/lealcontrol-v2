@@ -30,7 +30,7 @@ export const StyleShowcasePage: React.FC = () => {
           </p>
         </div>
         <div className="toolbar">
-          <div style={{ display: "flex", gap: 8, background: "var(--surface-muted)", padding: 4, borderRadius: 14, border: "1px solid var(--surface-border)" }}>
+          <div style={{ display: "flex", gap: 8, background: "var(--lc-surface-2)", padding: 4, borderRadius: 14, border: "1px solid var(--lc-line)" }}>
             <button
               type="button"
               className={`btn ${!isDark ? "" : "ghost"}`}
@@ -62,7 +62,7 @@ export const StyleShowcasePage: React.FC = () => {
           >
             {!isDark && (
               <div className="t-small t-strong"
-                style={{ position: "absolute", top: 12, right: 12, background: "var(--primary)", color: "#fff", borderRadius: 999, padding: "3px 10px" }}
+                style={{ position: "absolute", top: 12, right: 12, background: "var(--lc-accent)", color: "#fff", borderRadius: 999, padding: "3px 10px" }}
               >
                 ACTIVO AHORA
               </div>
@@ -72,7 +72,7 @@ export const StyleShowcasePage: React.FC = () => {
               <span className="t-xl">☀️</span>
               <div>
                 <h3 style={{ margin: 0 }}>Modo Claro: {LIGHT_THEME.name}</h3>
-                <div className="t-small t-strong" style={{ color: "var(--accent)" }}>{LIGHT_THEME.inspiration}</div>
+                <div className="t-small t-strong" style={{ color: "var(--lc-accent)" }}>{LIGHT_THEME.inspiration}</div>
               </div>
             </div>
 
@@ -100,7 +100,7 @@ export const StyleShowcasePage: React.FC = () => {
           >
             {isDark && (
               <div className="t-small t-strong"
-                style={{ position: "absolute", top: 12, right: 12, background: "var(--primary)", color: "#fff", borderRadius: 999, padding: "3px 10px" }}
+                style={{ position: "absolute", top: 12, right: 12, background: "var(--lc-accent)", color: "#fff", borderRadius: 999, padding: "3px 10px" }}
               >
                 ACTIVO AHORA
               </div>
@@ -110,7 +110,7 @@ export const StyleShowcasePage: React.FC = () => {
               <span className="t-xl">🌙</span>
               <div>
                 <h3 style={{ margin: 0 }}>Modo Oscuro: {DARK_THEME.name}</h3>
-                <div className="t-small t-strong" style={{ color: "var(--accent)" }}>{DARK_THEME.inspiration}</div>
+                <div className="t-small t-strong" style={{ color: "var(--lc-accent)" }}>{DARK_THEME.inspiration}</div>
               </div>
             </div>
 
@@ -133,7 +133,7 @@ export const StyleShowcasePage: React.FC = () => {
       </section>
 
       {/* Tabs for Showcase categories */}
-      <div style={{ display: "flex", gap: 10, borderBottom: "1px solid var(--line)", marginBottom: 24 }}>
+      <div style={{ display: "flex", gap: 10, borderBottom: "1px solid var(--lc-line)", marginBottom: 24 }}>
         {[
           { id: "kpis", label: "📊 KPIs y Métricas" },
           { id: "tables", label: "📑 Tablas y Grillas" },

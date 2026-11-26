@@ -14,7 +14,7 @@ export const ThemeToggle: React.FC<{ compact?: boolean }> = ({ compact = false }
           ? "rgba(255, 255, 255, 0.08)"
           : "rgba(255, 255, 255, 0.08)", border: isDark
           ? "1px solid rgba(255, 255, 255, 0.14)"
-          : "1px solid rgba(255, 255, 255, 0.14)", color: "var(--sidebar-text)", cursor: "pointer", transition: "all 0.22s cubic-bezier(0.16, 1, 0.3, 1)", boxShadow: isDark
+          : "1px solid rgba(255, 255, 255, 0.14)", color: "var(--lc-ink-on-dark)", cursor: "pointer", transition: "all 0.22s cubic-bezier(0.16, 1, 0.3, 1)", boxShadow: isDark
           ? "0 2px 8px rgba(0, 0, 0, 0.3)"
           : "0 2px 8px rgba(0, 0, 0, 0.05)" }}
     >

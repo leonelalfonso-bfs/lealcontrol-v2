@@ -236,7 +236,7 @@ export function AppShell({
               <strong>{companyName}</strong>
               {tenant?.documentNumber && <span>{tenant.documentNumber}</span>}
             </span>
-            {canSwitch && <Icon name="upDown" size={16} style={{ color: "var(--ins-ink-3)" }} />}
+            {canSwitch && <Icon name="upDown" size={16} style={{ color: "var(--lc-ink-3)" }} />}
           </button>
           {companyMenu.open && (
             <div className="ins-popover" role="menu" style={{ top: "calc(100% + 6px)", left: 0, right: 0 }}>
@@ -370,7 +370,7 @@ export function AppShell({
                 <strong>{userName}</strong>
                 <span>{presentation.active ? "Presentación · solo lectura" : userRole}</span>
               </span>
-              <Icon name="upDown" size={16} style={{ color: "var(--ins-ink-3)" }} />
+              <Icon name="upDown" size={16} style={{ color: "var(--lc-ink-3)" }} />
             </button>
             {userMenu.open && (
               <div className="ins-popover" role="menu" style={{ bottom: "calc(100% + 6px)", left: 0, right: 0 }}>
@@ -465,7 +465,7 @@ export function AppShell({
                   ))}
                   <div className="ins-menu-sep" />
                   <button type="button" className="ins-menu-item" onClick={() => { newMenu.setOpen(false); setPaletteOpen(true); }}>
-                    <Icon name="search" size={16} style={{ color: "var(--ins-ink-3)" }} />
+                    <Icon name="search" size={16} style={{ color: "var(--lc-ink-3)" }} />
                     Más opciones
                     <span className="ins-menu-item__meta">{shortcutLabel}</span>
                   </button>

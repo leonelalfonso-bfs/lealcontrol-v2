@@ -438,8 +438,8 @@ export const ProductsPage: React.FC = () => {
                               height: 40,
                               objectFit: "contain",
                               borderRadius: 8,
-                              border: "1px solid var(--surface-border)",
-                              background: "var(--surface)"
+                              border: "1px solid var(--lc-line)",
+                              background: "var(--lc-surface)"
                             }}
                           />
                         ) : (
@@ -448,11 +448,11 @@ export const ProductsPage: React.FC = () => {
                               width: 40,
                               height: 40,
                               borderRadius: 8,
-                              background: "var(--surface-muted)",
+                              background: "var(--lc-surface-2)",
                               display: "grid",
                               placeItems: "center",
                               fontSize: "1.1rem",
-                              border: "1px solid var(--surface-border)"
+                              border: "1px solid var(--lc-line)"
                             }}
                           >
                             {productTypeMeta[item.type]?.icon ?? "📦"}

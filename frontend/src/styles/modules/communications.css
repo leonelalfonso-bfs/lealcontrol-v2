@@ -3,24 +3,24 @@
  * Solo reglas propias del módulo; botones, tarjetas, tablas y campos vienen de ds/components.css.
  */
 
-.health-line {margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--surface-border); font-size: .76rem; font-weight: 700;}
+.health-line {margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--lc-line); font-size: .76rem; font-weight: 700;}
 .mail-layout {display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(380px, .75fr); gap: 18px; align-items: start;}
 .mail-account-form {display: grid; gap: 14px; position: sticky; top: 76px; border-top: 3px solid #477cc8;}
 .provider-picker {display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px;}
-.provider-picker button {padding: 9px 6px; border: 1px solid var(--surface-border); border-radius: 10px; background: rgba(255,255,255,.74); color: var(--ink-soft); font-weight: 700; cursor: pointer;}
+.provider-picker button {padding: 9px 6px; border: 1px solid var(--lc-line); border-radius: 10px; background: rgba(255,255,255,.74); color: var(--lc-ink-2); font-weight: 700; cursor: pointer;}
 .provider-picker button.active {border-color: rgba(71,124,200,.35); background: #e8f0fc; color: #3769ae;}
 .oauth-notice {display: grid; gap: 4px; padding: 12px; border-left: 3px solid #d18435; border-radius: 8px; background: #fff4e5; color: #875722; font-size: .8rem;}
 .mail-account-list {display: grid; gap: 10px;}
-.mail-account-card {display: grid; grid-template-columns: 42px 1fr auto; gap: 12px; align-items: center; padding: 14px; border: 1px solid var(--surface-border); border-radius: 13px; background: rgba(255,255,255,.72);}
+.mail-account-card {display: grid; grid-template-columns: 42px 1fr auto; gap: 12px; align-items: center; padding: 14px; border: 1px solid var(--lc-line); border-radius: 13px; background: rgba(255,255,255,.72);}
 .provider-mark {width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; background: #edf1f6; color: #65748d; font-weight: 900;}
 .mail-account-main {display: grid; gap: 2px; min-width: 0;}
-.mail-account-main span {color: var(--ink-soft);}
-.mail-account-main small {color: var(--ink-soft);}
+.mail-account-main span {color: var(--lc-ink-2);}
+.mail-account-main small {color: var(--lc-ink-2);}
 .mail-account-main .mail-health {display: inline-flex; width: fit-content; margin: 3px 0; padding: 3px 8px; border-radius: 999px; font-size: .72rem; font-weight: 750;}
 .mail-account-main .mail-health-ok {color: #247253; background: #e5f5ec;}
 .mail-account-main .mail-health-warning {color: #895713; background: #fff0d7;}
 .mail-account-main .mail-health-error {color: #a33d3d; background: #fde8e7;}
-.mail-account-main .mail-health-neutral {color: var(--ink-soft); background: var(--surface-border);}
+.mail-account-main .mail-health-neutral {color: var(--lc-ink-2); background: var(--lc-line);}
 .mail-account-main .mail-health-hint-warning {color: #895713;}
 .mail-account-main .mail-health-hint-error {color: #a33d3d;}
 .mail-account-actions {display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px;}
@@ -53,12 +53,12 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  border-right: 1px solid var(--surface-border);}
+  border-right: 1px solid var(--lc-line);}
 .inbox-folders {display: flex;
   flex-direction: column;
   gap: 7px;
   padding: 12px;
-  border-right: 1px solid var(--surface-border);
+  border-right: 1px solid var(--lc-line);
   background: rgba(239, 243, 252, .58);
   min-height: 0;
   overflow-y: auto;}
@@ -68,20 +68,20 @@
   min-width: 0;
   min-height: 0;
   overflow-y: auto;
-  border-left: 1px solid var(--surface-border);
+  border-left: 1px solid var(--lc-line);
   background: rgba(248, 250, 252, .72);}
 .inbox-context-head {display: grid;
   gap: 4px;
   padding: 14px 16px;
-  border-bottom: 1px solid var(--surface-border);
-  background: var(--surface);}
+  border-bottom: 1px solid var(--lc-line);
+  background: var(--lc-surface);}
 .inbox-context-head strong {font-size: .92rem;
   line-height: 1.3;
   overflow-wrap: anywhere;}
 .inbox-context-details {display: grid;
   gap: 12px;
   padding: 14px 16px;
-  border-bottom: 1px solid var(--surface-border);
+  border-bottom: 1px solid var(--lc-line);
   font-size: .82rem;}
 .inbox-context-field {display: grid;
   gap: 3px;
@@ -101,7 +101,7 @@
   border: 1px solid transparent;
   border-radius: 12px;
   background: transparent;
-  color: var(--ink-soft);
+  color: var(--lc-ink-2);
   font: inherit;
   font-size: .86rem;
   font-weight: 750;
@@ -110,11 +110,11 @@
   transition: .18s ease;}
 .inbox-folders button:hover, .inbox-folders a:hover {border-color: rgba(93, 103, 206, .15);
   background: rgba(255, 255, 255, .72);
-  color: var(--primary);
+  color: var(--lc-accent);
   transform: translateX(2px);}
 .inbox-folders button.active {border-color: rgba(93, 103, 206, .2);
   background: linear-gradient(135deg, rgba(255,255,255,.94), rgba(229,233,255,.9));
-  color: var(--primary);
+  color: var(--lc-accent);
   box-shadow: 0 8px 22px rgba(71, 85, 170, .1);}
 .inbox-folders button strong {min-width: 25px;
   padding: 3px 7px;
@@ -123,23 +123,23 @@
   color: inherit;
   text-align: center;
   font-size: .72rem;}
-.inbox-folders a {margin-top: auto; justify-content: flex-start; border-color: var(--surface-border); background: rgba(255,255,255,.62);}
+.inbox-folders a {margin-top: auto; justify-content: flex-start; border-color: var(--lc-line); background: rgba(255,255,255,.62);}
 .inbox-folders a::before {content: "⚙";}
 .message-list {min-width: 0; min-height: 0; overflow: hidden;}
 .message-list > button {width: 100%; display: grid; grid-template-columns: 10px minmax(0,1fr) auto; gap: 10px;
-  padding: 16px; border: 0; border-bottom: 1px solid var(--surface-border);
-  background: transparent; color: var(--ink); text-align: left; cursor: pointer;}
+  padding: 16px; border: 0; border-bottom: 1px solid var(--lc-line);
+  background: transparent; color: var(--lc-ink); text-align: left; cursor: pointer;}
 .message-list > button:hover, .message-list > button.active {background: rgba(232, 237, 255, .68);}
 .message-list > button div {display: grid; gap: 4px; min-width: 0;}
 .message-list > button div > strong, .message-list > button b, .message-list > button small {overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
-.message-list > button small, .message-list > button time {color: var(--ink-soft); font-size: .74rem;}
+.message-list > button small, .message-list > button time {color: var(--lc-ink-2); font-size: .74rem;}
 .message-reader {min-width: 0; min-height: 0; height: 100%; padding: 26px; overflow: auto;}
 .inbox-thread-messages {flex: 1; min-height: 0; overflow-y: auto;}
 .inbox-shell-email .inbox-list-column, .inbox-shell-email .message-list, .inbox-shell-email .message-reader, .inbox-shell-email .inbox-context {min-height: 0; height: 100%;}
 .inbox-shell-email .inbox-thread-messages {flex: 1; min-height: 0; overflow-y: auto;}
 .inbox-shell-email .inbox-email-card {flex-shrink: 0;}
 .inbox-shell-email .message-html {height: clamp(280px, 42vh, 520px);}
-.inbox-thread-header {display: grid; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--surface-border); background: var(--surface);}
+.inbox-thread-header {display: grid; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--lc-line); background: var(--lc-surface);}
 .inbox-thread-identity {min-width: 0;}
 .inbox-thread-title {display: flex; align-items: flex-start; gap: 10px; min-width: 0;}
 .inbox-thread-title h2 {min-width: 0; margin: 0; font-size: 1.05rem; line-height: 1.3; overflow-wrap: anywhere;}
@@ -151,7 +151,7 @@
 .inbox-email-meta > div {min-width: 0;}
 .inbox-email-meta > span {flex-shrink: 0;}
 .message-body {white-space: pre-wrap; line-height: 1.7;}
-.inbox-shell .empty-state {min-height: 150px; display: grid; place-items: center; padding: 24px; color: var(--ink-soft); text-align: center;}
+.inbox-shell .empty-state {min-height: 150px; display: grid; place-items: center; padding: 24px; color: var(--lc-ink-2); text-align: center;}
 .inbox-page {overflow-x: hidden; max-width: 100%;}
 @media (max-width: 1366px) {
   .inbox-shell {grid-template-columns: minmax(240px, 280px) minmax(0, 1fr) minmax(190px, 220px);
@@ -169,7 +169,7 @@
   .inbox-folders {flex-direction: row;
     flex-wrap: wrap;
     border-right: 0;
-    border-bottom: 1px solid var(--surface-border);
+    border-bottom: 1px solid var(--lc-line);
     overflow-x: auto;
     overflow-y: hidden;}
 }
@@ -179,12 +179,12 @@
     height: auto;
     min-height: 0;
     overflow: visible;}
-  .inbox-list-column {border-right: 0; border-bottom: 1px solid var(--surface-border); max-height: 340px;}
-  .inbox-folders {flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid var(--surface-border);}
+  .inbox-list-column {border-right: 0; border-bottom: 1px solid var(--lc-line); max-height: 340px;}
+  .inbox-folders {flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid var(--lc-line);}
   .inbox-folders a {margin: 0;}
   .message-list {max-height: 260px;}
   .message-reader {height: clamp(420px, 55vh, 720px);}
-  .inbox-context {border-left: 0; border-top: 1px solid var(--surface-border); max-height: none;}
+  .inbox-context {border-left: 0; border-top: 1px solid var(--lc-line); max-height: none;}
   .inbox-shell-email .message-reader {height: auto;}
 }
 @media (max-width: 600px) {
@@ -203,9 +203,9 @@
 }
 .message-html {display: block; min-height: 620px;}
 .channel-filter {display: flex; gap: 8px; margin-bottom: 14px; padding: 8px; overflow-x: auto; background: rgba(255,255,255,.58);}
-.channel-filter button {display: flex; align-items: center; gap: 8px; min-width: 120px; padding: 10px 13px; border: 1px solid transparent; border-radius: 11px; background: transparent; color: var(--ink-soft); font: inherit; cursor: pointer;}
-.channel-filter button:hover, .channel-filter button.selected {border-color: rgba(93,103,206,.18); background: linear-gradient(135deg, rgba(255,255,255,.95), rgba(231,235,255,.86)); color: var(--primary);}
-.message-html {width: 100%; min-height: 520px; border: 1px solid var(--surface-border); border-radius: 10px; background: white;}
+.channel-filter button {display: flex; align-items: center; gap: 8px; min-width: 120px; padding: 10px 13px; border: 1px solid transparent; border-radius: 11px; background: transparent; color: var(--lc-ink-2); font: inherit; cursor: pointer;}
+.channel-filter button:hover, .channel-filter button.selected {border-color: rgba(93,103,206,.18); background: linear-gradient(135deg, rgba(255,255,255,.95), rgba(231,235,255,.86)); color: var(--lc-accent);}
+.message-html {width: 100%; min-height: 520px; border: 1px solid var(--lc-line); border-radius: 10px; background: white;}
 .account-cards {display: grid;
   grid-template-columns: repeat(3, minmax(260px, 1fr));
   gap: 18px;}
@@ -215,15 +215,15 @@
   gap: 10px;
   text-align: left;
   padding: 22px;
-  border: 1px solid var(--surface-border);
-  border-radius: var(--radius);
-  background: var(--panel);
-  color: var(--ink);
-  box-shadow: var(--shadow-card);
+  border: 1px solid var(--lc-line);
+  border-radius: var(--lc-radius-card);
+  background: var(--lc-surface);
+  color: var(--lc-ink);
+  box-shadow: var(--lc-raise-1);
   cursor: pointer;
   transition: 0.16s ease;}
 .account-card:hover {transform: translateY(-3px);
-  border-color: var(--primary);
+  border-color: var(--lc-accent);
   box-shadow: 0 14px 30px rgba(20, 40, 60, 0.16);}
 .account-card-title {display: flex;
   align-items: center;
@@ -234,18 +234,18 @@
   width: 34px;
   height: 34px;
   border-radius: 10px;
-  background: var(--primary);
+  background: var(--lc-accent);
   color: #fff;
   font-size: 1.2rem;}
 .account-card-footer {display: flex;
   justify-content: space-between;
   align-items: end;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--lc-line);
   padding-top: 16px;
   margin-top: 8px;}
 .account-card-footer strong {font-size: 1.45rem;}
 .account-card-footer span {font-weight: 700;
-  color: var(--primary);}
+  color: var(--lc-accent);}
 @media (max-width: 900px) {
   .account-cards {grid-template-columns: repeat(2, minmax(240px, 1fr));}
 }

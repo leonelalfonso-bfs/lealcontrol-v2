@@ -111,7 +111,7 @@ export function OrgChartPage() {
                       <div
                         key={pos.id}
                         style={{
-                          background: "var(--surface-sunken)",
+                          background: "var(--lc-surface-sunken)",
                           padding: "14px 16px",
                           borderRadius: 8,
                           border: "1px solid var(--lc-line-2)",
@@ -123,7 +123,7 @@ export function OrgChartPage() {
                       >
                         <div>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-                            <strong style={{ color: "var(--text-main)" }}>{pos.title}</strong>
+                            <strong style={{ color: "var(--lc-ink)" }}>{pos.title}</strong>
                             <span className="badge ok" style={{ fontSize: "0.68rem" }}>
                               Nivel {pos.level}
                             </span>

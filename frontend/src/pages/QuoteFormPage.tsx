@@ -970,7 +970,7 @@ export const QuoteFormPage: React.FC = () => {
                 />
               </div>
 
-              <div className="t-accent" style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid var(--surface-border)", paddingTop: "8px", fontSize: "1.1rem" }}>
+              <div className="t-accent" style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid var(--lc-line)", paddingTop: "8px", fontSize: "1.1rem" }}>
                 <strong>TOTAL PRESUPUESTO:</strong>
                 <strong className="t-mono">{currency} ${total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</strong>
               </div>
