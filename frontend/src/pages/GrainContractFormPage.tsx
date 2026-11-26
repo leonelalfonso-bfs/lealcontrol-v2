@@ -59,19 +59,19 @@ export function GrainContractFormPage() {
   return (
     <div className="page" style={{ padding: "24px 32px", maxWidth: "900px", margin: "0 auto" }}>
       <div style={{ marginBottom: "20px" }}>
-        <Link to="/cereales/contratos" style={{ textDecoration: "none", color: "var(--ink-soft)", fontSize: "0.9rem" }}>
+        <Link className="muted" to="/cereales/contratos" style={{ textDecoration: "none" }}>
           ← Volver a Contratos
         </Link>
-        <h1 style={{ margin: "8px 0 0", fontSize: "1.5rem", fontWeight: 800 }}>
+        <h1 style={{ margin: "8px 0 0" }}>
           🌾 Nuevo Contrato de Granos
         </h1>
-        <p style={{ margin: 0, color: "var(--ink-soft)", fontSize: "0.85rem" }}>
+        <p className="muted t-small" style={{ margin: 0 }}>
           Emisión de boleto de compra/venta cerealera con fijación y comisión de corretaje
         </p>
       </div>
 
       {error && (
-        <div className="card" style={{ padding: "12px 16px", marginBottom: "16px", background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.3)", color: "var(--lc-danger)", fontWeight: 700 }}>
+        <div className="card alert t-strong" style={{ marginBottom: "16px" }}>
           ⚠️ {error}
         </div>
       )}
@@ -89,7 +89,7 @@ export function GrainContractFormPage() {
         {/* Row 1: Cereal, Campaña, Tipo */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px" }}>
           <div>
-            <label className="label" style={{ fontWeight: 700 }}>Cereal / Cultivo *</label>
+            <label className="label">Cereal / Cultivo *</label>
             <select className="input" value={form.grainType} onChange={(e) => setForm({ ...form, grainType: e.target.value })}>
               <option value="Soja">Soja</option>
               <option value="Maíz">Maíz</option>
@@ -101,7 +101,7 @@ export function GrainContractFormPage() {
           </div>
 
           <div>
-            <label className="label" style={{ fontWeight: 700 }}>Campaña Agrícola *</label>
+            <label className="label">Campaña Agrícola *</label>
             <select className="input" value={form.harvest} onChange={(e) => setForm({ ...form, harvest: e.target.value })}>
               <option value="2025/2026">2025/2026</option>
               <option value="2024/2025">2024/2025</option>
@@ -110,7 +110,7 @@ export function GrainContractFormPage() {
           </div>
 
           <div>
-            <label className="label" style={{ fontWeight: 700 }}>Tipo de Operación *</label>
+            <label className="label">Tipo de Operación *</label>
             <select className="input" value={form.contractType} onChange={(e) => setForm({ ...form, contractType: e.target.value })}>
               <option value="Compra">Compra</option>
               <option value="Venta">Venta</option>
@@ -123,7 +123,7 @@ export function GrainContractFormPage() {
         {/* Row 2: Partes (Vendedor y Comprador) */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
           <div>
-            <label className="label" style={{ fontWeight: 700 }}>Productor / Vendedor *</label>
+            <label className="label">Productor / Vendedor *</label>
             <input
               type="text"
               className="input"
@@ -135,7 +135,7 @@ export function GrainContractFormPage() {
           </div>
 
           <div>
-            <label className="label" style={{ fontWeight: 700 }}>Comprador / Destino *</label>
+            <label className="label">Comprador / Destino *</label>
             <input
               type="text"
               className="input"
@@ -150,7 +150,7 @@ export function GrainContractFormPage() {
         {/* Row 3: Modalidad de Precio, Valor y Toneladas */}
         <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr 1fr", gap: "16px" }}>
           <div>
-            <label className="label" style={{ fontWeight: 700 }}>Modalidad de Precio *</label>
+            <label className="label">Modalidad de Precio *</label>
             <select className="input" value={form.pricingMode} onChange={(e) => setForm({ ...form, pricingMode: e.target.value })}>
               <option value="PrecioHecho">Precio Hecho (Fijo)</option>
               <option value="AFijar">A Fijar (Pizarra)</option>
@@ -159,7 +159,7 @@ export function GrainContractFormPage() {
           </div>
 
           <div>
-            <label className="label" style={{ fontWeight: 700 }}>Moneda</label>
+            <label className="label">Moneda</label>
             <select className="input" value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })}>
               <option value="USD">USD ($ Dólares)</option>
               <option value="ARS">ARS ($ Pesos)</option>
@@ -167,7 +167,7 @@ export function GrainContractFormPage() {
           </div>
 
           <div>
-            <label className="label" style={{ fontWeight: 700 }}>Precio Pactado / Base</label>
+            <label className="label">Precio Pactado / Base</label>
             <input
               type="number"
               step="0.01"
@@ -179,7 +179,7 @@ export function GrainContractFormPage() {
           </div>
 
           <div>
-            <label className="label" style={{ fontWeight: 700 }}>Toneladas (Entero) *</label>
+            <label className="label">Toneladas (Entero) *</label>
             <input
               type="number"
               step="1"
@@ -195,7 +195,7 @@ export function GrainContractFormPage() {
         {/* Row 4: Referencia de Mercado y Puerto */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
           <div>
-            <label className="label" style={{ fontWeight: 700 }}>Referencia de Fijación / Cámara</label>
+            <label className="label">Referencia de Fijación / Cámara</label>
             <select className="input" value={form.pricingReference} onChange={(e) => setForm({ ...form, pricingReference: e.target.value })}>
               <option value="Pizarra Rosario">Pizarra Rosario</option>
               <option value="Pizarra Dársena">Pizarra Dársena / Buenos Aires</option>
@@ -205,7 +205,7 @@ export function GrainContractFormPage() {
           </div>
 
           <div>
-            <label className="label" style={{ fontWeight: 700 }}>Puerto o Destino de Entrega</label>
+            <label className="label">Puerto o Destino de Entrega</label>
             <input
               type="text"
               className="input"
@@ -229,7 +229,7 @@ export function GrainContractFormPage() {
           gap: "16px"
         }}>
           <div>
-            <label className="label" style={{ fontWeight: 700, color: "var(--lc-ok)" }}>% Comisión Corretaje</label>
+            <label className="label">% Comisión Corretaje</label>
             <input
               type="number"
               step="0.01"
@@ -242,16 +242,16 @@ export function GrainContractFormPage() {
             />
           </div>
 
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: "0.8rem", color: "var(--ink-soft)" }}>Honorarios de Corretaje Estimados</div>
-            <div style={{ fontSize: "1.4rem", fontWeight: 900, color: "var(--lc-ok)" }}>
+          <div className="t-right">
+            <div className="t-small muted">Honorarios de Corretaje Estimados</div>
+            <div className="t-ok" style={{ fontSize: "1.4rem", fontWeight: 900 }}>
               {form.currency} {calculatedCommission.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
             </div>
           </div>
         </div>
 
         <div>
-          <label className="label" style={{ fontWeight: 700 }}>Observaciones / Cláusulas especiales</label>
+          <label className="label">Observaciones / Cláusulas especiales</label>
           <textarea
             className="input"
             rows={3}
@@ -269,13 +269,6 @@ export function GrainContractFormPage() {
             type="submit"
             className="btn primary"
             disabled={saving}
-            style={{
-              background: "linear-gradient(135deg, var(--lc-warn) 0%, var(--lc-warn) 100%)",
-              color: "#fff",
-              fontWeight: 700,
-              border: "none",
-              padding: "10px 24px"
-            }}
           >
             {saving ? "Guardando..." : "✅ Registrar Contrato Granario"}
           </button>

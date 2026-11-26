@@ -98,7 +98,7 @@ export function ProcedureManualFormPage() {
 
   if (loading) {
     return (
-      <div className="page-wide" style={{ padding: 40, textAlign: "center" }}>
+      <div className="page-wide t-center" style={{ padding: 40 }}>
         <p className="muted">Cargando procedimiento...</p>
       </div>
     );
@@ -109,16 +109,16 @@ export function ProcedureManualFormPage() {
       {/* Header */}
       <div className="page-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "var(--lc-ink-3)", marginBottom: 6 }}>
-            <Link to="/rrhh" style={{ color: "var(--lc-ink-3)", textDecoration: "none" }}>
+          <div className="t-small muted" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <Link className="muted" to="/rrhh" style={{ textDecoration: "none" }}>
               RRHH
             </Link>
             <span>›</span>
-            <Link to="/rrhh/manuales" style={{ color: "var(--lc-ink-3)", textDecoration: "none" }}>
+            <Link className="muted" to="/rrhh/manuales" style={{ textDecoration: "none" }}>
               Manuales de Procedimientos
             </Link>
             <span>›</span>
-            <span style={{ color: "var(--lc-ink)", fontWeight: 600 }}>{isEditing ? `Editar: ${code}` : "Nuevo Procedimiento"}</span>
+            <span className="t-strong">{isEditing ? `Editar: ${code}` : "Nuevo Procedimiento"}</span>
           </div>
           <h1 style={{ margin: 0 }}>{isEditing ? `✏️ Editar Procedimiento: ${code} - ${title}` : "➕ Nuevo Procedimiento / Instructivo"}</h1>
           <p className="muted" style={{ margin: "4px 0 0 0" }}>
@@ -135,7 +135,6 @@ export function ProcedureManualFormPage() {
             className="btn"
             onClick={handleSubmit}
             disabled={saving}
-            style={{ background: "linear-gradient(135deg, var(--lc-violet), var(--lc-violet))", color: "#fff", fontWeight: 700 }}
           >
             {saving ? "Guardando..." : "💾 Guardar Procedimiento"}
           </button>
@@ -147,7 +146,7 @@ export function ProcedureManualFormPage() {
       <form onSubmit={handleSubmit} className="stack" style={{ gap: 20 }}>
         {/* Card 1: Identificación */}
         <div className="card pad stack" style={{ gap: 16, borderLeft: "5px solid var(--lc-violet)" }}>
-          <h2 style={{ fontSize: "1.15rem", margin: 0 }}>1. Identificación y Alcance del Procedimiento</h2>
+          <h2 style={{ margin: 0 }}>1. Identificación y Alcance del Procedimiento</h2>
 
           <div className="grid-3">
             <label>
@@ -218,7 +217,7 @@ export function ProcedureManualFormPage() {
 
         {/* Card 2: Contenido & Enlaces */}
         <div className="card pad stack" style={{ gap: 16, borderLeft: "5px solid var(--lc-info)" }}>
-          <h2 style={{ fontSize: "1.15rem", margin: 0 }}>2. Descripción del Contenido y Documento Adjunto</h2>
+          <h2 style={{ margin: 0 }}>2. Descripción del Contenido y Documento Adjunto</h2>
 
           <label>
             Resumen, Alcance y Destinatarios del Procedimiento *
@@ -232,7 +231,7 @@ export function ProcedureManualFormPage() {
           </label>
 
           <div className="stack" style={{ gap: 4 }}>
-            <strong style={{ fontSize: "0.85rem" }}>Documento (PDF, Word o imagen)</strong>
+            <strong className="t-small">Documento (PDF, Word o imagen)</strong>
             {isEditing && id ? (
               <FileAttachment path={`/api/v1/hr/manuals/${id}/file`} fileName={fileName} onChanged={() => void api.listProcedureManuals().then((list) => setFileName(list.find((m) => m.id === id)?.fileName ?? null))} />
             ) : <small className="muted">Guardá el manual y después subí el archivo.</small>}
@@ -258,7 +257,6 @@ export function ProcedureManualFormPage() {
             type="submit"
             className="btn"
             disabled={saving}
-            style={{ background: "linear-gradient(135deg, var(--lc-violet), var(--lc-violet))", color: "#fff", fontWeight: 700 }}
           >
             {saving ? "Guardando..." : "💾 Guardar Procedimiento"}
           </button>

@@ -64,27 +64,27 @@ export function CompanyDocumentsPage() {
             <button type="submit" className="btn">Guardar</button>
             <button type="button" className="btn btn-outline" onClick={() => { setForm(null); setEditingId(null); }}>Cancelar</button>
           </div>
-          {!editingId && <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}>Después de guardar, subí el archivo con “📎 Subir”.</p>}
+          {!editingId && <p className="muted t-small" style={{ margin: 0 }}>Después de guardar, subí el archivo con “📎 Subir”.</p>}
         </form>
       )}
 
       <div className="card pad stack" style={{ gap: 8 }}>
-        <label className="row" style={{ gap: 6, alignItems: "center", fontWeight: 500 }}>
+        <label className="row" style={{ gap: 6, alignItems: "center" }}>
           <input type="checkbox" checked={history} onChange={(e) => setHistory(e.target.checked)} /> Ver también los archivados
         </label>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Documento</th><th>Número</th><th>Emisor</th><th>Vence</th><th>Estado</th><th>Archivo</th><th style={{ textAlign: "right" }}>Acciones</th></tr></thead>
+            <thead><tr><th>Documento</th><th>Número</th><th>Emisor</th><th>Vence</th><th>Estado</th><th>Archivo</th><th className="t-right">Acciones</th></tr></thead>
             <tbody>
               {docs.map((d) => (
                 <tr key={d.id} style={d.isActive ? undefined : { opacity: 0.55 }}>
-                  <td>{d.title || d.categoryLabel}{d.title && <div className="muted" style={{ fontSize: "0.78rem" }}>{d.categoryLabel}</div>}</td>
+                  <td>{d.title || d.categoryLabel}{d.title && <div className="muted t-small">{d.categoryLabel}</div>}</td>
                   <td>{d.number || "—"}</td>
                   <td>{d.issuer || "—"}</td>
                   <td>{day(d.expirationDate)}</td>
-                  <td style={{ color: STATE[d.state].color, fontWeight: 700 }}>{d.isActive ? (d.expirationDate ? STATE[d.state].text : "Vigente") : "Archivado"}</td>
+                  <td className="t-strong" style={{ color: STATE[d.state].color }}>{d.isActive ? (d.expirationDate ? STATE[d.state].text : "Vigente") : "Archivado"}</td>
                   <td><FileAttachment path={`/api/v1/hr/company-documents/${d.id}/file`} fileName={d.fileName} onChanged={() => void load()} /></td>
-                  <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                  <td className="t-right" style={{ whiteSpace: "nowrap" }}>
                     <button type="button" className="btn btn-outline compact" onClick={() => {
                       setEditingId(d.id);
                       setForm({ category: d.category, title: d.title, number: d.number, issuer: d.issuer ?? "", issueDate: d.issueDate ?? "", expirationDate: d.expirationDate ?? "", alertDaysBefore: d.alertDaysBefore });

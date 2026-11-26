@@ -103,7 +103,7 @@ export function OrganizationPositionFormPage() {
 
   if (loading) {
     return (
-      <div className="page-wide" style={{ padding: 40, textAlign: "center" }}>
+      <div className="page-wide t-center" style={{ padding: 40 }}>
         <p className="muted">Cargando formulario de puesto...</p>
       </div>
     );
@@ -114,16 +114,16 @@ export function OrganizationPositionFormPage() {
       {/* Header */}
       <div className="page-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "var(--lc-ink-3)", marginBottom: 6 }}>
-            <Link to="/rrhh" style={{ color: "var(--lc-ink-3)", textDecoration: "none" }}>
+          <div className="t-small muted" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <Link className="muted" to="/rrhh" style={{ textDecoration: "none" }}>
               RRHH
             </Link>
             <span>›</span>
-            <Link to="/rrhh/organigrama" style={{ color: "var(--lc-ink-3)", textDecoration: "none" }}>
+            <Link className="muted" to="/rrhh/organigrama" style={{ textDecoration: "none" }}>
               Organigrama & Puestos
             </Link>
             <span>›</span>
-            <span style={{ color: "var(--lc-ink)", fontWeight: 600 }}>{isEditing ? `Editar: ${title}` : "Nuevo Puesto"}</span>
+            <span className="t-strong">{isEditing ? `Editar: ${title}` : "Nuevo Puesto"}</span>
           </div>
           <h1 style={{ margin: 0 }}>{isEditing ? `✏️ Editar Puesto: ${title}` : "➕ Nuevo Puesto en Organigrama"}</h1>
           <p className="muted" style={{ margin: "4px 0 0 0" }}>
@@ -140,7 +140,6 @@ export function OrganizationPositionFormPage() {
             className="btn"
             onClick={handleSubmit}
             disabled={saving}
-            style={{ background: "linear-gradient(135deg, #ec4899, #db2777)", color: "#fff", fontWeight: 700 }}
           >
             {saving ? "Guardando..." : "💾 Guardar Puesto"}
           </button>
@@ -152,7 +151,7 @@ export function OrganizationPositionFormPage() {
       <form onSubmit={handleSubmit} className="stack" style={{ gap: 20 }}>
         {/* Tarjeta 1: Estructura & Asignación */}
         <div className="card pad stack" style={{ gap: 16, borderLeft: "5px solid #ec4899" }}>
-          <h2 style={{ fontSize: "1.15rem", margin: 0 }}>1. Identificación y Ubicación en el Organigrama</h2>
+          <h2 style={{ margin: 0 }}>1. Identificación y Ubicación en el Organigrama</h2>
           
           <div className="grid-2">
             <label>
@@ -218,7 +217,7 @@ export function OrganizationPositionFormPage() {
 
         {/* Tarjeta 2: Misión y Responsabilidades */}
         <div className="card pad stack" style={{ gap: 16, borderLeft: "5px solid var(--lc-info)" }}>
-          <h2 style={{ fontSize: "1.15rem", margin: 0 }}>2. Misión y Responsabilidades del Puesto</h2>
+          <h2 style={{ margin: 0 }}>2. Misión y Responsabilidades del Puesto</h2>
 
           <label>
             Misión Principal del Puesto (Propósito Estratégico) *
@@ -245,7 +244,7 @@ export function OrganizationPositionFormPage() {
 
         {/* Tarjeta 3: Perfil, Competencias & KPIs */}
         <div className="card pad stack" style={{ gap: 16, borderLeft: "5px solid var(--lc-ok)" }}>
-          <h2 style={{ fontSize: "1.15rem", margin: 0 }}>3. Perfil Requerido, Competencias y Métricas (KPIs)</h2>
+          <h2 style={{ margin: 0 }}>3. Perfil Requerido, Competencias y Métricas (KPIs)</h2>
 
           <div className="grid-2">
             <label>
@@ -289,7 +288,6 @@ export function OrganizationPositionFormPage() {
             type="submit"
             className="btn"
             disabled={saving}
-            style={{ background: "linear-gradient(135deg, #ec4899, #db2777)", color: "#fff", fontWeight: 700 }}
           >
             {saving ? "Guardando..." : "💾 Guardar Puesto en Organigrama"}
           </button>

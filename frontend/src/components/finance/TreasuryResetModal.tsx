@@ -83,12 +83,12 @@ export function TreasuryResetModal({ open, onClose, onDone }: { open: boolean; o
       {!counts || !purchases ? (
         <p className="muted">Calculando…</p>
       ) : (
-        <div className="stack" style={{ gap: 10, fontSize: "0.9rem" }}>
+        <div className="stack" style={{ gap: 10 }}>
           <p style={{ margin: 0 }}>Se borra, de toda la empresa:</p>
-          <table style={{ width: "100%" }}>
+          <table>
             <tbody>
               {rows.map(([label, n]) => (
-                <tr key={label}><td>{label}</td><td style={{ textAlign: "right", fontWeight: 700 }}>{n ?? 0}</td></tr>
+                <tr key={label}><td>{label}</td><td className="t-right t-strong">{n ?? 0}</td></tr>
               ))}
             </tbody>
           </table>
@@ -100,7 +100,7 @@ export function TreasuryResetModal({ open, onClose, onDone }: { open: boolean; o
             <li>Se conservan las {counts.accounts} cuentas, conceptos, reglas, fondos y la numeración (no se repiten números ya entregados).</li>
           </ul>
           <p className="muted" style={{ margin: 0 }}>No se puede deshacer. Después corregí el saldo inicial de cada cuenta (♻ en la cuenta) e importá los extractos.</p>
-          <label style={{ fontWeight: 600 }}>
+          <label>
             Escribí {PHRASE} para confirmar
             <input value={phrase} onChange={(e) => setPhrase(e.target.value)} placeholder={PHRASE} style={{ width: "100%" }} />
           </label>

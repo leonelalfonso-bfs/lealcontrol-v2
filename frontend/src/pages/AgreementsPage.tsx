@@ -80,16 +80,16 @@ export function AgreementsPage() {
         {list.length === 0 ? (
           <p className="muted" style={{ margin: 0 }}>Todavía no hay convenios. Cargá UECARA o creá el de tu actividad.</p>
         ) : (
-          <table style={{ fontSize: "0.85rem" }}>
-            <thead><tr><th>Convenio</th><th>Sindicato</th><th>Zonas</th><th style={{ textAlign: "right" }}>Colaboradores</th><th /></tr></thead>
+          <table>
+            <thead><tr><th>Convenio</th><th>Sindicato</th><th>Zonas</th><th className="t-right">Colaboradores</th><th /></tr></thead>
             <tbody>
               {list.map((a) => (
                 <tr key={a.id}>
                   <td><strong>{a.code}</strong> — {a.name}</td>
                   <td>{a.union || "—"}</td>
                   <td>{a.zones || "—"}</td>
-                  <td style={{ textAlign: "right" }}>{a.employees}</td>
-                  <td style={{ textAlign: "right" }}><Link to={`/rrhh/convenios/${a.id}`} className="btn ghost compact">Abrir</Link></td>
+                  <td className="t-right">{a.employees}</td>
+                  <td className="t-right"><Link to={`/rrhh/convenios/${a.id}`} className="btn ghost compact">Abrir</Link></td>
                 </tr>
               ))}
             </tbody>

@@ -1047,7 +1047,7 @@ export function FinanceAccountsPage() {
                         <td>
                           {titular ? (
                             <div>
-                              <strong style={{ fontSize: "0.86rem", display: "block" }}>
+                              <strong style={{ display: "block" }}>
                                 {titular}
                               </strong>
                               {cuit && (

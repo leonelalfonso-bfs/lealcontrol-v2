@@ -41,7 +41,7 @@ function Summary({ matrix, sensitive, modules }: { matrix: Record<string, Permis
   const denied = modules.filter((m) => matrix[m.key] === "None");
   const sees = SENSITIVE.filter((s) => sensitive[s.key]).map((s) => s.label.toLowerCase());
   return (
-    <div style={{ fontSize: "0.85rem", lineHeight: 1.5 }}>
+    <div className="t-small" style={{ lineHeight: 1.5 }}>
       {granted.length === 0 ? <div>No tiene acceso a ningún módulo.</div> : (
         <div>{granted.map((m) => <span key={m.key} style={{ marginRight: 10, whiteSpace: "nowrap" }}>
           <strong>{m.label}</strong>: {levelLabel(matrix[m.key]).toLowerCase()}
@@ -210,7 +210,7 @@ export function UsersAndPermissions() {
       {tab === "users" && (
         <section className="card pad">
           <div className="row" style={{ justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
-            <p className="muted" style={{ margin: 0, fontSize: "0.85rem", maxWidth: 640 }}>
+            <p className="muted t-small" style={{ margin: 0, maxWidth: 640 }}>
               Cada usuario tiene un <strong>perfil</strong> (qué módulos ve y qué puede hacer) y, si hace falta, excepciones propias.
               Los usuarios son de esta empresa{tenant?.legalName ? ` (${tenant.legalName})` : ""}.
             </p>
@@ -218,14 +218,14 @@ export function UsersAndPermissions() {
           </div>
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Usuario</th><th>Perfil</th><th>Puede</th><th>Estado</th><th style={{ textAlign: "right" }}>Acciones</th></tr></thead>
+              <thead><tr><th>Usuario</th><th>Perfil</th><th>Puede</th><th>Estado</th><th className="t-right">Acciones</th></tr></thead>
               <tbody>
                 {users.map((u) => {
                   const hasOverrides = Boolean(u.overrides);
                   const visible = modules.filter((m) => (u.effectiveModules?.[m.key] ?? "None") !== "None");
                   return (
                     <tr key={u.id}>
-                      <td><strong>{u.fullName}</strong><div className="muted" style={{ fontSize: "0.8rem" }}>{u.email}</div></td>
+                      <td><strong>{u.fullName}</strong><div className="muted t-small">{u.email}</div></td>
                       <td>
                         {u.profileName ?? <span className="muted">Sin perfil</span>}
                         {hasOverrides && <span className="badge warn" style={{ marginLeft: 6 }}>con excepciones</span>}
@@ -240,7 +240,7 @@ export function UsersAndPermissions() {
                         </div>
                       </td>
                       <td><span className={`badge ${u.isActive ? "ok" : "off"}`}>{u.isActive ? "Activo" : "Inactivo"}</span></td>
-                      <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                      <td className="t-right" style={{ whiteSpace: "nowrap" }}>
                         <button type="button" className="btn btn-outline compact" onClick={() => editUser(u)}>Editar</button>{" "}
                         <button type="button" className="btn btn-outline compact" onClick={() => deleteUser(u)}
                           disabled={currentUser?.id === u.id} title={currentUser?.id === u.id ? "No podés eliminar tu propio usuario" : undefined}>
@@ -259,7 +259,7 @@ export function UsersAndPermissions() {
       {tab === "profiles" && (
         <section className="card pad stack" style={{ gap: 12 }}>
           <div className="row" style={{ justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-            <p className="muted" style={{ margin: 0, fontSize: "0.85rem", maxWidth: 640 }}>
+            <p className="muted t-small" style={{ margin: 0, maxWidth: 640 }}>
               Un perfil es una plantilla: nivel por módulo y datos sensibles. Al editarlo, todos sus usuarios toman el cambio.
               Los de fábrica se pueden editar o copiar; "Dueño" siempre tiene todo.
             </p>
@@ -273,14 +273,14 @@ export function UsersAndPermissions() {
               <tbody>
                 {profiles.map((p) => (
                   <tr key={p.id}>
-                    <td style={{ minWidth: 160 }}><strong>{p.name}</strong>{p.description && <div className="muted" style={{ fontSize: "0.75rem" }}>{p.description}</div>}</td>
+                    <td style={{ minWidth: 160 }}><strong>{p.name}</strong>{p.description && <div className="muted t-small">{p.description}</div>}</td>
                     {modules.map((m) => (
                       <td key={m.key}>
                         {p.matrix[m.key] === "None" ? <span className="muted">—</span>
                           : <span className={`badge ${levelBadge(p.matrix[m.key])}`}>{levelLabel(p.matrix[m.key])}</span>}
                       </td>
                     ))}
-                    <td style={{ fontSize: "0.78rem" }}>{SENSITIVE.filter((s) => p[s.profileKey]).map((s) => s.label).join(", ") || "—"}</td>
+                    <td className="t-small">{SENSITIVE.filter((s) => p[s.profileKey]).map((s) => s.label).join(", ") || "—"}</td>
                     <td>{p.userCount}</td>
                     <td style={{ whiteSpace: "nowrap" }}>
                       {!p.isLocked && <button type="button" className="btn btn-outline compact" onClick={() => setProfileForm({ ...p })}>Editar</button>}{" "}
@@ -315,7 +315,7 @@ export function UsersAndPermissions() {
                 </select>
               </label>
             </div>
-            {userProfile?.description && <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>{userProfile.description}</p>}
+            {userProfile?.description && <p className="muted t-small" style={{ margin: 0 }}>{userProfile.description}</p>}
             {userForm.id && (
               <label className="check-label" style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                 <input type="checkbox" checked={userForm.isActive} onChange={(e) => setUserForm({ ...userForm, isActive: e.target.checked })} />
@@ -330,12 +330,12 @@ export function UsersAndPermissions() {
             </div>
             {showExceptions && (
               <div className="stack" style={{ gap: 8, border: "1px solid var(--line)", borderRadius: 10, padding: 12 }}>
-                <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
+                <p className="muted t-small" style={{ margin: 0 }}>
                   Solo para este usuario. "Del perfil" toma lo que diga {userProfile?.name ?? "el perfil"}.
                 </p>
                 <div className="grid-2" style={{ gap: 8 }}>
                   {modules.map((m) => (
-                    <label key={m.key} style={{ fontWeight: 500 }}>{m.label}
+                    <label key={m.key}>{m.label}
                       <select value={userForm.overrides.modules?.[m.key] ?? ""} onChange={(e) => setModuleOverride(m.key, e.target.value as PermissionLevel | "")}>
                         <option value="">Del perfil ({levelLabel(userProfile?.matrix[m.key] ?? "None")})</option>
                         {LEVELS.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
@@ -345,7 +345,7 @@ export function UsersAndPermissions() {
                   {SENSITIVE.map((s) => {
                     const value = userForm.overrides[s.key];
                     return (
-                      <label key={s.key} style={{ fontWeight: 500 }}>{s.label}
+                      <label key={s.key}>{s.label}
                         <select value={value == null ? "" : value ? "yes" : "no"} onChange={(e) => setSensitiveOverride(s.key, e.target.value as "" | "yes" | "no")}>
                           <option value="">Del perfil ({userProfile?.[s.profileKey] ? "ve" : "no ve"})</option>
                           <option value="yes">Ve</option>
@@ -359,7 +359,7 @@ export function UsersAndPermissions() {
             )}
 
             <div style={{ background: "rgba(13,148,136,0.06)", border: "1px solid rgba(13,148,136,0.25)", borderRadius: 10, padding: 12 }}>
-              <strong style={{ fontSize: "0.85rem" }}>Qué va a poder hacer</strong>
+              <strong className="t-small">Qué va a poder hacer</strong>
               <Summary matrix={userEffective.matrix} sensitive={userEffective.sensitive} modules={modules} />
             </div>
 
@@ -385,13 +385,13 @@ export function UsersAndPermissions() {
             </div>
             <div className="table-wrap">
               <table>
-                <thead><tr><th>Módulo</th>{LEVELS.map((l) => <th key={l.value} title={l.hint} style={{ textAlign: "center" }}>{l.label}</th>)}</tr></thead>
+                <thead><tr><th>Módulo</th>{LEVELS.map((l) => <th className="t-center" key={l.value} title={l.hint}>{l.label}</th>)}</tr></thead>
                 <tbody>
                   {modules.map((m) => (
                     <tr key={m.key}>
-                      <td><strong>{m.label}</strong><div className="muted" style={{ fontSize: "0.72rem" }}>{m.description}</div></td>
+                      <td><strong>{m.label}</strong><div className="muted t-small">{m.description}</div></td>
                       {LEVELS.map((l) => (
-                        <td key={l.value} style={{ textAlign: "center" }}>
+                        <td className="t-center" key={l.value}>
                           <input type="radio" name={`lvl-${m.key}`} checked={(profileForm.matrix[m.key] ?? "None") === l.value}
                             onChange={() => setProfileForm({ ...profileForm, matrix: { ...profileForm.matrix, [m.key]: l.value } })} />
                         </td>
@@ -409,12 +409,12 @@ export function UsersAndPermissions() {
                 </label>
               ))}
             </div>
-            <p className="muted" style={{ margin: 0, fontSize: "0.78rem" }}>
+            <p className="muted t-small" style={{ margin: 0 }}>
               Cada nivel incluye a los anteriores. Sin "importes" no se entra a Finanzas, Contabilidad ni cuentas
               corrientes; sin "costos" no se ven costos ni Compras; sin "sueldos" no se ven liquidaciones ni el básico.
             </p>
             {profileForm.id && profileForm.userCount > 0 && (
-              <p style={{ margin: 0, fontSize: "0.82rem", fontWeight: 600 }}>Lo usan {profileForm.userCount} usuario(s): toman el cambio al guardar.</p>
+              <p className="t-small t-strong" style={{ margin: 0 }}>Lo usan {profileForm.userCount} usuario(s): toman el cambio al guardar.</p>
             )}
             <div className="row" style={{ justifyContent: "flex-end", gap: 8 }}>
               <button type="button" className="btn btn-outline" onClick={() => setProfileForm(null)}>Cancelar</button>

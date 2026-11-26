@@ -52,10 +52,10 @@ function AuthenticatedMedia({ messageId, att }: { messageId: string; att: EmailA
   }, [messageId, att.id, att.contentType, att.fileName, isAudio]);
 
   if (loadError) {
-    return <span className="muted" style={{ fontSize: "0.8rem" }}>No se pudo cargar {att.fileName}</span>;
+    return <span className="muted t-small">No se pudo cargar {att.fileName}</span>;
   }
 
-  if (!src) return <span className="muted" style={{ fontSize: "0.8rem" }}>Cargando {isAudio ? "nota de voz" : att.fileName}...</span>;
+  if (!src) return <span className="muted t-small">Cargando {isAudio ? "nota de voz" : att.fileName}...</span>;
 
   if (isAudio) {
     return (
@@ -63,7 +63,7 @@ function AuthenticatedMedia({ messageId, att }: { messageId: string; att: EmailA
         <audio controls preload="metadata" style={{ maxWidth: "100%", minWidth: 220, height: 36 }}>
           <source src={src} type={audioMimeType(att)} />
         </audio>
-        <span className="muted" style={{ fontSize: "0.72rem" }}>🎤 Nota de voz</span>
+        <span className="muted t-small">🎤 Nota de voz</span>
       </div>
     );
   }
@@ -73,7 +73,7 @@ function AuthenticatedMedia({ messageId, att }: { messageId: string; att: EmailA
   }
 
   return (
-    <a href={src} download={att.fileName} style={{ fontSize: "0.82rem", color: "var(--lc-info)" }}>
+    <a className="t-small t-info" href={src} download={att.fileName}>
       📎 {att.fileName}
     </a>
   );
@@ -91,7 +91,7 @@ export function MessageAttachments({ messageId, attachments, bodyPreview }: Prop
   if (!hasAttachments) {
     if (looksLikeMediaOnly) {
       return (
-        <div style={{ marginTop: 6, fontSize: "0.78rem", color: "var(--ink-soft)" }}>
+        <div className="t-small muted" style={{ marginTop: 6 }}>
           Archivo multimedia pendiente de descarga. Usá «Sincronizar» para reintentar.
         </div>
       );

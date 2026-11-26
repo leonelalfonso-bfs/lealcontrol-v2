@@ -99,8 +99,8 @@ export function GrainContractDetailPage() {
 
   if (loading || !data) {
     return (
-      <div className="page" style={{ padding: "32px", textAlign: "center" }}>
-        <p style={{ color: "var(--ink-soft)" }}>Cargando ficha del contrato granario...</p>
+      <div className="page t-center" style={{ padding: "32px" }}>
+        <p className="muted">Cargando ficha del contrato granario...</p>
       </div>
     );
   }
@@ -114,21 +114,14 @@ export function GrainContractDetailPage() {
       {/* Top Navigation */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
         <div>
-          <Link to="/cereales/contratos" style={{ textDecoration: "none", color: "var(--ink-soft)", fontSize: "0.9rem" }}>
+          <Link className="muted" to="/cereales/contratos" style={{ textDecoration: "none" }}>
             ← Volver a Contratos
           </Link>
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "4px" }}>
-            <h1 style={{ margin: 0, fontSize: "1.6rem", fontWeight: 800 }}>
+            <h1 style={{ margin: 0 }}>
               {contract.contractNumber}
             </h1>
-            <span style={{
-              background: contract.pricingMode === "PrecioHecho" ? "rgba(16, 185, 129, 0.12)" : "rgba(245, 158, 11, 0.12)",
-              color: contract.pricingMode === "PrecioHecho" ? "#10b981" : "#d97706",
-              padding: "4px 12px",
-              borderRadius: "8px",
-              fontWeight: 800,
-              fontSize: "0.8rem"
-            }}>
+            <span className="t-strong t-small" style={{ background: contract.pricingMode === "PrecioHecho" ? "rgba(16, 185, 129, 0.12)" : "rgba(245, 158, 11, 0.12)", color: contract.pricingMode === "PrecioHecho" ? "#10b981" : "#d97706", padding: "4px 12px", borderRadius: "8px" }}>
               {contract.pricingMode === "PrecioHecho" ? "Precio Fijo" : "A Fijar (Pizarra)"}
             </span>
           </div>
@@ -139,12 +132,6 @@ export function GrainContractDetailPage() {
             <button
               className="btn primary"
               onClick={() => setShowFixModal(true)}
-              style={{
-                background: "linear-gradient(135deg, var(--lc-info) 0%, var(--lc-info) 100%)",
-                color: "#fff",
-                fontWeight: 700,
-                border: "none"
-              }}
             >
               ⚖️ Registrar Fijación
             </button>
@@ -153,12 +140,6 @@ export function GrainContractDetailPage() {
           <button
             className="btn primary"
             onClick={() => setShowDelModal(true)}
-            style={{
-              background: "linear-gradient(135deg, var(--lc-accent) 0%, var(--lc-accent) 100%)",
-              color: "#fff",
-              fontWeight: 700,
-              border: "none"
-            }}
           >
             🚚 Registrar Balanza / CPE
           </button>
@@ -168,27 +149,27 @@ export function GrainContractDetailPage() {
       {/* KPI Cards Row */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "14px" }}>
         <div className="card" style={{ padding: "16px" }}>
-          <div style={{ fontSize: "0.78rem", color: "var(--ink-soft)", fontWeight: 700 }}>CULTIVO & CAMPAÑA</div>
-          <div style={{ fontSize: "1.3rem", fontWeight: 800 }}>{contract.grainType}</div>
-          <div style={{ fontSize: "0.8rem", color: "var(--ink-soft)" }}>Campaña {contract.harvest}</div>
+          <div className="t-small muted t-strong">CULTIVO & CAMPAÑA</div>
+          <div className="t-strong" style={{ fontSize: "1.3rem" }}>{contract.grainType}</div>
+          <div className="t-small muted">Campaña {contract.harvest}</div>
         </div>
 
         <div className="card" style={{ padding: "16px" }}>
-          <div style={{ fontSize: "0.78rem", color: "var(--ink-soft)", fontWeight: 700 }}>VOLUMEN TOTAL</div>
-          <div style={{ fontSize: "1.3rem", fontWeight: 800 }}>{contract.totalTons.toLocaleString("es-AR")} Tn</div>
-          <div style={{ fontSize: "0.8rem", color: "var(--lc-accent-strong)" }}>{contract.deliveredTons.toLocaleString("es-AR")} Tn entregadas ({delProg}%)</div>
+          <div className="t-small muted t-strong">VOLUMEN TOTAL</div>
+          <div className="t-strong" style={{ fontSize: "1.3rem" }}>{contract.totalTons.toLocaleString("es-AR")} Tn</div>
+          <div className="t-small t-accent">{contract.deliveredTons.toLocaleString("es-AR")} Tn entregadas ({delProg}%)</div>
         </div>
 
         <div className="card" style={{ padding: "16px" }}>
-          <div style={{ fontSize: "0.78rem", color: "var(--ink-soft)", fontWeight: 700 }}>PRECIO / BASE</div>
-          <div style={{ fontSize: "1.3rem", fontWeight: 800 }}>{contract.currency} {contract.pricePerTon.toLocaleString("es-AR")}</div>
-          <div style={{ fontSize: "0.8rem", color: "var(--lc-info)" }}>{contract.fixedTons.toLocaleString("es-AR")} Tn fijadas ({fixProg}%)</div>
+          <div className="t-small muted t-strong">PRECIO / BASE</div>
+          <div className="t-strong" style={{ fontSize: "1.3rem" }}>{contract.currency} {contract.pricePerTon.toLocaleString("es-AR")}</div>
+          <div className="t-small t-info">{contract.fixedTons.toLocaleString("es-AR")} Tn fijadas ({fixProg}%)</div>
         </div>
 
         <div className="card" style={{ padding: "16px" }}>
-          <div style={{ fontSize: "0.78rem", color: "var(--ink-soft)", fontWeight: 700 }}>COMISIÓN CORRETAJE</div>
-          <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "var(--lc-ok)" }}>USD {contract.brokerCommissionAmount.toLocaleString("es-AR")}</div>
-          <div style={{ fontSize: "0.8rem", color: "var(--ink-soft)" }}>Tasa: {contract.brokerCommissionPercentage}%</div>
+          <div className="t-small muted t-strong">COMISIÓN CORRETAJE</div>
+          <div className="t-strong t-ok" style={{ fontSize: "1.3rem" }}>USD {contract.brokerCommissionAmount.toLocaleString("es-AR")}</div>
+          <div className="t-small muted">Tasa: {contract.brokerCommissionPercentage}%</div>
         </div>
       </div>
 
@@ -229,36 +210,36 @@ export function GrainContractDetailPage() {
           gap: "24px"
         }}>
           <div>
-            <h3 style={{ fontSize: "1.05rem", fontWeight: 800, marginBottom: "12px" }}>Partes Intervinientes</h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "0.88rem" }}>
+            <h3 style={{ marginBottom: "12px" }}>Partes Intervinientes</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               <div>
-                <span style={{ color: "var(--ink-soft)" }}>Vendedor (Productor):</span>
+                <span className="muted">Vendedor (Productor):</span>
                 <div><strong>{contract.sellerName}</strong></div>
               </div>
               <div>
-                <span style={{ color: "var(--ink-soft)" }}>Comprador (Exportador / Destino):</span>
+                <span className="muted">Comprador (Exportador / Destino):</span>
                 <div><strong>{contract.buyerName}</strong></div>
               </div>
               <div>
-                <span style={{ color: "var(--ink-soft)" }}>Puerto o Planta de Entrega:</span>
+                <span className="muted">Puerto o Planta de Entrega:</span>
                 <div><strong>{contract.deliveryPort || "Rosario Norte"}</strong></div>
               </div>
             </div>
           </div>
 
           <div>
-            <h3 style={{ fontSize: "1.05rem", fontWeight: 800, marginBottom: "12px" }}>Condiciones del Negocio</h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "0.88rem" }}>
+            <h3 style={{ marginBottom: "12px" }}>Condiciones del Negocio</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               <div>
-                <span style={{ color: "var(--ink-soft)" }}>Modalidad de Fijación:</span>
+                <span className="muted">Modalidad de Fijación:</span>
                 <div><strong>{contract.pricingMode} ({contract.pricingReference || "Pizarra Rosario"})</strong></div>
               </div>
               <div>
-                <span style={{ color: "var(--ink-soft)" }}>Estado Operativo:</span>
-                <div><strong style={{ color: "var(--lc-ok)" }}>{contract.status}</strong></div>
+                <span className="muted">Estado Operativo:</span>
+                <div><strong className="t-ok">{contract.status}</strong></div>
               </div>
               <div>
-                <span style={{ color: "var(--ink-soft)" }}>Observaciones:</span>
+                <span className="muted">Observaciones:</span>
                 <div>{contract.notes || "Sin observaciones adicionales."}</div>
               </div>
             </div>
@@ -274,12 +255,12 @@ export function GrainContractDetailPage() {
           padding: "20px"
         }}>
           {deliveries.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "30px" }}>
-              <p style={{ color: "var(--ink-soft)" }}>Aún no hay descargas registradas en balanza para este contrato.</p>
+            <div className="t-center" style={{ padding: "30px" }}>
+              <p className="muted">Aún no hay descargas registradas en balanza para este contrato.</p>
               <button className="btn primary" onClick={() => setShowDelModal(true)}>+ Cargar Primera Descarga</button>
             </div>
           ) : (
-            <table className="table" style={{ width: "100%", fontSize: "0.85rem" }}>
+            <table className="table">
               <thead>
                 <tr>
                   <th>N° Remito / CPE</th>
@@ -296,14 +277,14 @@ export function GrainContractDetailPage() {
                   <tr key={del.id}>
                     <td>
                       <strong>{del.deliveryNumber}</strong>
-                      <div><small style={{ color: "var(--ink-soft)" }}>{del.cpeNumber || "-"}</small></div>
+                      <div><small className="muted">{del.cpeNumber || "-"}</small></div>
                     </td>
                     <td>{del.truckPlate} / {del.trailerPlate}</td>
                     <td>{del.driverName}</td>
                     <td>{(del.grossWeightKg / 1000).toFixed(2)} Tn / {(del.tareWeightKg / 1000).toFixed(2)} Tn</td>
                     <td>{del.humidityPercentage}%</td>
-                    <td><strong style={{ color: "var(--lc-accent-strong)" }}>{del.commercialNetWeightTons.toLocaleString("es-AR")} Tn</strong></td>
-                    <td><span style={{ color: "var(--lc-ok)", fontWeight: 700 }}>{del.status}</span></td>
+                    <td><strong className="t-accent">{del.commercialNetWeightTons.toLocaleString("es-AR")} Tn</strong></td>
+                    <td><span className="t-ok t-strong">{del.status}</span></td>
                   </tr>
                 ))}
               </tbody>
@@ -320,14 +301,14 @@ export function GrainContractDetailPage() {
           padding: "20px"
         }}>
           {fixations.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "30px" }}>
-              <p style={{ color: "var(--ink-soft)" }}>No hay fijaciones parciales registradas.</p>
+            <div className="t-center" style={{ padding: "30px" }}>
+              <p className="muted">No hay fijaciones parciales registradas.</p>
               {contract.pricingMode === "AFijar" && (
                 <button className="btn primary" onClick={() => setShowFixModal(true)}>+ Registrar Fijación de Precio</button>
               )}
             </div>
           ) : (
-            <table className="table" style={{ width: "100%", fontSize: "0.85rem" }}>
+            <table className="table">
               <thead>
                 <tr>
                   <th>N° Boleto Fijación</th>
@@ -345,8 +326,8 @@ export function GrainContractDetailPage() {
                     <td>{new Date(f.fixationDateUtc).toLocaleDateString("es-AR")}</td>
                     <td><strong>{f.fixedTons.toLocaleString("es-AR")} Tn</strong></td>
                     <td>{f.currency} {f.pricePerTon.toLocaleString("es-AR")}</td>
-                    <td><strong style={{ color: "var(--lc-ok)" }}>USD {f.brokerageAmount.toLocaleString("es-AR")}</strong></td>
-                    <td><span style={{ color: "var(--lc-info)", fontWeight: 700 }}>{f.status}</span></td>
+                    <td><strong className="t-ok">USD {f.brokerageAmount.toLocaleString("es-AR")}</strong></td>
+                    <td><span className="t-info t-strong">{f.status}</span></td>
                   </tr>
                 ))}
               </tbody>
@@ -357,16 +338,7 @@ export function GrainContractDetailPage() {
 
       {/* Modal Fijación */}
       {showFixModal && (
-        <div style={{
-          position: "fixed",
-          top: 0, left: 0, right: 0, bottom: 0,
-          background: "rgba(0,0,0,0.6)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 1000,
-          padding: "20px"
-        }}>
+        <div className="modal-backdrop">
           <div style={{
             background: "var(--surface-canvas)",
             borderRadius: "20px",
@@ -375,10 +347,10 @@ export function GrainContractDetailPage() {
             width: "100%",
             boxShadow: "0 10px 40px rgba(0,0,0,0.3)"
           }}>
-            <h3 style={{ margin: "0 0 16px", fontSize: "1.2rem", fontWeight: 800 }}>⚖️ Fijación de Precio Granario</h3>
+            <h3 style={{ margin: "0 0 16px" }}>⚖️ Fijación de Precio Granario</h3>
             <form onSubmit={handleCreateFixation} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
               <div>
-                <label className="label" style={{ fontWeight: 700 }}>Toneladas a Fijar (Entero) *</label>
+                <label className="label">Toneladas a Fijar (Entero) *</label>
                 <input
                   type="number"
                   step="1"
@@ -389,13 +361,13 @@ export function GrainContractDetailPage() {
                   onChange={(e) => setFixTons(parseInt(e.target.value, 10) || 1)}
                   required
                 />
-                <small style={{ color: "var(--ink-soft)" }}>
+                <small className="muted">
                   Máximo disponible a fijar: {(contract.totalTons - contract.fixedTons).toLocaleString("es-AR")} Tn
                 </small>
               </div>
 
               <div>
-                <label className="label" style={{ fontWeight: 700 }}>Precio por Tonelada ({contract.currency}) *</label>
+                <label className="label">Precio por Tonelada ({contract.currency}) *</label>
                 <input
                   type="number"
                   step="0.01"
@@ -408,7 +380,7 @@ export function GrainContractDetailPage() {
               </div>
 
               <div>
-                <label className="label" style={{ fontWeight: 700 }}>Observaciones</label>
+                <label className="label">Observaciones</label>
                 <textarea
                   className="input"
                   rows={2}
@@ -431,16 +403,7 @@ export function GrainContractDetailPage() {
 
       {/* Modal Balanza / Entrega */}
       {showDelModal && (
-        <div style={{
-          position: "fixed",
-          top: 0, left: 0, right: 0, bottom: 0,
-          background: "rgba(0,0,0,0.6)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 1000,
-          padding: "20px"
-        }}>
+        <div className="modal-backdrop">
           <div style={{
             background: "var(--surface-canvas)",
             borderRadius: "20px",
@@ -449,11 +412,11 @@ export function GrainContractDetailPage() {
             width: "100%",
             boxShadow: "0 10px 40px rgba(0,0,0,0.3)"
           }}>
-            <h3 style={{ margin: "0 0 16px", fontSize: "1.2rem", fontWeight: 800 }}>🚚 Registrar Descarga en Balanza & CPE</h3>
+            <h3 style={{ margin: "0 0 16px" }}>🚚 Registrar Descarga en Balanza & CPE</h3>
             <form onSubmit={handleCreateDelivery} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
-                  <label className="label" style={{ fontWeight: 700 }}>N° Carta de Porte (CPE)</label>
+                  <label className="label">N° Carta de Porte (CPE)</label>
                   <input
                     type="text"
                     className="input"
@@ -463,7 +426,7 @@ export function GrainContractDetailPage() {
                   />
                 </div>
                 <div>
-                  <label className="label" style={{ fontWeight: 700 }}>Código CTG</label>
+                  <label className="label">Código CTG</label>
                   <input
                     type="text"
                     className="input"
@@ -476,7 +439,7 @@ export function GrainContractDetailPage() {
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1.5fr", gap: "12px" }}>
                 <div>
-                  <label className="label" style={{ fontWeight: 700 }}>Chapa Camión</label>
+                  <label className="label">Chapa Camión</label>
                   <input
                     type="text"
                     className="input"
@@ -486,7 +449,7 @@ export function GrainContractDetailPage() {
                   />
                 </div>
                 <div>
-                  <label className="label" style={{ fontWeight: 700 }}>Acoplado</label>
+                  <label className="label">Acoplado</label>
                   <input
                     type="text"
                     className="input"
@@ -496,7 +459,7 @@ export function GrainContractDetailPage() {
                   />
                 </div>
                 <div>
-                  <label className="label" style={{ fontWeight: 700 }}>Nombre Chofer</label>
+                  <label className="label">Nombre Chofer</label>
                   <input
                     type="text"
                     className="input"
@@ -509,7 +472,7 @@ export function GrainContractDetailPage() {
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
                 <div>
-                  <label className="label" style={{ fontWeight: 700 }}>Bruto (Kg) *</label>
+                  <label className="label">Bruto (Kg) *</label>
                   <input
                     type="number"
                     step="1"
@@ -521,7 +484,7 @@ export function GrainContractDetailPage() {
                   />
                 </div>
                 <div>
-                  <label className="label" style={{ fontWeight: 700 }}>Tara (Kg) *</label>
+                  <label className="label">Tara (Kg) *</label>
                   <input
                     type="number"
                     step="1"
@@ -533,7 +496,7 @@ export function GrainContractDetailPage() {
                   />
                 </div>
                 <div>
-                  <label className="label" style={{ fontWeight: 700 }}>% Humedad</label>
+                  <label className="label">% Humedad</label>
                   <input
                     type="number"
                     step="0.1"
@@ -546,7 +509,7 @@ export function GrainContractDetailPage() {
               </div>
 
               <div>
-                <label className="label" style={{ fontWeight: 700 }}>Destino / Silo Planta</label>
+                <label className="label">Destino / Silo Planta</label>
                 <input
                   type="text"
                   className="input"

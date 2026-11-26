@@ -10,7 +10,7 @@ type FormFieldProps = {
 
 export function FormField({ label, htmlFor, error, hint, children }: FormFieldProps) {
   return (
-    <label htmlFor={htmlFor} style={{ display: "block" }}>
+    <label htmlFor={htmlFor}>
       <strong>{label}</strong>
       <div style={{ marginTop: 4 }}>{children}</div>
       {hint && !error ? <small className="muted" style={{ display: "block", marginTop: 4 }}>{hint}</small> : null}

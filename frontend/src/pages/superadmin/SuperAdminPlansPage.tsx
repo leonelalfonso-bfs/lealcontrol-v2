@@ -160,21 +160,21 @@ export function SuperAdminPlansPage() {
             ⚡
           </div>
           <div>
-            <h2 style={{ fontSize: "18px", fontWeight: "800", margin: 0 }}>LEAL SuperAdmin</h2>
-            <span style={{ fontSize: "12px", color: "var(--lc-ink-3)" }}>Planes Comerciales & Suscripciones SaaS</span>
+            <h2 style={{ margin: 0 }}>LEAL SuperAdmin</h2>
+            <span className="t-small muted">Planes Comerciales & Suscripciones SaaS</span>
           </div>
         </div>
 
         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-          <Link to="/superadmin" style={{ color: "var(--lc-line-2)", textDecoration: "none", fontSize: "14px", fontWeight: "600", padding: "8px 14px", borderRadius: "8px", border: "1px solid var(--lc-ink-2)" }}>
+          <Link className="t-strong" to="/superadmin" style={{ color: "var(--lc-line-2)", textDecoration: "none", padding: "8px 14px", borderRadius: "8px", border: "1px solid var(--lc-ink-2)" }}>
             ← Volver al Dashboard
           </Link>
-          <Link to="/superadmin/tenants" style={{ color: "var(--lc-line-2)", textDecoration: "none", fontSize: "14px", fontWeight: "600", padding: "8px 14px", borderRadius: "8px", border: "1px solid var(--lc-ink-2)" }}>
+          <Link className="t-strong" to="/superadmin/tenants" style={{ color: "var(--lc-line-2)", textDecoration: "none", padding: "8px 14px", borderRadius: "8px", border: "1px solid var(--lc-ink-2)" }}>
             🏢 Clientes & Bases
           </Link>
-          <button
+          <button className="t-strong"
             onClick={openNewPlan}
-            style={{ background: "var(--lc-info)", color: "#fff", border: "none", padding: "8px 16px", borderRadius: "8px", fontWeight: "700", fontSize: "14px", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}
+            style={{ background: "var(--lc-info)", color: "#fff", border: "none", padding: "8px 16px", borderRadius: "8px", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}
           >
             ➕ Crear Plan a Medida
           </button>
@@ -184,13 +184,13 @@ export function SuperAdminPlansPage() {
       <main style={{ maxWidth: "1200px", margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "28px" }}>
           <div>
-            <h1 style={{ fontSize: "26px", fontWeight: "800", margin: "0 0 6px", color: "var(--lc-surface-2)" }}>💎 Planes & Tarifas de Licenciamiento</h1>
-            <p style={{ color: "var(--lc-ink-3)", margin: 0, fontSize: "15px" }}>Configuración de precios mensuales, límites de usuarios y selección de módulos habilitados.</p>
+            <h1 style={{ margin: "0 0 6px" }}>💎 Planes & Tarifas de Licenciamiento</h1>
+            <p className="muted" style={{ margin: 0 }}>Configuración de precios mensuales, límites de usuarios y selección de módulos habilitados.</p>
           </div>
         </div>
 
         {loading ? (
-          <div style={{ textAlign: "center", padding: "60px", color: "var(--lc-ink-3)" }}>Cargando planes...</div>
+          <div className="t-center muted" style={{ padding: "60px" }}>Cargando planes...</div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "24px" }}>
             {plans.map((p) => {
@@ -205,49 +205,39 @@ export function SuperAdminPlansPage() {
                 <div key={p.id} style={{ background: "#131c2e", border: "1px solid var(--lc-ink)", borderRadius: "16px", padding: "28px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                   <div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                      <span style={{ textTransform: "uppercase", fontSize: "12px", fontWeight: "800", color: "var(--lc-warn)", background: "rgba(234, 179, 8, 0.1)", padding: "4px 10px", borderRadius: "20px" }}>
+                      <span className="t-caps t-small t-strong t-warn" style={{ background: "rgba(234, 179, 8, 0.1)", padding: "4px 10px", borderRadius: "20px" }}>
                         {p.code}
                       </span>
-                      <button
+                      <button className="t-info t-small t-strong"
                         onClick={() => openEditPlan(p)}
-                        style={{ background: "var(--lc-ink)", border: "1px solid var(--lc-ink-2)", color: "var(--lc-info)", padding: "4px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: "700", cursor: "pointer" }}
+                        style={{ background: "var(--lc-ink)", border: "1px solid var(--lc-ink-2)", padding: "4px 10px", borderRadius: "6px", cursor: "pointer" }}
                       >
                         ✏️ Modificar Módulos / Precio
                       </button>
                     </div>
 
-                    <h3 style={{ fontSize: "22px", fontWeight: "800", color: "var(--lc-surface-2)", margin: "0 0 8px" }}>{p.name}</h3>
-                    <p style={{ color: "var(--lc-ink-3)", fontSize: "14px", margin: "0 0 20px" }}>{p.description}</p>
+                    <h3 style={{ margin: "0 0 8px" }}>{p.name}</h3>
+                    <p className="muted" style={{ margin: "0 0 20px" }}>{p.description}</p>
 
                     <div style={{ marginBottom: "20px" }}>
-                      <div style={{ fontSize: "30px", fontWeight: "900", color: "var(--lc-info)" }}>
+                      <div className="t-info" style={{ fontSize: "30px", fontWeight: "900" }}>
                         $ {p.priceArs.toLocaleString("es-AR")}
-                        <span style={{ fontSize: "14px", fontWeight: "400", color: "var(--lc-ink-3)" }}> /mes ARS</span>
+                        <span className="muted" style={{ fontWeight: "400" }}> /mes ARS</span>
                       </div>
-                      <div style={{ fontSize: "14px", color: "var(--lc-ink-3)" }}>U$S {p.priceUsd} • Hasta {p.maxUsers} usuarios</div>
+                      <div className="muted">U$S {p.priceUsd} • Hasta {p.maxUsers} usuarios</div>
                     </div>
 
                     <div style={{ borderTop: "1px solid var(--lc-ink)", paddingTop: "16px" }}>
-                      <div style={{ fontSize: "13px", fontWeight: "700", color: "var(--lc-line-2)", marginBottom: "10px" }}>
+                      <div className="t-small t-strong" style={{ color: "var(--lc-line-2)", marginBottom: "10px" }}>
                         Módulos Habilitados ({planMods.length}/{ALL_SYSTEM_MODULES.length}):
                       </div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
                         {ALL_SYSTEM_MODULES.map((m) => {
                           const isIncluded = planMods.includes(m.id);
                           return (
-                            <span
+                            <span className="t-small"
                               key={m.id}
-                              style={{
-                                fontSize: "12px",
-                                padding: "4px 8px",
-                                borderRadius: "6px",
-                                background: isIncluded ? "rgba(34, 197, 94, 0.15)" : "rgba(100, 116, 139, 0.1)",
-                                border: isIncluded ? "1px solid rgba(34, 197, 94, 0.3)" : "1px solid rgba(100, 116, 139, 0.2)",
-                                color: isIncluded ? "#4ade80" : "var(--lc-ink-3)",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "4px"
-                              }}
+                              style={{ padding: "4px 8px", borderRadius: "6px", background: isIncluded ? "rgba(34, 197, 94, 0.15)" : "rgba(100, 116, 139, 0.1)", border: isIncluded ? "1px solid rgba(34, 197, 94, 0.3)" : "1px solid rgba(100, 116, 139, 0.2)", color: isIncluded ? "#4ade80" : "var(--lc-ink-3)", display: "inline-flex", alignItems: "center", gap: "4px" }}
                             >
                               <span>{m.icon}</span> {m.name}
                             </span>
@@ -264,17 +254,17 @@ export function SuperAdminPlansPage() {
 
         {/* Modal Creación / Edición de Plan */}
         {showModal && (
-          <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0, 0, 0, 0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: "20px" }}>
+          <div className="modal-backdrop">
             <div style={{ background: "#131c2e", border: "1px solid var(--lc-ink-2)", borderRadius: "16px", padding: "28px", maxWidth: "680px", width: "100%", maxHeight: "90vh", overflowY: "auto" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-                <h2 style={{ fontSize: "20px", fontWeight: "800", color: "var(--lc-surface-2)", margin: 0 }}>
+                <h2 style={{ margin: 0 }}>
                   {isEditing ? `✏️ Editar Plan: ${name}` : "➕ Crear Nuevo Plan Personalizado"}
                 </h2>
-                <button onClick={() => setShowModal(false)} style={{ background: "transparent", border: "none", color: "var(--lc-ink-3)", fontSize: "20px", cursor: "pointer" }}>✕</button>
+                <button className="muted" onClick={() => setShowModal(false)} style={{ background: "transparent", border: "none", fontSize: "20px", cursor: "pointer" }}>✕</button>
               </div>
 
               {error && (
-                <div style={{ padding: "12px", borderRadius: "8px", background: "rgba(239, 68, 68, 0.15)", border: "1px solid rgba(239, 68, 68, 0.4)", color: "var(--lc-danger)", fontSize: "14px", marginBottom: "16px" }}>
+                <div className="alert" style={{ marginBottom: "16px" }}>
                   ⚠️ {error}
                 </div>
               )}
@@ -282,82 +272,82 @@ export function SuperAdminPlansPage() {
               <form onSubmit={handleSave} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                   <div>
-                    <label style={{ display: "block", fontSize: "13px", color: "var(--lc-ink-3)", marginBottom: "6px" }}>Código Identificador:</label>
+                    <label>Código Identificador:</label>
                     <input
                       type="text"
                       disabled={isEditing}
                       value={code}
                       onChange={(e) => setCode(e.target.value)}
                       placeholder="ej: agro-premium, pyme-express"
-                      style={{ width: "100%", padding: "10px", background: "#090d16", border: "1px solid var(--lc-ink-2)", borderRadius: "8px", color: "#fff", boxSizing: "border-box" }}
+                      style={{ width: "100%", color: "#fff" }}
                       required
                     />
                   </div>
                   <div>
-                    <label style={{ display: "block", fontSize: "13px", color: "var(--lc-ink-3)", marginBottom: "6px" }}>Nombre Comercial:</label>
+                    <label>Nombre Comercial:</label>
                     <input
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="ej: Plan Acopio Plus"
-                      style={{ width: "100%", padding: "10px", background: "#090d16", border: "1px solid var(--lc-ink-2)", borderRadius: "8px", color: "#fff", boxSizing: "border-box" }}
+                      style={{ width: "100%", color: "#fff" }}
                       required
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: "13px", color: "var(--lc-ink-3)", marginBottom: "6px" }}>Descripción Comercial:</label>
+                  <label>Descripción Comercial:</label>
                   <input
                     type="text"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="ej: Para acopios y cooperativas con hasta 15 operadores"
-                    style={{ width: "100%", padding: "10px", background: "#090d16", border: "1px solid var(--lc-ink-2)", borderRadius: "8px", color: "#fff", boxSizing: "border-box" }}
+                    style={{ width: "100%", color: "#fff" }}
                   />
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px" }}>
                   <div>
-                    <label style={{ display: "block", fontSize: "13px", color: "var(--lc-ink-3)", marginBottom: "6px" }}>Precio Mensual ARS ($):</label>
+                    <label>Precio Mensual ARS ($):</label>
                     <input
                       type="number"
                       step="1"
                       min="0"
                       value={priceArs}
                       onChange={(e) => setPriceArs(parseFloat(e.target.value) || 0)}
-                      style={{ width: "100%", padding: "10px", background: "#090d16", border: "1px solid var(--lc-ink-2)", borderRadius: "8px", color: "#fff", boxSizing: "border-box" }}
+                      style={{ width: "100%", color: "#fff" }}
                       required
                     />
                   </div>
                   <div>
-                    <label style={{ display: "block", fontSize: "13px", color: "var(--lc-ink-3)", marginBottom: "6px" }}>Precio USD (U$S):</label>
+                    <label>Precio USD (U$S):</label>
                     <input
                       type="number"
                       step="1"
                       min="0"
                       value={priceUsd}
                       onChange={(e) => setPriceUsd(parseFloat(e.target.value) || 0)}
-                      style={{ width: "100%", padding: "10px", background: "#090d16", border: "1px solid var(--lc-ink-2)", borderRadius: "8px", color: "#fff", boxSizing: "border-box" }}
+                      style={{ width: "100%", color: "#fff" }}
                       required
                     />
                   </div>
                   <div>
-                    <label style={{ display: "block", fontSize: "13px", color: "var(--lc-ink-3)", marginBottom: "6px" }}>Máximo de Usuarios:</label>
+                    <label>Máximo de Usuarios:</label>
                     <input
                       type="number"
                       step="1"
                       min="1"
                       value={maxUsers}
                       onChange={(e) => setMaxUsers(parseInt(e.target.value, 10) || 1)}
-                      style={{ width: "100%", padding: "10px", background: "#090d16", border: "1px solid var(--lc-ink-2)", borderRadius: "8px", color: "#fff", boxSizing: "border-box" }}
+                      style={{ width: "100%", color: "#fff" }}
                       required
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: "14px", fontWeight: "700", color: "var(--lc-line-2)", marginBottom: "8px" }}>
+                  <label>
                     Selección Modular de Funcionalidades ({selectedModules.length} seleccionados):
                   </label>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
@@ -386,10 +376,10 @@ export function SuperAdminPlansPage() {
                             style={{ marginTop: "3px", cursor: "pointer" }}
                           />
                           <div>
-                            <div style={{ fontSize: "13px", fontWeight: "700", color: isChecked ? "#fff" : "var(--lc-line-2)" }}>
+                            <div className="t-small t-strong" style={{ color: isChecked ? "#fff" : "var(--lc-line-2)" }}>
                               {m.icon} {m.name}
                             </div>
-                            <div style={{ fontSize: "11px", color: "var(--lc-ink-3)", marginTop: "2px" }}>{m.desc}</div>
+                            <div className="t-small muted" style={{ marginTop: "2px" }}>{m.desc}</div>
                           </div>
                         </div>
                       );
@@ -398,17 +388,17 @@ export function SuperAdminPlansPage() {
                 </div>
 
                 <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "12px" }}>
-                  <button
+                  <button className="t-strong"
                     type="button"
                     onClick={() => setShowModal(false)}
-                    style={{ background: "var(--lc-ink-2)", border: "none", color: "var(--lc-line-2)", padding: "10px 18px", borderRadius: "8px", fontWeight: "600", cursor: "pointer" }}
+                    style={{ background: "var(--lc-ink-2)", border: "none", color: "var(--lc-line-2)", padding: "10px 18px", borderRadius: "8px", cursor: "pointer" }}
                   >
                     Cancelar
                   </button>
-                  <button
+                  <button className="t-strong"
                     type="submit"
                     disabled={saving}
-                    style={{ background: "var(--lc-info)", border: "none", color: "#fff", padding: "10px 24px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}
+                    style={{ background: "var(--lc-info)", border: "none", color: "#fff", padding: "10px 24px", borderRadius: "8px", cursor: "pointer" }}
                   >
                     {saving ? "Guardando..." : "💾 Guardar Plan"}
                   </button>

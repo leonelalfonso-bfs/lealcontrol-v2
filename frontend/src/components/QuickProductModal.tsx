@@ -111,21 +111,7 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
   };
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.65)",
-        backdropFilter: "blur(4px)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 9999,
-        padding: "16px"
-      }}
+    <div className="modal-backdrop"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -155,27 +141,20 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span style={{ fontSize: "1.6rem" }}>📦</span>
+            <span className="t-xl">📦</span>
             <div>
-              <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800, color: "var(--lc-ink)" }}>
+              <h2 style={{ margin: 0 }}>
                 Alta Rápida de Producto / Servicio
               </h2>
-              <span style={{ fontSize: "0.78rem", color: "var(--lc-ink-3)" }}>
+              <span className="t-small muted">
                 Se agregará al catálogo maestro y se insertará directamente en este documento.
               </span>
             </div>
           </div>
-          <button
+          <button className="muted"
             type="button"
             onClick={onClose}
-            style={{
-              background: "none",
-              border: "none",
-              fontSize: "1.4rem",
-              color: "var(--lc-ink-3)",
-              cursor: "pointer",
-              padding: "4px 8px"
-            }}
+            style={{ background: "none", border: "none", fontSize: "1.4rem", cursor: "pointer", padding: "4px 8px" }}
           >
             ✕
           </button>
@@ -185,15 +164,7 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
           <div style={{ padding: "20px 24px", overflowY: "auto", flex: 1, display: "grid", gap: "16px" }}>
             {error && (
-              <div
-                style={{
-                  background: "var(--lc-danger-bg)",
-                  border: "1px solid var(--lc-danger)",
-                  color: "var(--lc-danger)",
-                  padding: "10px 14px",
-                  borderRadius: "8px",
-                  fontSize: "0.85rem"
-                }}
+              <div className="alert t-small"
               >
                 ⚠️ {error}
               </div>
@@ -211,19 +182,9 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
               }}
             >
               {/* Photo Box */}
-              <div style={{ textAlign: "center" }}>
-                <div
-                  style={{
-                    width: 120,
-                    height: 120,
-                    borderRadius: 12,
-                    border: "2px dashed var(--lc-line-2)",
-                    background: "var(--lc-surface-2)",
-                    display: "grid",
-                    placeItems: "center",
-                    overflow: "hidden",
-                    position: "relative"
-                  }}
+              <div className="t-center">
+                <div className="box"
+                  style={{ width: 120, height: 120, display: "grid", placeItems: "center", overflow: "hidden", position: "relative" }}
                 >
                   {imagePath ? (
                     <img
@@ -232,8 +193,8 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
                       style={{ width: "100%", height: "100%", objectFit: "contain" }}
                     />
                   ) : (
-                    <div style={{ color: "var(--lc-ink-3)", fontSize: "0.75rem", padding: "6px", textAlign: "center" }}>
-                      <span style={{ fontSize: "2rem", display: "block", marginBottom: 2 }}>📷</span>
+                    <div className="muted t-small t-center" style={{ padding: "6px" }}>
+                      <span className="t-xl" style={{ display: "block", marginBottom: 2 }}>📷</span>
                       Subir Foto
                     </div>
                   )}
@@ -242,8 +203,8 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
                 <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 4 }}>
                   <label
                     htmlFor="quickProductImageUpload"
-                    className="btn btn-outline"
-                    style={{ padding: "4px 8px", fontSize: "0.72rem", cursor: "pointer", display: "inline-block" }}
+                    className="btn btn-outline compact"
+                    style={{ cursor: "pointer" }}
                   >
                     📁 {imagePath ? "Cambiar" : "Cargar"}
                   </label>
@@ -255,10 +216,10 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
                     style={{ display: "none" }}
                   />
                   {imagePath && (
-                    <button
+                    <button className="t-danger t-small"
                       type="button"
                       onClick={() => setImagePath(null)}
-                      style={{ background: "none", border: "none", color: "var(--lc-danger)", fontSize: "0.7rem", cursor: "pointer", textDecoration: "underline" }}
+                      style={{ background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
                     >
                       Quitar
                     </button>
@@ -270,43 +231,43 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
               <div style={{ display: "grid", gap: "12px" }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "12px" }}>
                   <div>
-                    <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, marginBottom: "3px" }}>
+                    <label>
                       Código / SKU *
                     </label>
-                    <input
+                    <input className="t-strong"
                       type="text"
                       required
                       value={code}
                       onChange={(e) => setCode(e.target.value)}
                       placeholder="BAL-500"
-                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--lc-line-2)", fontFamily: "monospace", fontWeight: 700 }}
+                      style={{ width: "100%" }}
                     />
                   </div>
 
                   <div>
-                    <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, marginBottom: "3px" }}>
+                    <label>
                       Nombre del Artículo / Servicio *
                     </label>
-                    <input
+                    <input className="t-strong"
                       type="text"
                       required
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Balanza de Plataforma 500kg"
-                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--lc-line-2)", fontWeight: 600 }}
+                      style={{ width: "100%" }}
                     />
                   </div>
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", gap: "12px" }}>
                   <div>
-                    <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, marginBottom: "3px" }}>
+                    <label>
                       Tipo de Artículo
                     </label>
                     <select
                       value={type}
                       onChange={(e) => setType(e.target.value as ProductWrite["type"])}
-                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--lc-line-2)" }}
+                      style={{ width: "100%" }}
                     >
                       <option value="DirectSale">📦 Venta Directa (Reventa)</option>
                       <option value="Service">🛠️ Servicio Intangible</option>
@@ -318,13 +279,13 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
                   </div>
 
                   <div>
-                    <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, marginBottom: "3px" }}>
+                    <label>
                       Categoría
                     </label>
                     <select
                       value={categoryId}
                       onChange={(e) => setCategoryId(e.target.value)}
-                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--lc-line-2)" }}
+                      style={{ width: "100%" }}
                     >
                       <option value="">(Sin Categoría)</option>
                       {categories.map((c) => (
@@ -336,13 +297,13 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
                   </div>
 
                   <div>
-                    <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, marginBottom: "3px" }}>
+                    <label>
                       Unidad
                     </label>
                     <select
                       value={baseUnit}
                       onChange={(e) => setBaseUnit(e.target.value)}
-                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--lc-line-2)" }}
+                      style={{ width: "100%" }}
                     >
                       <option value="UN">Unidad (UN)</option>
                       <option value="KG">Kilogramo (KG)</option>
@@ -374,7 +335,7 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
                     onChange={(e) => setShowInCatalog(e.target.checked)}
                     style={{ width: 15, height: 15, cursor: "pointer" }}
                   />
-                  <label htmlFor="quickShowInCatalog" style={{ cursor: "pointer", fontSize: "0.78rem", fontWeight: 700, color: showInCatalog ? "var(--lc-ok)" : "var(--lc-ink-2)" }}>
+                  <label htmlFor="quickShowInCatalog" style={{ cursor: "pointer", color: showInCatalog ? "var(--lc-ok)" : "var(--lc-ink-2)" }}>
                     🌐 Publicar en Catálogo Web & Carrito de Clientes (Portal B2B)
                   </label>
                 </div>
@@ -382,16 +343,16 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
             </div>
 
             {/* Prices Matrix */}
-            <div style={{ background: "var(--lc-surface-2)", padding: "14px", borderRadius: "10px", border: "1px solid var(--lc-line)" }}>
+            <div className="box">
               <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", gap: "12px" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, marginBottom: "3px", color: "var(--lc-ok)" }}>
+                  <label>
                     🟢 Moneda de Venta *
                   </label>
                   <select
                     value={saleCurrency}
                     onChange={(e) => setSaleCurrency(e.target.value as ProductWrite["saleCurrency"])}
-                    style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid var(--lc-line-2)" }}
+                    style={{ width: "100%" }}
                   >
                     <option value="ARS">ARS ($ Pesos)</option>
                     <option value="USD_BILLETE">USD (Dólar Billete)</option>
@@ -400,27 +361,27 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, marginBottom: "3px", color: "var(--lc-ok)" }}>
+                  <label>
                     Precio de Venta Base *
                   </label>
-                  <input
+                  <input className="t-strong"
                     type="number"
                     step="0.01"
                     min="0"
                     value={basePrice}
                     onChange={(e) => setBasePrice(parseFloat(e.target.value) || 0)}
-                    style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid var(--lc-line-2)", fontFamily: "monospace", fontWeight: 700 }}
+                    style={{ width: "100%" }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, marginBottom: "3px" }}>
+                  <label>
                     Alícuota IVA
                   </label>
                   <select
                     value={taxRate}
                     onChange={(e) => setTaxRate(parseFloat(e.target.value) || 21)}
-                    style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid var(--lc-line-2)" }}
+                    style={{ width: "100%" }}
                   >
                     <option value={21}>21.0% (General)</option>
                     <option value={10.5}>10.5% (Bienes de Capital)</option>
@@ -432,13 +393,13 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
 
               <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "12px", marginTop: "10px", paddingTop: "10px", borderTop: "1px dashed var(--lc-line-2)" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, marginBottom: "3px", color: "var(--lc-ink-3)" }}>
+                  <label>
                     Moneda de Costo
                   </label>
                   <select
                     value={purchaseCurrency}
                     onChange={(e) => setPurchaseCurrency(e.target.value as ProductWrite["purchaseCurrency"])}
-                    style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--lc-line-2)", fontSize: "0.82rem" }}
+                    style={{ width: "100%" }}
                   >
                     <option value="ARS">ARS ($)</option>
                     <option value="USD_BILLETE">USD (Billete)</option>
@@ -447,7 +408,7 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, marginBottom: "3px", color: "var(--lc-ink-3)" }}>
+                  <label>
                     Costo de Compra / Reposición
                   </label>
                   <input
@@ -456,7 +417,7 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
                     min="0"
                     value={costPrice}
                     onChange={(e) => setCostPrice(parseFloat(e.target.value) || 0)}
-                    style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--lc-line-2)", fontSize: "0.82rem", fontFamily: "monospace" }}
+                    style={{ width: "100%" }}
                   />
                 </div>
               </div>
@@ -464,7 +425,7 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
 
             {/* Descriptions */}
             <div>
-              <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, marginBottom: "3px" }}>
+              <label>
                 Descripción Comercial Breve (para presupuestos y facturas)
               </label>
               <textarea
@@ -472,12 +433,12 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Resumen del producto o servicio..."
-                style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--lc-line-2)", fontSize: "0.85rem" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, marginBottom: "3px" }}>
+              <label>
                 Ficha Técnica / Especificaciones (para Ofertas Técnicas)
               </label>
               <textarea
@@ -485,7 +446,7 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
                 value={detailedDescription}
                 onChange={(e) => setDetailedDescription(e.target.value)}
                 placeholder="Dimensiones, capacidad, tolerancias, certificaciones..."
-                style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--lc-line-2)", fontSize: "0.85rem" }}
+                style={{ width: "100%" }}
               />
             </div>
           </div>
@@ -505,23 +466,13 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
               type="button"
               onClick={onClose}
               className="btn btn-outline"
-              style={{ padding: "9px 18px", borderRadius: "8px" }}
             >
               Cancelar
             </button>
-            <button
+            <button className="t-strong"
               type="submit"
               disabled={saving}
-              style={{
-                padding: "9px 24px",
-                borderRadius: "8px",
-                background: "var(--lc-accent)",
-                color: "#fff",
-                border: "none",
-                fontWeight: 700,
-                cursor: "pointer",
-                boxShadow: "0 2px 8px rgba(13, 148, 136, 0.3)"
-              }}
+              style={{ padding: "9px 24px", borderRadius: "8px", background: "var(--lc-accent)", color: "#fff", border: "none", cursor: "pointer", boxShadow: "0 2px 8px rgba(13, 148, 136, 0.3)" }}
             >
               {saving ? "Guardando..." : "💾 Guardar y Usar Producto"}
             </button>

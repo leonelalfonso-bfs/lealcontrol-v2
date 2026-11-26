@@ -86,7 +86,7 @@ export function FleetVehiclesListPage() {
         )}
       </section>
 
-      <p className="muted" style={{ fontSize: "0.82rem", margin: "-8px 0 16px" }}>
+      <p className="muted t-small" style={{ margin: "-8px 0 16px" }}>
         Cada persona recibe estos vencimientos en su resumen diario si lo elige en <Link to="/mi-perfil/avisos">Mi perfil → Mis avisos</Link>.
       </p>
 
@@ -119,8 +119,8 @@ export function FleetVehiclesListPage() {
                   return (
                     <tr key={v.id} style={{ cursor: "pointer" }} onClick={() => navigate(`/flota/vehiculos/${v.id}`)}>
                       <td>
-                        <strong style={{ fontFamily: "monospace" }}>{v.label}</strong>
-                        {v.plate && v.internalCode && <div className="muted" style={{ fontSize: "0.78rem" }}>{v.internalCode}</div>}
+                        <strong className="t-mono">{v.label}</strong>
+                        {v.plate && v.internalCode && <div className="muted t-small">{v.internalCode}</div>}
                       </td>
                       <td>{vehicleTypeLabel(v.type)}</td>
                       <td>{[v.brand, v.model].filter(Boolean).join(" ")}{v.year ? <span className="muted"> · {v.year}</span> : null}</td>

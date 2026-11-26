@@ -27,20 +27,20 @@ export function GrainPositionPage() {
     <div className="page" style={{ padding: "24px 32px", display: "flex", flexDirection: "column", gap: "20px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <Link to="/cereales" style={{ textDecoration: "none", color: "var(--ink-soft)", fontSize: "0.9rem" }}>
+          <Link className="muted" to="/cereales" style={{ textDecoration: "none" }}>
             ← Tablero Granario
           </Link>
-          <h1 style={{ margin: "4px 0 0", fontSize: "1.5rem", fontWeight: 800 }}>
+          <h1 style={{ margin: "4px 0 0" }}>
             🌾 Posición Granaria Física & Comercial
           </h1>
-          <p style={{ margin: 0, color: "var(--ink-soft)", fontSize: "0.85rem" }}>
+          <p className="muted t-small" style={{ margin: 0 }}>
             Control de existencias, riesgo de mercado abierto y balance de granos
           </p>
         </div>
       </div>
 
       {loading || !data ? (
-        <p style={{ textAlign: "center", color: "var(--ink-soft)" }}>Cargando posición...</p>
+        <p className="t-center muted">Cargando posición...</p>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "20px" }}>
           {data.positionSummary.map((pos) => (
@@ -58,35 +58,28 @@ export function GrainPositionPage() {
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800 }}>{pos.grainType}</h3>
-                <span style={{
-                  padding: "4px 10px",
-                  borderRadius: "8px",
-                  fontWeight: 800,
-                  fontSize: "0.8rem",
-                  background: pos.netPositionTons >= 0 ? "rgba(16, 185, 129, 0.12)" : "rgba(239, 68, 68, 0.12)",
-                  color: pos.netPositionTons >= 0 ? "var(--lc-ok)" : "var(--lc-danger)"
-                }}>
+                <h3 style={{ margin: 0 }}>{pos.grainType}</h3>
+                <span className="alert t-strong t-small">
                   {pos.netPositionTons >= 0 ? "Posición Long (+)" : "Posición Short (-)"}
                 </span>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", fontSize: "0.86rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                 <div className="card" style={{ padding: "12px" }}>
-                  <div style={{ color: "var(--ink-soft)" }}>Comprado Total</div>
+                  <div className="muted">Comprado Total</div>
                   <strong style={{ fontSize: "1.1rem" }}>{pos.buyTons.toLocaleString("es-AR")} Tn</strong>
                 </div>
                 <div className="card" style={{ padding: "12px" }}>
-                  <div style={{ color: "var(--ink-soft)" }}>Vendido Total</div>
+                  <div className="muted">Vendido Total</div>
                   <strong style={{ fontSize: "1.1rem" }}>{pos.sellTons.toLocaleString("es-AR")} Tn</strong>
                 </div>
                 <div className="card" style={{ padding: "12px" }}>
-                  <div style={{ color: "var(--ink-soft)" }}>Entregado Físico</div>
-                  <strong style={{ fontSize: "1.1rem", color: "var(--lc-accent-strong)" }}>{pos.deliveredTons.toLocaleString("es-AR")} Tn</strong>
+                  <div className="muted">Entregado Físico</div>
+                  <strong className="t-accent" style={{ fontSize: "1.1rem" }}>{pos.deliveredTons.toLocaleString("es-AR")} Tn</strong>
                 </div>
                 <div className="card" style={{ padding: "12px" }}>
-                  <div style={{ color: "var(--ink-soft)" }}>Pendiente de Fijar</div>
-                  <strong style={{ fontSize: "1.1rem", color: "var(--lc-warn)" }}>{pos.openFixationTons.toLocaleString("es-AR")} Tn</strong>
+                  <div className="muted">Pendiente de Fijar</div>
+                  <strong className="t-warn" style={{ fontSize: "1.1rem" }}>{pos.openFixationTons.toLocaleString("es-AR")} Tn</strong>
                 </div>
               </div>
             </div>

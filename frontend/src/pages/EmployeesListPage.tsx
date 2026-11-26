@@ -45,10 +45,10 @@ export function EmployeesListPage() {
           <p className="muted">Legajos digitales 360°, control de puestos, CCT y asignaciones</p>
         </div>
         <div style={{ display: "flex", gap: "10px" }}>
-          <Link to="/rrhh/liquidaciones" className="btn btn-outline" style={{ background: "var(--lc-surface)" }}>
+          <Link to="/rrhh/liquidaciones" className="btn btn-outline">
             💰 Liquidación de Sueldos
           </Link>
-          <Link to="/rrhh/empleados/nuevo" className="btn btn-primary" style={{ background: "var(--lc-accent)" }}>
+          <Link to="/rrhh/empleados/nuevo" className="btn btn-primary">
             + Nuevo Colaborador
           </Link>
         </div>
@@ -58,24 +58,24 @@ export function EmployeesListPage() {
 
       {/* KPI Cards Header */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "20px" }}>
-        <div className="card pad" style={{ background: "linear-gradient(135deg, rgba(13, 148, 136, 0.08), rgba(255,255,255,1))" }}>
-          <div style={{ fontSize: "0.8rem", color: "var(--lc-ink-3)", fontWeight: 700 }}>TOTAL COLABORADORES</div>
-          <div style={{ fontSize: "1.8rem", fontWeight: 900, color: "var(--lc-ink)", marginTop: 4 }}>{employees.length}</div>
-          <div style={{ fontSize: "0.75rem", color: "var(--lc-ok)" }}>{employees.filter((e) => e.status === 0).length} Activos en nómina</div>
+        <div className="card pad">
+          <div className="t-small muted t-strong">TOTAL COLABORADORES</div>
+          <div className="t-xl" style={{ fontWeight: 900, marginTop: 4 }}>{employees.length}</div>
+          <div className="t-small t-ok">{employees.filter((e) => e.status === 0).length} Activos en nómina</div>
         </div>
 
-        <div className="card pad" style={{ background: "linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(255,255,255,1))" }}>
-          <div style={{ fontSize: "0.8rem", color: "var(--lc-ink-3)", fontWeight: 700 }}>DEPARTAMENTOS</div>
-          <div style={{ fontSize: "1.8rem", fontWeight: 900, color: "var(--lc-info)", marginTop: 4 }}>{departments.length || 1}</div>
-          <div style={{ fontSize: "0.75rem", color: "var(--lc-ink-3)" }}>Técnica, Operaciones, Ventas</div>
+        <div className="card pad">
+          <div className="t-small muted t-strong">DEPARTAMENTOS</div>
+          <div className="t-xl t-info" style={{ fontWeight: 900, marginTop: 4 }}>{departments.length || 1}</div>
+          <div className="t-small muted">Técnica, Operaciones, Ventas</div>
         </div>
 
-        <div className="card pad" style={{ background: "linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(255,255,255,1))" }}>
-          <div style={{ fontSize: "0.8rem", color: "var(--lc-ink-3)", fontWeight: 700 }}>CONVENIOS (CCT)</div>
-          <div style={{ fontSize: "1.8rem", fontWeight: 900, color: "var(--lc-warn)", marginTop: 4 }}>
+        <div className="card pad">
+          <div className="t-small muted t-strong">CONVENIOS (CCT)</div>
+          <div className="t-xl t-warn" style={{ fontWeight: 900, marginTop: 4 }}>
             {new Set(employees.map((e) => e.unionCct).filter(Boolean)).size || 1}
           </div>
-          <div style={{ fontSize: "0.75rem", color: "var(--lc-ink-3)" }}>Comercio, UOM, UOCRA, etc.</div>
+          <div className="t-small muted">Comercio, UOM, UOCRA, etc.</div>
         </div>
       </div>
 
@@ -95,7 +95,7 @@ export function EmployeesListPage() {
             <select
               value={departmentFilter}
               onChange={(e) => setDepartmentFilter(e.target.value)}
-              style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--lc-line-2)" }}
+              style={{ width: "100%" }}
             >
               <option value="ALL">Todos los Departamentos</option>
               {departments.map((d) => (
@@ -110,13 +110,13 @@ export function EmployeesListPage() {
 
       {/* Employees Grid */}
       {loading ? (
-        <div style={{ textAlign: "center", padding: "40px" }}>Cargando nómina de colaboradores...</div>
+        <div className="t-center" style={{ padding: "40px" }}>Cargando nómina de colaboradores...</div>
       ) : filtered.length === 0 ? (
-        <div className="card pad" style={{ textAlign: "center", padding: "40px" }}>
+        <div className="card pad t-center" style={{ padding: "40px" }}>
           <span style={{ fontSize: "2.5rem", display: "block", marginBottom: "8px" }}>👥</span>
           <h3>No se encontraron colaboradores</h3>
           <p className="muted">Registrá a los miembros de tu equipo para gestionar sus legajos, EPP y sueldos.</p>
-          <Link to="/rrhh/empleados/nuevo" className="btn btn-primary" style={{ background: "var(--lc-accent)", marginTop: "12px" }}>
+          <Link to="/rrhh/empleados/nuevo" className="btn btn-primary" style={{ marginTop: "12px" }}>
             + Cargar Primer Colaborador
           </Link>
         </div>
@@ -139,21 +139,8 @@ export function EmployeesListPage() {
               <div>
                 <div style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
                   {/* Photo or Initials Avatar */}
-                  <div
-                    style={{
-                      width: 54,
-                      height: 54,
-                      borderRadius: "50%",
-                      background: "var(--lc-line)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "1.2rem",
-                      fontWeight: 800,
-                      color: "var(--lc-ink-2)",
-                      overflow: "hidden",
-                      flexShrink: 0
-                    }}
+                  <div className="t-strong muted"
+                    style={{ width: 54, height: 54, borderRadius: "50%", background: "var(--lc-line)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", overflow: "hidden", flexShrink: 0 }}
                   >
                     {emp.photoPath ? (
                       <img src={emp.photoPath} alt={emp.firstName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -164,32 +151,25 @@ export function EmployeesListPage() {
 
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                      <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--lc-ink-3)" }}>LEGAJO #{emp.fileNumber}</span>
-                      <span
-                        style={{
-                          fontSize: "0.7rem",
-                          padding: "2px 8px",
-                          borderRadius: "12px",
-                          background: emp.status === 0 ? "rgba(16, 185, 129, 0.15)" : "rgba(100, 116, 139, 0.15)",
-                          color: emp.status === 0 ? "var(--lc-ok)" : "var(--lc-ink-2)",
-                          fontWeight: 700
-                        }}
+                      <span className="t-small t-strong muted">LEGAJO #{emp.fileNumber}</span>
+                      <span className="t-small t-strong"
+                        style={{ padding: "2px 8px", borderRadius: "12px", background: emp.status === 0 ? "rgba(16, 185, 129, 0.15)" : "rgba(100, 116, 139, 0.15)", color: emp.status === 0 ? "var(--lc-ok)" : "var(--lc-ink-2)" }}
                       >
                         {emp.status === 0 ? "Activo" : "Baja"}
                       </span>
                     </div>
 
-                    <h3 style={{ margin: "2px 0 0 0", fontSize: "1.05rem", color: "var(--lc-ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    <h3 style={{ margin: "2px 0 0 0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                       {emp.lastName}, {emp.firstName}
                     </h3>
-                    <div style={{ fontSize: "0.82rem", color: "var(--lc-accent-strong)", fontWeight: 600 }}>{emp.jobTitle || "Puesto no definido"}</div>
+                    <div className="t-small t-accent t-strong">{emp.jobTitle || "Puesto no definido"}</div>
                   </div>
                 </div>
 
-                <div style={{ marginTop: "14px", paddingTop: "12px", borderTop: "1px solid var(--lc-surface-2)", display: "grid", gap: "6px", fontSize: "0.8rem", color: "var(--lc-ink-2)" }}>
+                <div className="t-small muted" style={{ marginTop: "14px", paddingTop: "12px", borderTop: "1px solid var(--lc-surface-2)", display: "grid", gap: "6px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <span>CUIL / DNI:</span>
-                    <strong style={{ fontFamily: "monospace" }}>{emp.cuil || emp.documentNumber}</strong>
+                    <strong className="t-mono">{emp.cuil || emp.documentNumber}</strong>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <span>Dpto / Centro:</span>
@@ -197,12 +177,12 @@ export function EmployeesListPage() {
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <span>Convenio / Gremio:</span>
-                    <span style={{ fontWeight: 600 }}>{emp.unionCct}</span>
+                    <span className="t-strong">{emp.unionCct}</span>
                   </div>
                   {emp.baseSalary != null && (
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
                       <span>Básico Mensual:</span>
-                      <strong style={{ color: "var(--lc-ok)", fontFamily: "monospace" }}>${emp.baseSalary.toLocaleString("es-AR")}</strong>
+                      <strong className="t-ok t-mono">${emp.baseSalary.toLocaleString("es-AR")}</strong>
                     </div>
                   )}
                 </div>
@@ -215,8 +195,7 @@ export function EmployeesListPage() {
                     e.stopPropagation();
                     navigate(`/rrhh/empleados/${emp.id}`);
                   }}
-                  className="btn btn-outline"
-                  style={{ padding: "5px 12px", fontSize: "0.75rem" }}
+                  className="btn btn-outline compact"
                 >
                   Ver Ficha 360° →
                 </button>

@@ -133,8 +133,8 @@ export function SuperAdminDemoRequestsPage() {
     <div style={{ minHeight: "100vh", background: "#090d16", color: "var(--lc-surface-2)", fontFamily: "system-ui, sans-serif" }}>
       <header style={{ borderBottom: "1px solid var(--lc-ink)", padding: "16px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: "18px" }}>Solicitudes de Demo</h2>
-          <span style={{ color: "var(--lc-ink-3)", fontSize: "13px" }}>{pendingCount} pendientes</span>
+          <h2 style={{ margin: 0 }}>Solicitudes de Demo</h2>
+          <span className="muted t-small">{pendingCount} pendientes</span>
         </div>
         <div style={{ display: "flex", gap: "10px" }}>
           <Link to="/superadmin" style={{ color: "var(--lc-line-2)", textDecoration: "none", padding: "8px 14px", border: "1px solid var(--lc-ink-2)", borderRadius: "8px" }}>← Panel</Link>
@@ -164,9 +164,9 @@ export function SuperAdminDemoRequestsPage() {
         </div>
 
         {loading ? (
-          <p style={{ color: "var(--lc-ink-3)" }}>Cargando solicitudes...</p>
+          <p className="muted">Cargando solicitudes...</p>
         ) : filtered.length === 0 ? (
-          <p style={{ color: "var(--lc-ink-3)" }}>No hay solicitudes en este filtro.</p>
+          <p className="muted">No hay solicitudes en este filtro.</p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             {filtered.map((req) => (
@@ -174,15 +174,15 @@ export function SuperAdminDemoRequestsPage() {
                 <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
                   <div>
                     <strong style={{ fontSize: "16px" }}>{req.companyName}</strong>
-                    <span style={{ marginLeft: "10px", fontSize: "12px", color: STATUS_COLORS[req.status] || "#94a3b8" }}>{req.status}</span>
-                    <div style={{ color: "var(--lc-ink-3)", fontSize: "13px", marginTop: "6px" }}>
+                    <span className="t-small" style={{ marginLeft: "10px", color: STATUS_COLORS[req.status] || "#94a3b8" }}>{req.status}</span>
+                    <div className="muted t-small" style={{ marginTop: "6px" }}>
                       {req.contactFullName} · {req.email} · {req.phone}
                       {req.cuit ? ` · CUIT ${req.cuit}` : ""}
                     </div>
-                    <div style={{ color: "var(--lc-ink-3)", fontSize: "12px", marginTop: "4px" }}>
+                    <div className="muted t-small" style={{ marginTop: "4px" }}>
                       {new Date(req.createdAtUtc).toLocaleString("es-AR")} · Usuarios: {req.estimatedUsers}
                     </div>
-                    {req.message && <p style={{ marginTop: "8px", fontSize: "13px", color: "var(--lc-line-2)" }}>{req.message}</p>}
+                    {req.message && <p className="t-small" style={{ marginTop: "8px", color: "var(--lc-line-2)" }}>{req.message}</p>}
                   </div>
                   <div style={{ display: "flex", gap: "8px", alignItems: "flex-start", flexWrap: "wrap" }}>
                     {req.status === "Pending" && (
@@ -203,9 +203,9 @@ export function SuperAdminDemoRequestsPage() {
       </main>
 
       {selected && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", zIndex: 50 }}>
+        <div className="modal-backdrop">
           <div style={{ background: "var(--lc-ink)", border: "1px solid var(--lc-ink-2)", borderRadius: "14px", padding: "24px", width: "100%", maxWidth: "520px", maxHeight: "90vh", overflow: "auto" }}>
-            <h3 style={{ marginTop: 0 }}>Aprovisionar: {selected.companyName}</h3>
+            <h3>Aprovisionar: {selected.companyName}</h3>
             {provisionResult ? (
               <div>
                 <p style={{ color: "#34d399" }}>{provisionResult}</p>
@@ -232,7 +232,7 @@ export function SuperAdminDemoRequestsPage() {
                 <label style={labelStyle}>Precio ARS/mes
                   <input type="number" value={monthlyPriceArs} onChange={(e) => setMonthlyPriceArs(Number(e.target.value))} style={inputStyle} />
                 </label>
-                {error && <p style={{ color: "var(--lc-danger)", margin: 0, fontSize: "13px" }}>{error}</p>}
+                {error && <p className="t-danger t-small" style={{ margin: 0 }}>{error}</p>}
                 <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
                   <button type="submit" disabled={provisioning} style={btnPrimary}>{provisioning ? "Creando BD..." : "Aprovisionar empresa + BD"}</button>
                   <button type="button" onClick={() => setSelected(null)} style={btnSecondary}>Cancelar</button>

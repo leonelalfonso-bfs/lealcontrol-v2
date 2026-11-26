@@ -61,20 +61,20 @@ export function FleetServiceOrderReportPage() {
         </div>
       </div>
 
-      <div id="service-report-sheet" style={{ maxWidth: "210mm", margin: "0 auto", background: "var(--lc-surface)", color: "var(--lc-ink)", padding: "12mm", fontFamily: "Helvetica, Arial, sans-serif", fontSize: 11 }}>
+      <div className="t-small" id="service-report-sheet" style={{ maxWidth: "210mm", margin: "0 auto", background: "var(--lc-surface)", padding: "12mm", fontFamily: "Helvetica, Arial, sans-serif" }}>
         <table style={{ width: "100%", borderBottom: `2px solid ${primary}`, paddingBottom: 8, marginBottom: 12 }}>
           <tbody>
             <tr>
-              <td style={{ verticalAlign: "top" }}>
+              <td>
                 {company?.logoUrl && <img src={company.logoUrl} alt="" style={{ maxHeight: 48, maxWidth: 160, marginBottom: 4 }} crossOrigin="anonymous" />}
-                <div style={{ fontWeight: 700, fontSize: 14 }}>{companyName}</div>
+                <div className="t-strong">{companyName}</div>
                 <div>{company?.documentNumber ? `CUIT ${company.documentNumber}` : ""}</div>
                 <div>{address}</div>
                 <div>{[company?.phone, company?.email].filter(Boolean).join(" · ")}</div>
               </td>
-              <td style={{ textAlign: "right", verticalAlign: "top" }}>
-                <div style={{ fontSize: 18, fontWeight: 700, color: primary }}>INFORME DE SERVICIO</div>
-                <div style={{ fontSize: 14, fontWeight: 700 }}>{order.code}</div>
+              <td className="t-right">
+                <div className="t-strong" style={{ fontSize: 18, color: primary }}>INFORME DE SERVICIO</div>
+                <div className="t-strong">{order.code}</div>
                 <div>Estado: {serviceOrderStatusLabel(order.status)}</div>
                 {order.salesOrderNumber && <div>Pedido {order.salesOrderNumber}</div>}
                 {order.remitoNumber && <div>Remito {order.remitoNumber}</div>}
@@ -83,13 +83,13 @@ export function FleetServiceOrderReportPage() {
           </tbody>
         </table>
 
-        <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 12 }}>
+        <table style={{ marginBottom: 12 }}>
           <tbody>
-            <tr><td style={{ ...cell, width: "22%", fontWeight: 700 }}>Cliente</td><td style={cell}>{order.customerName}</td></tr>
-            {order.location && <tr><td style={{ ...cell, fontWeight: 700 }}>Lugar</td><td style={cell}>{order.location}</td></tr>}
-            <tr><td style={{ ...cell, fontWeight: 700 }}>Fecha y horario</td><td style={cell}>{rangeText(order.start, order.end)}</td></tr>
-            <tr><td style={{ ...cell, fontWeight: 700 }}>Técnicos</td><td style={cell}>{order.people.map((p) => p.label).join(", ") || "—"}</td></tr>
-            <tr><td style={{ ...cell, fontWeight: 700 }}>Unidades</td><td style={cell}>{order.vehicles.map((v) => v.label).join(", ") || "—"}</td></tr>
+            <tr><td className="t-strong" style={{ ...cell, width: "22%" }}>Cliente</td><td style={cell}>{order.customerName}</td></tr>
+            {order.location && <tr><td className="t-strong" style={{ ...cell }}>Lugar</td><td style={cell}>{order.location}</td></tr>}
+            <tr><td className="t-strong" style={{ ...cell }}>Fecha y horario</td><td style={cell}>{rangeText(order.start, order.end)}</td></tr>
+            <tr><td className="t-strong" style={{ ...cell }}>Técnicos</td><td style={cell}>{order.people.map((p) => p.label).join(", ") || "—"}</td></tr>
+            <tr><td className="t-strong" style={{ ...cell }}>Unidades</td><td style={cell}>{order.vehicles.map((v) => v.label).join(", ") || "—"}</td></tr>
           </tbody>
         </table>
 
@@ -109,10 +109,10 @@ export function FleetServiceOrderReportPage() {
         {items.length > 0 && (
           <>
             <h4 style={{ margin: "12px 0 4px", color: primary }}>Repuestos y materiales</h4>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <table>
               <thead>
-                <tr style={{ background: "var(--lc-surface-2)" }}>
-                  <th style={cell}>Código</th><th style={cell}>Descripción</th><th style={{ ...cell, textAlign: "right" }}>Cantidad</th><th style={cell}>N° de serie</th>
+                <tr>
+                  <th style={cell}>Código</th><th style={cell}>Descripción</th><th className="t-right" style={{ ...cell }}>Cantidad</th><th style={cell}>N° de serie</th>
                 </tr>
               </thead>
               <tbody>
@@ -120,7 +120,7 @@ export function FleetServiceOrderReportPage() {
                   <tr key={i.id}>
                     <td style={cell}>{i.code || "—"}</td>
                     <td style={cell}>{i.description}</td>
-                    <td style={{ ...cell, textAlign: "right" }}>{num(i.quantity, 3)} {i.unit}</td>
+                    <td className="t-right" style={{ ...cell }}>{num(i.quantity, 3)} {i.unit}</td>
                     <td style={cell}>{i.serialNumbers || "—"}</td>
                   </tr>
                 ))}
@@ -129,12 +129,12 @@ export function FleetServiceOrderReportPage() {
           </>
         )}
 
-        <table style={{ width: "100%", marginTop: 48, pageBreakInside: "avoid" }}>
+        <table style={{ marginTop: 48, pageBreakInside: "avoid" }}>
           <tbody>
             <tr>
-              <td style={{ width: "45%", borderTop: "1px solid var(--lc-ink-3)", paddingTop: 4, textAlign: "center" }}>Firma del técnico</td>
+              <td className="t-center" style={{ width: "45%", borderTop: "1px solid var(--lc-ink-3)" }}>Firma del técnico</td>
               <td style={{ width: "10%" }}></td>
-              <td style={{ width: "45%", borderTop: "1px solid var(--lc-ink-3)", paddingTop: 4, textAlign: "center" }}>Firma, aclaración y DNI del cliente</td>
+              <td className="t-center" style={{ width: "45%", borderTop: "1px solid var(--lc-ink-3)" }}>Firma, aclaración y DNI del cliente</td>
             </tr>
           </tbody>
         </table>

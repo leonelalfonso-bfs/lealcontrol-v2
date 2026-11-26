@@ -42,22 +42,13 @@ export const LealLogo: React.FC<LealLogoProps> = ({
             <span style={{ fontWeight: 900, fontSize: "1.12rem", color: "var(--logo-title-color, var(--ink))", letterSpacing: "-0.02em" }}>
               LEAL
             </span>
-            <span
-              style={{
-                fontSize: "0.72rem",
-                fontWeight: 800,
-                padding: "2px 6px",
-                borderRadius: 6,
-                background: "linear-gradient(135deg, var(--lc-ok), var(--lc-ok))",
-                color: "#fff",
-                boxShadow: "0 2px 8px rgba(16, 185, 129, 0.35)",
-                letterSpacing: "0.04em"
-              }}
+            <span className="t-small t-strong"
+              style={{ padding: "2px 6px", borderRadius: 6, background: "linear-gradient(135deg, var(--lc-ok), var(--lc-ok))", color: "#fff", boxShadow: "0 2px 8px rgba(16, 185, 129, 0.35)", letterSpacing: "0.04em" }}
             >
               v2.0
             </span>
           </div>
-          <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--logo-subtitle-color, var(--ink-soft))", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+          <span className="t-small t-strong t-caps" style={{ color: "var(--logo-subtitle-color, var(--ink-soft))", letterSpacing: "0.06em" }}>
             Control ERP
           </span>
         </div>

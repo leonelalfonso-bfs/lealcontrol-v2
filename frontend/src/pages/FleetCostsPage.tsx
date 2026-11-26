@@ -54,24 +54,24 @@ export function FleetCostsPage() {
                 <table>
                   <thead>
                     <tr>
-                      <th>Unidad</th><th style={{ textAlign: "right" }}>Uso</th><th style={{ textAlign: "right" }}>Combustible</th>
-                      <th style={{ textAlign: "right" }}>Taller</th><th style={{ textAlign: "right" }}>Vencimientos</th>
-                      <th style={{ textAlign: "right" }}>Total</th><th style={{ textAlign: "right" }}>Costo por uso</th><th style={{ textAlign: "right" }}>Consumo</th>
+                      <th>Unidad</th><th className="t-right">Uso</th><th className="t-right">Combustible</th>
+                      <th className="t-right">Taller</th><th className="t-right">Vencimientos</th>
+                      <th className="t-right">Total</th><th className="t-right">Costo por uso</th><th className="t-right">Consumo</th>
                     </tr>
                   </thead>
                   <tbody>
                     {data.rows.map((r) => (
                       <tr key={r.vehicleId} style={{ cursor: "pointer" }} onClick={() => navigate(`/flota/vehiculos/${r.vehicleId}`)}>
-                        <td><strong>{r.vehicleLabel}</strong><div className="muted" style={{ fontSize: "0.75rem" }}>{vehicleTypeLabel(r.vehicleType)} · {r.vehicleName}</div></td>
-                        <td style={{ textAlign: "right" }}>{[r.km > 0 && `${num(r.km)} km`, r.hours > 0 && `${num(r.hours, 1)} h`].filter(Boolean).join(" · ") || "—"}</td>
-                        <td style={{ textAlign: "right" }}>{money(r.fuelCost)}<div className="muted" style={{ fontSize: "0.75rem" }}>{num(r.liters)} l</div></td>
-                        <td style={{ textAlign: "right" }}>{money(r.maintenanceCost)}</td>
-                        <td style={{ textAlign: "right" }}>{money(r.documentsCost)}</td>
-                        <td style={{ textAlign: "right" }}><strong>{money(r.totalCost)}</strong></td>
-                        <td style={{ textAlign: "right" }}>
+                        <td><strong>{r.vehicleLabel}</strong><div className="muted t-small">{vehicleTypeLabel(r.vehicleType)} · {r.vehicleName}</div></td>
+                        <td className="t-right">{[r.km > 0 && `${num(r.km)} km`, r.hours > 0 && `${num(r.hours, 1)} h`].filter(Boolean).join(" · ") || "—"}</td>
+                        <td className="t-right">{money(r.fuelCost)}<div className="muted t-small">{num(r.liters)} l</div></td>
+                        <td className="t-right">{money(r.maintenanceCost)}</td>
+                        <td className="t-right">{money(r.documentsCost)}</td>
+                        <td className="t-right"><strong>{money(r.totalCost)}</strong></td>
+                        <td className="t-right">
                           {[r.costPerKm != null && `${money(r.costPerKm)}/km`, r.costPerHour != null && `${money(r.costPerHour)}/h`].filter(Boolean).join(" · ") || "—"}
                         </td>
-                        <td style={{ textAlign: "right" }}>
+                        <td className="t-right">
                           {[r.kmPerLiter != null && `${num(r.kmPerLiter, 2)} km/l`, r.litersPerHour != null && `${num(r.litersPerHour, 2)} l/h`].filter(Boolean).join(" · ") || "—"}
                         </td>
                       </tr>
@@ -80,7 +80,7 @@ export function FleetCostsPage() {
                 </table>
               </div>
             )}
-            <p className="muted" style={{ margin: "12px 0 0", fontSize: "0.8rem" }}>
+            <p className="muted t-small" style={{ margin: "12px 0 0" }}>
               El uso sale de las lecturas de km y horas (incluidas las de cargas de combustible y del taller). El consumo es litros cargados sobre uso del período: es aproximado si el tanque no se llena siempre.
             </p>
           </section>

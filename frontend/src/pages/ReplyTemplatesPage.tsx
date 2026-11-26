@@ -116,27 +116,16 @@ export function ReplyTemplatesPage() {
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                     <strong>{t.name}</strong>
                     {t.channelType && (
-                      <span
-                        style={{
-                          fontSize: "0.72rem",
-                          background: "var(--surface-muted)",
-                          padding: "2px 8px",
-                          borderRadius: 10,
-                          color: "var(--ink-soft)"
-                        }}
+                      <span className="t-small muted"
+                        style={{ background: "var(--surface-muted)", padding: "2px 8px", borderRadius: 10 }}
                       >
                         {t.channelType}
                       </span>
                     )}
                   </div>
                   <div
-                    className="muted"
-                    style={{
-                      fontSize: "0.85rem",
-                      whiteSpace: "pre-wrap",
-                      maxHeight: 80,
-                      overflow: "hidden"
-                    }}
+                    className="muted t-small"
+                    style={{ whiteSpace: "pre-wrap", maxHeight: 80, overflow: "hidden" }}
                   >
                     {t.body}
                   </div>
@@ -176,7 +165,7 @@ export function ReplyTemplatesPage() {
             <select
               value={form.channelType}
               onChange={(e) => setForm({ ...form, channelType: e.target.value })}
-              style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
+              style={{ width: "100%" }}
             >
               {CHANNELS.map((c) => (
                 <option key={c.value || "all"} value={c.value}>
@@ -194,7 +183,7 @@ export function ReplyTemplatesPage() {
               value={form.body}
               onChange={(e) => setForm({ ...form, body: e.target.value })}
               placeholder="Escribí el texto que querés reutilizar..."
-              style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--surface-border)", fontFamily: "inherit" }}
+              style={{ width: "100%" }}
             />
           </label>
 

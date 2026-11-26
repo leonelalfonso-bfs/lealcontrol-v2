@@ -786,7 +786,7 @@ export function PaymentOrderFormPage() {
                         <td>
                           <strong>{METHOD_LABELS[line.method]}</strong>
                         </td>
-                        <td style={{ fontSize: "0.86rem" }}>{lineDetail(line)}</td>
+                        <td>{lineDetail(line)}</td>
                         <td className="t-right t-strong">{money(line.amount, line.currency)}</td>
                         <td>
                           <div className="toolbar" style={{ gap: 4, justifyContent: "flex-end" }}>

@@ -108,8 +108,8 @@ export function PayrollListPage() {
         {runs.length === 0 ? (
           <p className="muted" style={{ margin: 0 }}>Todavía no hay liquidaciones.</p>
         ) : (
-          <table style={{ fontSize: "0.85rem" }}>
-            <thead><tr><th>Período</th><th>Tipo</th><th>Pago</th><th>Estado</th><th style={{ textAlign: "right" }}>Recibos</th><th style={{ textAlign: "right" }}>Bruto</th><th style={{ textAlign: "right" }}>Neto</th><th /></tr></thead>
+          <table>
+            <thead><tr><th>Período</th><th>Tipo</th><th>Pago</th><th>Estado</th><th className="t-right">Recibos</th><th className="t-right">Bruto</th><th className="t-right">Neto</th><th /></tr></thead>
             <tbody>
               {runs.map((r) => (
                 <tr key={r.id}>
@@ -117,10 +117,10 @@ export function PayrollListPage() {
                   <td>{KIND_LABEL(r)}</td>
                   <td>{r.paymentDate.slice(0, 10).split("-").reverse().join("/")}</td>
                   <td>{r.status === "Closed" ? "Cerrada" : "Borrador"}</td>
-                  <td style={{ textAlign: "right" }}>{r.payslips}</td>
-                  <td style={{ textAlign: "right" }}>{money(r.gross)}</td>
-                  <td style={{ textAlign: "right" }}>{money(r.net)}</td>
-                  <td style={{ textAlign: "right" }}><Link to={`/rrhh/liquidaciones/${r.id}`} className="btn ghost compact">Abrir</Link></td>
+                  <td className="t-right">{r.payslips}</td>
+                  <td className="t-right">{money(r.gross)}</td>
+                  <td className="t-right">{money(r.net)}</td>
+                  <td className="t-right"><Link to={`/rrhh/liquidaciones/${r.id}`} className="btn ghost compact">Abrir</Link></td>
                 </tr>
               ))}
             </tbody>

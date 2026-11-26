@@ -130,7 +130,7 @@ export function EmailComposer({ context, onClose, onSent }: { context: EmailCont
         <label>Asunto<input required value={subject} onChange={(e) => setSubject(e.target.value)} /></label>
         <label>Mensaje<textarea required rows={10} value={body} onChange={(e) => setBody(e.target.value)} /></label>
         {signature && (
-          <div className="muted" style={{ fontSize: "0.78rem", marginTop: -4 }}>
+          <div className="muted t-small" style={{ marginTop: -4 }}>
             Al enviar se agregará la firma de {selectedAccount?.displayName} al pie del correo.
           </div>
         )}

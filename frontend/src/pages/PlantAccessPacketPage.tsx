@@ -61,17 +61,17 @@ export function PlantAccessPacketPage() {
         <div className="card pad stack" style={{ gap: 4, maxHeight: 300, overflow: "auto" }}>
           <strong>Personas ({people.length})</strong>
           {employees.filter((e) => !q || `${e.lastName} ${e.firstName} ${e.documentNumber}`.toLowerCase().includes(q)).map((e) => (
-            <label key={e.id} className="row" style={{ gap: 6, alignItems: "center", fontWeight: 500 }}>
+            <label key={e.id} className="row" style={{ gap: 6, alignItems: "center" }}>
               <input type="checkbox" checked={people.includes(e.id)} onChange={() => toggle(people, setPeople, e.id)} /> {e.lastName}, {e.firstName}
-              <span className="muted" style={{ fontSize: "0.78rem" }}>DNI {e.documentNumber}</span>
+              <span className="muted t-small">DNI {e.documentNumber}</span>
             </label>
           ))}
         </div>
         <div className="card pad stack" style={{ gap: 4, maxHeight: 300, overflow: "auto" }}>
           <strong>Unidades ({units.length})</strong>
           {vehicles.filter((v) => !q || `${v.label} ${v.brand} ${v.model}`.toLowerCase().includes(q)).map((v) => (
-            <label key={v.id} className="row" style={{ gap: 6, alignItems: "center", fontWeight: 500 }}>
-              <input type="checkbox" checked={units.includes(v.id)} onChange={() => toggle(units, setUnits, v.id)} /> {v.label} <span className="muted" style={{ fontSize: "0.78rem" }}>{v.brand} {v.model}</span>
+            <label key={v.id} className="row" style={{ gap: 6, alignItems: "center" }}>
+              <input type="checkbox" checked={units.includes(v.id)} onChange={() => toggle(units, setUnits, v.id)} /> {v.label} <span className="muted t-small">{v.brand} {v.model}</span>
             </label>
           ))}
         </div>
@@ -94,16 +94,16 @@ export function PlantAccessPacketPage() {
           )}
           {owners.map((o) => (
             <div key={o.ownerId}>
-              <div style={{ fontWeight: 700, margin: "6px 0 2px" }}>{o.ownerType === "Person" ? "👤" : o.ownerType === "Company" ? "🏢" : "🚚"} {o.ownerName}</div>
-              <table style={{ fontSize: "0.85rem" }}>
+              <div className="t-strong" style={{ margin: "6px 0 2px" }}>{o.ownerType === "Person" ? "👤" : o.ownerType === "Company" ? "🏢" : "🚚"} {o.ownerName}</div>
+              <table>
                 <tbody>
                   {items.filter((i) => i.ownerId === o.ownerId).map((i) => (
                     <tr key={key(i)}>
                       <td style={{ width: 30 }}><input type="checkbox" disabled={!i.hasFile} checked={selected.has(key(i))} onChange={() => setSelected((prev) => { const n = new Set(prev); if (n.has(key(i))) n.delete(key(i)); else n.add(key(i)); return n; })} /></td>
-                      <td>{i.label}{i.number ? <span className="muted"> · N° {i.number}</span> : null}<span className="muted" style={{ fontSize: "0.75rem" }}> · {i.source === "HrDocument" ? "legajo RRHH" : i.source === "CompanyDocument" ? "empresa" : "Flota"}</span></td>
+                      <td>{i.label}{i.number ? <span className="muted"> · N° {i.number}</span> : null}<span className="muted t-small"> · {i.source === "HrDocument" ? "legajo RRHH" : i.source === "CompanyDocument" ? "empresa" : "Flota"}</span></td>
                       <td>{i.expirationDate ? `vence ${day(i.expirationDate)}` : "—"}</td>
-                      <td style={{ color: STATE_COLOR[i.state], fontWeight: 700 }}>{i.state}</td>
-                      <td>{i.hasFile ? "📎" : <span style={{ color: "var(--lc-danger)" }}>sin archivo</span>}</td>
+                      <td className="t-strong" style={{ color: STATE_COLOR[i.state] }}>{i.state}</td>
+                      <td>{i.hasFile ? "📎" : <span className="t-danger">sin archivo</span>}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -96,20 +96,13 @@ export function CommunicationsNotificationBell() {
           }}
         >
           <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--surface-border)" }}>
-            <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>Bandeja — alertas</div>
-            <div className="muted" style={{ fontSize: "0.75rem", marginTop: 2 }}>
+            <div className="t-strong">Bandeja — alertas</div>
+            <div className="muted t-small" style={{ marginTop: 2 }}>
               {summary?.unreadTotal || 0} sin leer · {summary?.needsResponseCount || 0} requieren respuesta
             </div>
             {canUseDesktop && (
               <label
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  marginTop: 10,
-                  fontSize: "0.78rem",
-                  cursor: permission === "denied" ? "not-allowed" : "pointer"
-                }}
+                style={{ alignItems: "center", gap: 8, marginTop: 10, cursor: permission === "denied" ? "not-allowed" : "pointer" }}
               >
                 <input
                   type="checkbox"
@@ -121,12 +114,12 @@ export function CommunicationsNotificationBell() {
               </label>
             )}
             {permission === "denied" && (
-              <div className="muted" style={{ fontSize: "0.72rem", marginTop: 4 }}>
+              <div className="muted t-small" style={{ marginTop: 4 }}>
                 Bloqueadas por el navegador. Habilitálas en la configuración del sitio.
               </div>
             )}
             {desktopEnabled && permission === "granted" && (
-              <div className="muted" style={{ fontSize: "0.72rem", marginTop: 4 }}>
+              <div className="muted t-small" style={{ marginTop: 4 }}>
                 Te avisamos cuando llegue un mensaje nuevo (con la app abierta).
               </div>
             )}
@@ -134,7 +127,7 @@ export function CommunicationsNotificationBell() {
 
           <div style={{ overflowY: "auto", flex: 1 }}>
             {(summary?.recent || []).length === 0 ? (
-              <div className="muted" style={{ padding: 16, textAlign: "center", fontSize: "0.85rem" }}>
+              <div className="muted t-center t-small" style={{ padding: 16 }}>
                 No hay alertas pendientes.
               </div>
             ) : (
@@ -146,45 +139,30 @@ export function CommunicationsNotificationBell() {
                     setOpen(false);
                     navigate("/comunicaciones", { state: { conversationId: item.id } });
                   }}
-                  style={{
-                    display: "block",
-                    width: "100%",
-                    textAlign: "left",
-                    padding: "10px 14px",
-                    border: "none",
-                    borderBottom: "1px solid var(--surface-border)",
-                    background: "transparent",
-                    cursor: "pointer"
-                  }}
+                  style={{ display: "block", width: "100%", padding: "10px 14px", border: "none", borderBottom: "1px solid var(--surface-border)", background: "transparent", cursor: "pointer" }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                    <span style={{ fontWeight: 600, fontSize: "0.84rem" }}>
+                    <span className="t-strong" style={{ fontSize: "0.84rem" }}>
                       {channelIcon(item.channelType)} {item.participantName || item.participantId}
                     </span>
-                    <span className="muted" style={{ fontSize: "0.72rem", flexShrink: 0 }}>
+                    <span className="muted t-small" style={{ flexShrink: 0 }}>
                       {new Date(item.lastMessageAtUtc).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
                     </span>
                   </div>
                   <div
-                    className="muted"
-                    style={{
-                      fontSize: "0.78rem",
-                      marginTop: 2,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis"
-                    }}
+                    className="muted t-small"
+                    style={{ marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
                   >
                     {item.lastMessagePreview}
                   </div>
                   <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
                     {item.unreadCount > 0 && (
-                      <span style={{ fontSize: "0.7rem", color: "var(--lc-accent-strong)", fontWeight: 700 }}>
+                      <span className="t-small t-accent t-strong">
                         {item.unreadCount} nuevo(s)
                       </span>
                     )}
                     {item.needsResponse && (
-                      <span style={{ fontSize: "0.7rem", color: "var(--lc-danger)", fontWeight: 700 }}>
+                      <span className="t-small t-danger t-strong">
                         ⏰ SLA
                       </span>
                     )}
@@ -195,17 +173,10 @@ export function CommunicationsNotificationBell() {
           </div>
 
           <div style={{ padding: 10, borderTop: "1px solid var(--surface-border)" }}>
-            <Link
+            <Link className="t-center t-small t-strong t-accent"
               to="/comunicaciones"
               onClick={() => setOpen(false)}
-              style={{
-                display: "block",
-                textAlign: "center",
-                fontSize: "0.82rem",
-                fontWeight: 700,
-                color: "var(--lc-accent-strong)",
-                textDecoration: "none"
-              }}
+              style={{ display: "block", textDecoration: "none" }}
             >
               Abrir bandeja completa →
             </Link>

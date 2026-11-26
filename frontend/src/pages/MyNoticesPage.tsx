@@ -62,7 +62,7 @@ export function MyNoticesPage() {
       {message && <div className="alert ok">{message}</div>}
 
       <section className="card pad" style={{ marginBottom: 20 }}>
-        <h3 style={{ marginTop: 0 }}>Hoy {notices ? `(${notices.total})` : ""}</h3>
+        <h3>Hoy {notices ? `(${notices.total})` : ""}</h3>
         {!notices ? <p className="muted">Cargando…</p> : notices.groups.length === 0 ? (
           <p className="muted" style={{ margin: 0 }}>No tenés avisos pendientes.</p>
         ) : notices.groups.map((group) => (
@@ -72,8 +72,8 @@ export function MyNoticesPage() {
               {group.items.map((item, i) => (
                 <li key={i} style={{ marginBottom: 4 }}>
                   {item.link ? (
-                    <Link to={item.link} style={{ color: SEVERITY_COLOR[item.severity], fontWeight: 600 }}>{item.title}</Link>
-                  ) : <span style={{ color: SEVERITY_COLOR[item.severity], fontWeight: 600 }}>{item.title}</span>}
+                    <Link className="t-strong" to={item.link} style={{ color: SEVERITY_COLOR[item.severity] }}>{item.title}</Link>
+                  ) : <span className="t-strong" style={{ color: SEVERITY_COLOR[item.severity] }}>{item.title}</span>}
                   {item.detail && <span className="muted"> — {item.detail}</span>}
                 </li>
               ))}
@@ -87,18 +87,18 @@ export function MyNoticesPage() {
           <h3 style={{ margin: 0 }}>Qué avisos recibir</h3>
           {settings.notices.length === 0 && <p className="muted" style={{ margin: 0 }}>Tu perfil no tiene avisos disponibles.</p>}
           {settings.notices.map((n) => (
-            <label key={n.code} className="check-label" style={{ flexDirection: "row", alignItems: "flex-start", gap: 10, fontWeight: 500 }}>
+            <label key={n.code} className="check-label" style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
               <input type="checkbox" checked={n.enabled} disabled={busy} onChange={(e) => void save({ code: n.code, enabled: e.target.checked })} style={{ marginTop: 3 }} />
-              <span><strong>{n.label}</strong><br /><span className="muted" style={{ fontSize: "0.82rem" }}>{n.description}</span></span>
+              <span><strong>{n.label}</strong><br /><span className="muted t-small">{n.description}</span></span>
             </label>
           ))}
 
           <div style={{ borderTop: "1px solid var(--line)", paddingTop: 12 }}>
-            <label className="check-label" style={{ flexDirection: "row", alignItems: "center", gap: 10, fontWeight: 500 }}>
+            <label className="check-label" style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
               <input type="checkbox" checked={settings.emailDigest} disabled={busy} onChange={(e) => void save({ emailDigest: e.target.checked })} />
               Recibir un resumen por correo todos los días a las 7{settings.email ? ` (a ${settings.email})` : ""}
             </label>
-            <p className="muted" style={{ fontSize: "0.8rem", margin: "6px 0 0" }}>
+            <p className="muted t-small" style={{ margin: "6px 0 0" }}>
               Un solo correo con todos tus avisos, solo los días que hay algo.
               {!settings.systemMailConfigured && " Todavía no está configurada la casilla del sistema: por ahora los avisos se ven acá y en la campanita."}
             </p>

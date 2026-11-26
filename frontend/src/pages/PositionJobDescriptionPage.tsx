@@ -46,7 +46,7 @@ export function PositionJobDescriptionPage() {
 
   if (loading) {
     return (
-      <div className="page-wide" style={{ padding: 40, textAlign: "center" }}>
+      <div className="page-wide t-center" style={{ padding: 40 }}>
         <p className="muted">Cargando descripción de puesto...</p>
       </div>
     );
@@ -68,16 +68,16 @@ export function PositionJobDescriptionPage() {
       {/* Header */}
       <div className="page-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "var(--lc-ink-3)", marginBottom: 6 }}>
-            <Link to="/rrhh" style={{ color: "var(--lc-ink-3)", textDecoration: "none" }}>
+          <div className="t-small muted" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <Link className="muted" to="/rrhh" style={{ textDecoration: "none" }}>
               RRHH
             </Link>
             <span>›</span>
-            <Link to="/rrhh/organigrama" style={{ color: "var(--lc-ink-3)", textDecoration: "none" }}>
+            <Link className="muted" to="/rrhh/organigrama" style={{ textDecoration: "none" }}>
               Organigrama & Puestos
             </Link>
             <span>›</span>
-            <span style={{ color: "var(--lc-ink)", fontWeight: 600 }}>{position.title}</span>
+            <span className="t-strong">{position.title}</span>
           </div>
           <h1 style={{ margin: 0 }}>📄 Perfil & Descripción de Puesto: {position.title}</h1>
           <p className="muted" style={{ margin: "4px 0 0 0" }}>
@@ -103,17 +103,17 @@ export function PositionJobDescriptionPage() {
         {/* Top Summary Grid */}
         <div className="grid-3" style={{ background: "var(--surface-sunken)", padding: "16px", borderRadius: 8 }}>
           <div>
-            <span className="muted" style={{ fontSize: "0.8rem", display: "block" }}>DEPARTAMENTO / ÁREA</span>
+            <span className="muted t-small" style={{ display: "block" }}>DEPARTAMENTO / ÁREA</span>
             <strong style={{ fontSize: "1.05rem" }}>🏢 {position.department}</strong>
           </div>
           <div>
-            <span className="muted" style={{ fontSize: "0.8rem", display: "block" }}>COLABORADOR OCUPANTE</span>
+            <span className="muted t-small" style={{ display: "block" }}>COLABORADOR OCUPANTE</span>
             <strong style={{ fontSize: "1.05rem", color: employee ? "var(--lc-accent-strong)" : "var(--lc-warn)" }}>
               {employee ? `👤 ${employee.lastName}, ${employee.firstName}` : "⚠️ Vacante sin asignar"}
             </strong>
           </div>
           <div>
-            <span className="muted" style={{ fontSize: "0.8rem", display: "block" }}>SUPERIOR INMEDIATO</span>
+            <span className="muted t-small" style={{ display: "block" }}>SUPERIOR INMEDIATO</span>
             <strong style={{ fontSize: "1.05rem" }}>
               {superiorPosition ? `🏢 ${superiorPosition.title}` : "Dirección General"}
             </strong>
@@ -122,20 +122,20 @@ export function PositionJobDescriptionPage() {
 
         {/* Section 1: Mission */}
         <div>
-          <h3 style={{ borderBottom: "2px solid var(--lc-line-2)", paddingBottom: 6, color: "var(--lc-ink)" }}>
+          <h3 style={{ borderBottom: "2px solid var(--lc-line-2)", paddingBottom: 6 }}>
             1. Misión Principal del Puesto
           </h3>
-          <p style={{ fontSize: "0.95rem", lineHeight: 1.6, color: "var(--lc-ink-2)" }}>
+          <p className="muted" style={{ lineHeight: 1.6 }}>
             {position.mission || "No se ha definido una misión específica para este puesto."}
           </p>
         </div>
 
         {/* Section 2: Responsibilities */}
         <div>
-          <h3 style={{ borderBottom: "2px solid var(--lc-line-2)", paddingBottom: 6, color: "var(--lc-ink)" }}>
+          <h3 style={{ borderBottom: "2px solid var(--lc-line-2)", paddingBottom: 6 }}>
             2. Responsabilidades y Tareas Clave
           </h3>
-          <p style={{ fontSize: "0.95rem", lineHeight: 1.6, whiteSpace: "pre-line", color: "var(--lc-ink-2)" }}>
+          <p className="muted" style={{ lineHeight: 1.6, whiteSpace: "pre-line" }}>
             {position.responsibilities || "No se han especificado responsabilidades."}
           </p>
         </div>
@@ -143,18 +143,18 @@ export function PositionJobDescriptionPage() {
         {/* Section 3: Qualifications & Competencies */}
         <div className="grid-2" style={{ gap: 20 }}>
           <div>
-            <h3 style={{ borderBottom: "2px solid var(--lc-line-2)", paddingBottom: 6, color: "var(--lc-ink)" }}>
+            <h3 style={{ borderBottom: "2px solid var(--lc-line-2)", paddingBottom: 6 }}>
               3. Formación & Requisitos Mínimos
             </h3>
-            <p style={{ fontSize: "0.95rem", lineHeight: 1.6, whiteSpace: "pre-line", color: "var(--lc-ink-2)" }}>
+            <p className="muted" style={{ lineHeight: 1.6, whiteSpace: "pre-line" }}>
               {position.requiredQualifications || "No se han especificado requisitos formativos."}
             </p>
           </div>
           <div>
-            <h3 style={{ borderBottom: "2px solid var(--lc-line-2)", paddingBottom: 6, color: "var(--lc-ink)" }}>
+            <h3 style={{ borderBottom: "2px solid var(--lc-line-2)", paddingBottom: 6 }}>
               4. Competencias Requeridas
             </h3>
-            <p style={{ fontSize: "0.95rem", lineHeight: 1.6, whiteSpace: "pre-line", color: "var(--lc-ink-2)" }}>
+            <p className="muted" style={{ lineHeight: 1.6, whiteSpace: "pre-line" }}>
               {position.competencies || "No se han especificado competencias."}
             </p>
           </div>
@@ -162,9 +162,9 @@ export function PositionJobDescriptionPage() {
 
         {/* Section 4: KPIs */}
         {position.kpis && (
-          <div style={{ background: "var(--lc-surface-2)", padding: "16px", borderRadius: 8, border: "1px solid var(--lc-line-2)" }}>
-            <h3 style={{ margin: "0 0 8px 0", color: "var(--lc-ink)" }}>5. Indicadores Clave de Desempeño (KPIs)</h3>
-            <p style={{ margin: 0, fontSize: "0.95rem", lineHeight: 1.6, whiteSpace: "pre-line", color: "var(--lc-ink-2)" }}>
+          <div className="box">
+            <h3 style={{ margin: "0 0 8px 0" }}>5. Indicadores Clave de Desempeño (KPIs)</h3>
+            <p className="muted" style={{ margin: 0, lineHeight: 1.6, whiteSpace: "pre-line" }}>
               {position.kpis}
             </p>
           </div>

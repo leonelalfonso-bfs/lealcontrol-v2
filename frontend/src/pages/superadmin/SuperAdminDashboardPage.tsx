@@ -118,27 +118,27 @@ export function SuperAdminDashboardPage() {
             ⚡
           </div>
           <div>
-            <h2 style={{ fontSize: "18px", fontWeight: "800", margin: 0, letterSpacing: "-0.5px" }}>LEAL SuperAdmin</h2>
-            <span style={{ fontSize: "12px", color: "var(--lc-ink-3)" }}>Plataforma Central SaaS & Multi-Bases</span>
+            <h2 style={{ margin: 0, letterSpacing: "-0.5px" }}>LEAL SuperAdmin</h2>
+            <span className="t-small muted">Plataforma Central SaaS & Multi-Bases</span>
           </div>
         </div>
 
         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-          <Link to="/superadmin/demos" style={{ color: "var(--lc-line-2)", textDecoration: "none", fontSize: "14px", fontWeight: "600", padding: "8px 14px", borderRadius: "8px", border: "1px solid var(--lc-ink-2)" }}>
+          <Link className="t-strong" to="/superadmin/demos" style={{ color: "var(--lc-line-2)", textDecoration: "none", padding: "8px 14px", borderRadius: "8px", border: "1px solid var(--lc-ink-2)" }}>
             📩 Solicitudes Demo
           </Link>
-          <Link to="/superadmin/tenants" style={{ color: "var(--lc-line-2)", textDecoration: "none", fontSize: "14px", fontWeight: "600", padding: "8px 14px", borderRadius: "8px", border: "1px solid var(--lc-ink-2)" }}>
+          <Link className="t-strong" to="/superadmin/tenants" style={{ color: "var(--lc-line-2)", textDecoration: "none", padding: "8px 14px", borderRadius: "8px", border: "1px solid var(--lc-ink-2)" }}>
             🏢 Clientes & Bases
           </Link>
-          <Link to="/superadmin/planes" style={{ color: "var(--lc-line-2)", textDecoration: "none", fontSize: "14px", fontWeight: "600", padding: "8px 14px", borderRadius: "8px", border: "1px solid var(--lc-ink-2)" }}>
+          <Link className="t-strong" to="/superadmin/planes" style={{ color: "var(--lc-line-2)", textDecoration: "none", padding: "8px 14px", borderRadius: "8px", border: "1px solid var(--lc-ink-2)" }}>
             💎 Planes & Tarifas
           </Link>
-          <Link to="/superadmin/configuracion" style={{ color: "var(--lc-line-2)", textDecoration: "none", fontSize: "14px", fontWeight: "600", padding: "8px 14px", borderRadius: "8px", border: "1px solid var(--lc-ink-2)" }}>
+          <Link className="t-strong" to="/superadmin/configuracion" style={{ color: "var(--lc-line-2)", textDecoration: "none", padding: "8px 14px", borderRadius: "8px", border: "1px solid var(--lc-ink-2)" }}>
             ⚙️ Configuración
           </Link>
-          <button
+          <button className="t-danger t-small t-strong"
             onClick={() => { localStorage.removeItem("leal_superadmin_token"); navigate("/superadmin/login"); }}
-            style={{ background: "var(--lc-ink)", border: "1px solid var(--lc-ink-2)", color: "var(--lc-danger)", padding: "8px 14px", borderRadius: "8px", cursor: "pointer", fontSize: "13px", fontWeight: "600" }}
+            style={{ background: "var(--lc-ink)", border: "1px solid var(--lc-ink-2)", padding: "8px 14px", borderRadius: "8px", cursor: "pointer" }}
           >
             Cerrar Sesión
           </button>
@@ -150,104 +150,104 @@ export function SuperAdminDashboardPage() {
         {/* Title Bar */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "28px" }}>
           <div>
-            <h1 style={{ fontSize: "28px", fontWeight: "800", margin: "0 0 6px", color: "var(--lc-surface-2)" }}>Panel de Control SaaS</h1>
-            <p style={{ color: "var(--lc-ink-3)", margin: 0, fontSize: "15px" }}>Monitoreo de bases físicas aisladas, facturación recurrente (MRR) y métricas de tenants.</p>
+            <h1 style={{ margin: "0 0 6px" }}>Panel de Control SaaS</h1>
+            <p className="muted" style={{ margin: 0 }}>Monitoreo de bases físicas aisladas, facturación recurrente (MRR) y métricas de tenants.</p>
           </div>
-          <button
+          <button className="t-strong"
             onClick={() => setShowModal(true)}
-            style={{ background: "linear-gradient(135deg, var(--lc-warn), var(--lc-warn))", border: "none", color: "#000", fontWeight: "800", padding: "12px 22px", borderRadius: "10px", cursor: "pointer", fontSize: "14px", display: "flex", alignItems: "center", gap: "8px", boxShadow: "0 4px 20px rgba(234, 179, 8, 0.3)" }}
+            style={{ background: "linear-gradient(135deg, var(--lc-warn), var(--lc-warn))", border: "none", color: "#000", padding: "12px 22px", borderRadius: "10px", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", boxShadow: "0 4px 20px rgba(234, 179, 8, 0.3)" }}
           >
             ➕ Aprovisionar Nueva Empresa & BD
           </button>
         </div>
 
         {loading ? (
-          <div style={{ textAlign: "center", padding: "80px 0", color: "var(--lc-ink-3)" }}>Cargando métricas de la plataforma...</div>
+          <div className="t-center muted" style={{ padding: "80px 0" }}>Cargando métricas de la plataforma...</div>
         ) : (
           <>
             {/* KPI Cards */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "20px", marginBottom: "32px" }}>
               <div style={{ background: "#131c2e", border: "1px solid var(--lc-ink)", borderRadius: "14px", padding: "20px" }}>
-                <div style={{ fontSize: "13px", fontWeight: "600", color: "var(--lc-ink-3)", marginBottom: "6px" }}>Empresas Activas</div>
-                <div style={{ fontSize: "32px", fontWeight: "800", color: "var(--lc-ok)" }}>{data?.activeTenants || 0}</div>
-                <div style={{ fontSize: "12px", color: "var(--lc-ink-3)", marginTop: "4px" }}>De un total de {data?.totalTenants || 0} bases</div>
+                <div className="t-small t-strong muted" style={{ marginBottom: "6px" }}>Empresas Activas</div>
+                <div className="t-strong t-ok" style={{ fontSize: "32px" }}>{data?.activeTenants || 0}</div>
+                <div className="t-small muted" style={{ marginTop: "4px" }}>De un total de {data?.totalTenants || 0} bases</div>
               </div>
 
               <div style={{ background: "#131c2e", border: "1px solid var(--lc-ink)", borderRadius: "14px", padding: "20px" }}>
-                <div style={{ fontSize: "13px", fontWeight: "600", color: "var(--lc-ink-3)", marginBottom: "6px" }}>MRR Estimado (ARS)</div>
-                <div style={{ fontSize: "32px", fontWeight: "800", color: "var(--lc-info)" }}>$ {(data?.mrrArs || 0).toLocaleString("es-AR")}</div>
-                <div style={{ fontSize: "12px", color: "var(--lc-ink-3)", marginTop: "4px" }}>Ingresos mensuales recurrentes</div>
+                <div className="t-small t-strong muted" style={{ marginBottom: "6px" }}>MRR Estimado (ARS)</div>
+                <div className="t-strong t-info" style={{ fontSize: "32px" }}>$ {(data?.mrrArs || 0).toLocaleString("es-AR")}</div>
+                <div className="t-small muted" style={{ marginTop: "4px" }}>Ingresos mensuales recurrentes</div>
               </div>
 
               <div style={{ background: "#131c2e", border: "1px solid var(--lc-ink)", borderRadius: "14px", padding: "20px" }}>
-                <div style={{ fontSize: "13px", fontWeight: "600", color: "var(--lc-ink-3)", marginBottom: "6px" }}>Almacenamiento Total</div>
-                <div style={{ fontSize: "32px", fontWeight: "800", color: "#a855f7" }}>{data?.totalStorageMb || 0} MB</div>
-                <div style={{ fontSize: "12px", color: "var(--lc-ink-3)", marginTop: "4px" }}>Bases PostgreSQL físicas</div>
+                <div className="t-small t-strong muted" style={{ marginBottom: "6px" }}>Almacenamiento Total</div>
+                <div className="t-strong" style={{ fontSize: "32px", color: "#a855f7" }}>{data?.totalStorageMb || 0} MB</div>
+                <div className="t-small muted" style={{ marginTop: "4px" }}>Bases PostgreSQL físicas</div>
               </div>
 
               <div style={{ background: "#131c2e", border: "1px solid var(--lc-ink)", borderRadius: "14px", padding: "20px" }}>
-                <div style={{ fontSize: "13px", fontWeight: "600", color: "var(--lc-ink-3)", marginBottom: "6px" }}>Bases Suspendidas</div>
-                <div style={{ fontSize: "32px", fontWeight: "800", color: data?.suspendedTenants > 0 ? "var(--lc-danger)" : "var(--lc-ink-3)" }}>{data?.suspendedTenants || 0}</div>
-                <div style={{ fontSize: "12px", color: "var(--lc-ink-3)", marginTop: "4px" }}>Por falta de pago / vencidas</div>
+                <div className="t-small t-strong muted" style={{ marginBottom: "6px" }}>Bases Suspendidas</div>
+                <div className="t-strong" style={{ fontSize: "32px", color: data?.suspendedTenants > 0 ? "var(--lc-danger)" : "var(--lc-ink-3)" }}>{data?.suspendedTenants || 0}</div>
+                <div className="t-small muted" style={{ marginTop: "4px" }}>Por falta de pago / vencidas</div>
               </div>
             </div>
 
             {/* Recent Tenants Table */}
             <div style={{ background: "#131c2e", border: "1px solid var(--lc-ink)", borderRadius: "14px", padding: "24px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
-                <h3 style={{ fontSize: "18px", fontWeight: "700", margin: 0, color: "var(--lc-surface-2)" }}>Últimas Empresas Aprovisionadas</h3>
-                <Link to="/superadmin/tenants" style={{ color: "var(--lc-info)", textDecoration: "none", fontSize: "13px", fontWeight: "600" }}>Ver todas las empresas →</Link>
+                <h3 style={{ margin: 0 }}>Últimas Empresas Aprovisionadas</h3>
+                <Link className="t-info t-small t-strong" to="/superadmin/tenants" style={{ textDecoration: "none" }}>Ver todas las empresas →</Link>
               </div>
 
-              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "14px" }}>
+              <table>
                 <thead>
-                  <tr style={{ borderBottom: "1px solid var(--lc-ink)", color: "var(--lc-ink-3)" }}>
-                    <th style={{ padding: "12px 16px" }}>Empresa</th>
-                    <th style={{ padding: "12px 16px" }}>Base PostgreSQL</th>
-                    <th style={{ padding: "12px 16px" }}>Plan</th>
-                    <th style={{ padding: "12px 16px" }}>Admin</th>
-                    <th style={{ padding: "12px 16px" }}>Abono</th>
-                    <th style={{ padding: "12px 16px" }}>Estado</th>
-                    <th style={{ padding: "12px 16px", textAlign: "right" }}>Acciones</th>
+                  <tr>
+                    <th>Empresa</th>
+                    <th>Base PostgreSQL</th>
+                    <th>Plan</th>
+                    <th>Admin</th>
+                    <th>Abono</th>
+                    <th>Estado</th>
+                    <th className="t-right">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data?.recentTenants?.map((t: any) => (
-                    <tr key={t.id} style={{ borderBottom: "1px solid rgba(30, 41, 59, 0.5)" }}>
-                      <td style={{ padding: "16px", fontWeight: "600", color: "var(--lc-surface-2)" }}>
+                    <tr key={t.id}>
+                      <td className="t-strong" style={{ color: "var(--lc-surface-2)" }}>
                         {t.name}
-                        <div style={{ fontSize: "12px", color: "var(--lc-ink-3)" }}>Slug: {t.slug}</div>
+                        <div className="t-small muted">Slug: {t.slug}</div>
                       </td>
-                      <td style={{ padding: "16px" }}>
-                        <code style={{ background: "#0b1120", padding: "4px 8px", borderRadius: "6px", color: "#a855f7", fontSize: "12px", fontWeight: "700" }}>{t.dbName}</code>
+                      <td>
+                        <code className="t-small t-strong" style={{ background: "#0b1120", padding: "4px 8px", borderRadius: "6px", color: "#a855f7" }}>{t.dbName}</code>
                       </td>
-                      <td style={{ padding: "16px" }}>
-                        <span style={{ textTransform: "uppercase", fontWeight: "700", color: "var(--lc-warn)", fontSize: "12px" }}>{t.planCode}</span>
+                      <td>
+                        <span className="t-caps t-strong t-warn t-small">{t.planCode}</span>
                       </td>
-                      <td style={{ padding: "16px" }}>
+                      <td>
                         <div>{t.adminFullName}</div>
-                        <div style={{ fontSize: "12px", color: "var(--lc-ink-3)" }}>{t.adminEmail}</div>
+                        <div className="t-small muted">{t.adminEmail}</div>
                       </td>
-                      <td style={{ padding: "16px", fontWeight: "700", color: "var(--lc-info)" }}>
+                      <td className="t-strong t-info">
                         $ {(t.monthlyPriceArs || 0).toLocaleString("es-AR")}
                       </td>
-                      <td style={{ padding: "16px" }}>
-                        <span style={{ display: "inline-block", padding: "4px 10px", borderRadius: "20px", fontSize: "12px", fontWeight: "700", background: t.status === "Active" ? "rgba(34, 197, 94, 0.15)" : "rgba(239, 68, 68, 0.15)", color: t.status === "Active" ? "#4ade80" : "#f87171" }}>
+                      <td>
+                        <span className="t-small t-strong" style={{ display: "inline-block", padding: "4px 10px", borderRadius: "20px", background: t.status === "Active" ? "rgba(34, 197, 94, 0.15)" : "rgba(239, 68, 68, 0.15)", color: t.status === "Active" ? "#4ade80" : "#f87171" }}>
                           {t.status === "Active" ? "🟢 Activo" : "🔴 Suspendido"}
                         </span>
                       </td>
-                      <td style={{ padding: "16px", textAlign: "right" }}>
+                      <td className="t-right">
                         <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-                          <button
+                          <button className="t-info t-small t-strong"
                             onClick={() => handleDownloadBackup(t.id, t.slug)}
                             title="Descargar Dump SQL"
-                            style={{ background: "#0b1120", border: "1px solid var(--lc-ink-2)", color: "var(--lc-info)", padding: "6px 12px", borderRadius: "6px", cursor: "pointer", fontSize: "13px", fontWeight: "600" }}
+                            style={{ background: "#0b1120", border: "1px solid var(--lc-ink-2)", padding: "6px 12px", borderRadius: "6px", cursor: "pointer" }}
                           >
                             📥 Backup
                           </button>
-                          <button
+                          <button className="t-small t-strong"
                             onClick={() => handleToggleStatus(t)}
-                            style={{ background: "#0b1120", border: "1px solid var(--lc-ink-2)", color: t.status === "Active" ? "#f87171" : "#4ade80", padding: "6px 12px", borderRadius: "6px", cursor: "pointer", fontSize: "13px", fontWeight: "600" }}
+                            style={{ background: "#0b1120", border: "1px solid var(--lc-ink-2)", color: t.status === "Active" ? "#f87171" : "#4ade80", padding: "6px 12px", borderRadius: "6px", cursor: "pointer" }}
                           >
                             {t.status === "Active" ? "Suspender" : "Activar"}
                           </button>
@@ -264,22 +264,22 @@ export function SuperAdminDashboardPage() {
 
       {/* Modal Aprovisionar Empresa */}
       {showModal && (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0, 0, 0, 0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: "20px" }}>
+        <div className="modal-backdrop">
           <div style={{ background: "#131c2e", border: "1px solid var(--lc-ink-2)", borderRadius: "16px", padding: "28px", maxWidth: "680px", width: "100%", maxHeight: "90vh", overflowY: "auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-              <h2 style={{ fontSize: "20px", fontWeight: "800", color: "var(--lc-surface-2)", margin: 0 }}>➕ Aprovisionar Nueva Empresa & BD</h2>
-              <button onClick={() => setShowModal(false)} style={{ background: "transparent", border: "none", color: "var(--lc-ink-3)", fontSize: "20px", cursor: "pointer" }}>✕</button>
+              <h2 style={{ margin: 0 }}>➕ Aprovisionar Nueva Empresa & BD</h2>
+              <button className="muted" onClick={() => setShowModal(false)} style={{ background: "transparent", border: "none", fontSize: "20px", cursor: "pointer" }}>✕</button>
             </div>
 
             {modalError && (
-              <div style={{ padding: "12px", borderRadius: "8px", background: "rgba(239, 68, 68, 0.15)", border: "1px solid rgba(239, 68, 68, 0.4)", color: "var(--lc-danger)", fontSize: "14px", marginBottom: "16px" }}>
+              <div className="alert" style={{ marginBottom: "16px" }}>
                 ⚠️ {modalError}
               </div>
             )}
 
             <form onSubmit={handleCreateTenant} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
               <div style={{ gridColumn: "1 / -1" }}>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "var(--lc-line-2)", marginBottom: "6px" }}>Nombre de la Empresa / Razón Social *</label>
+                <label>Nombre de la Empresa / Razón Social *</label>
                 <input
                   type="text"
                   required
@@ -289,28 +289,28 @@ export function SuperAdminDashboardPage() {
                     if (!slug) setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, "-"));
                   }}
                   placeholder="Ej: Agropecuaria El Ombú S.A."
-                  style={{ width: "100%", padding: "10px 12px", background: "#0b1120", border: "1px solid var(--lc-ink-2)", borderRadius: "8px", color: "#fff", outline: "none", boxSizing: "border-box" }}
+                  style={{ width: "100%", color: "#fff" }}
                 />
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "var(--lc-line-2)", marginBottom: "6px" }}>Identificador / Slug DB *</label>
-                <input
+                <label>Identificador / Slug DB *</label>
+                <input className="t-strong"
                   type="text"
                   required
                   value={slug}
                   onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
                   placeholder="el-ombu"
-                  style={{ width: "100%", padding: "10px 12px", background: "#0b1120", border: "1px solid var(--lc-ink-2)", borderRadius: "8px", color: "#a855f7", fontWeight: "600", outline: "none", boxSizing: "border-box" }}
+                  style={{ width: "100%", color: "#a855f7" }}
                 />
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "var(--lc-line-2)", marginBottom: "6px" }}>Plantilla de Plan</label>
+                <label>Plantilla de Plan</label>
                 <select
                   value={planCode}
                   onChange={(e) => handlePlanChange(e.target.value)}
-                  style={{ width: "100%", padding: "10px 12px", background: "#0b1120", border: "1px solid var(--lc-ink-2)", borderRadius: "8px", color: "#fff", outline: "none", boxSizing: "border-box" }}
+                  style={{ width: "100%", color: "#fff" }}
                 >
                   {plans.map((p) => (
                     <option key={p.id} value={p.code}>
@@ -321,55 +321,55 @@ export function SuperAdminDashboardPage() {
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "var(--lc-line-2)", marginBottom: "6px" }}>Nombre del Administrador *</label>
+                <label>Nombre del Administrador *</label>
                 <input
                   type="text"
                   required
                   value={adminFullName}
                   onChange={(e) => setAdminFullName(e.target.value)}
                   placeholder="Ing. Carlos Pérez"
-                  style={{ width: "100%", padding: "10px 12px", background: "#0b1120", border: "1px solid var(--lc-ink-2)", borderRadius: "8px", color: "#fff", outline: "none", boxSizing: "border-box" }}
+                  style={{ width: "100%", color: "#fff" }}
                 />
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "var(--lc-line-2)", marginBottom: "6px" }}>Email del Administrador *</label>
+                <label>Email del Administrador *</label>
                 <input
                   type="email"
                   required
                   value={adminEmail}
                   onChange={(e) => setAdminEmail(e.target.value)}
                   placeholder="admin@elombu.com"
-                  style={{ width: "100%", padding: "10px 12px", background: "#0b1120", border: "1px solid var(--lc-ink-2)", borderRadius: "8px", color: "#fff", outline: "none", boxSizing: "border-box" }}
+                  style={{ width: "100%", color: "#fff" }}
                 />
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "var(--lc-line-2)", marginBottom: "6px" }}>Contraseña Inicial *</label>
+                <label>Contraseña Inicial *</label>
                 <input
                   type="text"
                   required
                   value={adminPassword}
                   onChange={(e) => setAdminPassword(e.target.value)}
-                  style={{ width: "100%", padding: "10px 12px", background: "#0b1120", border: "1px solid var(--lc-ink-2)", borderRadius: "8px", color: "#fff", outline: "none", boxSizing: "border-box" }}
+                  style={{ width: "100%", color: "#fff" }}
                 />
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "var(--lc-line-2)", marginBottom: "6px" }}>Cuota Mensual (ARS)</label>
+                <label>Cuota Mensual (ARS)</label>
                 <input
                   type="number"
                   step="1"
                   min="0"
                   value={monthlyPriceArs}
                   onChange={(e) => setMonthlyPriceArs(Number(e.target.value))}
-                  style={{ width: "100%", padding: "10px 12px", background: "#0b1120", border: "1px solid var(--lc-ink-2)", borderRadius: "8px", color: "#fff", outline: "none", boxSizing: "border-box" }}
+                  style={{ width: "100%", color: "#fff" }}
                 />
               </div>
 
               {/* Modular Checkboxes */}
               <div style={{ gridColumn: "1 / -1", marginTop: "8px" }}>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: "700", color: "var(--lc-line-2)", marginBottom: "8px" }}>
+                <label>
                   Módulos Habilitados para esta Empresa ({selectedModules.length} activos):
                 </label>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
@@ -391,7 +391,7 @@ export function SuperAdminDashboardPage() {
                         }}
                       >
                         <input type="checkbox" checked={isChecked} onChange={() => {}} style={{ cursor: "pointer" }} />
-                        <span style={{ fontSize: "12px", fontWeight: "700", color: isChecked ? "#fff" : "var(--lc-ink-3)" }}>
+                        <span className="t-small t-strong" style={{ color: isChecked ? "#fff" : "var(--lc-ink-3)" }}>
                           {m.icon} {m.name}
                         </span>
                       </div>
@@ -401,17 +401,17 @@ export function SuperAdminDashboardPage() {
               </div>
 
               <div style={{ gridColumn: "1 / -1", display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "12px" }}>
-                <button
+                <button className="t-strong"
                   type="button"
                   onClick={() => setShowModal(false)}
-                  style={{ background: "#0b1120", border: "1px solid var(--lc-ink-2)", color: "var(--lc-line-2)", padding: "10px 18px", borderRadius: "8px", cursor: "pointer", fontWeight: "600" }}
+                  style={{ background: "#0b1120", border: "1px solid var(--lc-ink-2)", color: "var(--lc-line-2)", padding: "10px 18px", borderRadius: "8px", cursor: "pointer" }}
                 >
                   Cancelar
                 </button>
-                <button
+                <button className="t-strong"
                   type="submit"
                   disabled={creating}
-                  style={{ background: "linear-gradient(135deg, var(--lc-warn), var(--lc-warn))", border: "none", color: "#000", padding: "10px 22px", borderRadius: "8px", cursor: "pointer", fontWeight: "700", opacity: creating ? 0.7 : 1 }}
+                  style={{ background: "linear-gradient(135deg, var(--lc-warn), var(--lc-warn))", border: "none", color: "#000", padding: "10px 22px", borderRadius: "8px", cursor: "pointer", opacity: creating ? 0.7 : 1 }}
                 >
                   {creating ? "Creando BD PostgreSQL..." : "Aprovisionar Empresa"}
                 </button>

@@ -52,7 +52,7 @@ export function TechnicalDetailEditor({ value, onChange }: Props) {
         <button type="button" className="btn ghost" onMouseDown={(e) => e.preventDefault()} onClick={() => run("italic")}><em>C</em></button>
         <button type="button" className="btn ghost" onMouseDown={(e) => e.preventDefault()} onClick={() => run("insertUnorderedList")}>Ítems</button>
         <button type="button" className="btn ghost" onMouseDown={(e) => e.preventDefault()} onClick={() => run("insertOrderedList")}>1. 2. 3.</button>
-        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.82rem" }}>
+        <label style={{ alignItems: "center", gap: 6 }}>
           Tamaño
           <select defaultValue="" onChange={(e) => { if (e.target.value) applySize(e.target.value); e.target.value = ""; }}>
             <option value="">Elegir</option>

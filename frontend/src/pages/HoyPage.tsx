@@ -143,7 +143,7 @@ export function HoyPage() {
 
       {(buckets.overdue.length > 0 || buckets.today.length > 0 || buckets.withoutNextAction.length > 0 || buckets.pastCloseDate.length > 0) && (
         <section className="card pad" style={{ marginBottom: 18 }}>
-          <h3 style={{ marginTop: 0 }}>Requiere atención</h3>
+          <h3>Requiere atención</h3>
           <div className="split hoy-grid">
             <FollowSection title="Seguimientos vencidos" items={buckets.overdue} tone="warn" linkFor={linkFor} />
             <OpportunityAttention title="Sin próxima acción" items={buckets.withoutNextAction} onSchedule={openSchedule} />

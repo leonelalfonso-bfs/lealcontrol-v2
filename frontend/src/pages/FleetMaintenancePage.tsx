@@ -21,17 +21,17 @@ export function FleetMaintenancePage() {
     <div className="table-wrap">
       <table>
         <thead>
-          <tr><th>Unidad</th><th>Fecha</th><th>Trabajo</th><th>Lectura</th><th>Taller</th>{withCost && <th style={{ textAlign: "right" }}>Costo</th>}</tr>
+          <tr><th>Unidad</th><th>Fecha</th><th>Trabajo</th><th>Lectura</th><th>Taller</th>{withCost && <th className="t-right">Costo</th>}</tr>
         </thead>
         <tbody>
           {jobs.map((j) => (
             <tr key={j.id} style={{ cursor: "pointer" }} onClick={() => navigate(`/flota/vehiculos/${j.vehicleId}`)}>
               <td><strong>{j.vehicleLabel}</strong></td>
               <td>{civilDate(j.date)}</td>
-              <td>{j.title}<div className="muted" style={{ fontSize: "0.75rem" }}>{maintenanceTypeLabel(j.type)}</div></td>
+              <td>{j.title}<div className="muted t-small">{maintenanceTypeLabel(j.type)}</div></td>
               <td>{[j.km != null && `${num(j.km)} km`, j.hours != null && `${num(j.hours, 1)} h`].filter(Boolean).join(" · ") || "—"}</td>
               <td>{j.workshop}</td>
-              {withCost && <td style={{ textAlign: "right" }}>{money(j.totalCost)}</td>}
+              {withCost && <td className="t-right">{money(j.totalCost)}</td>}
             </tr>
           ))}
         </tbody>
@@ -63,7 +63,7 @@ export function FleetMaintenancePage() {
           </div>
 
           <section className="card pad" style={{ marginBottom: 20 }}>
-            <h3 style={{ marginTop: 0 }}>Services para atender</h3>
+            <h3>Services para atender</h3>
             {data.services.length === 0 ? (
               <p className="muted" style={{ margin: 0 }}>No hay services vencidos ni próximos. Si todavía no cargaste los planes, entrá a cada unidad → "Plan de mantenimiento".</p>
             ) : (
@@ -75,7 +75,7 @@ export function FleetMaintenancePage() {
                       <tr key={s.planId} style={{ cursor: "pointer" }} onClick={() => navigate(`/flota/vehiculos/${s.vehicleId}`)}>
                         <td>
                           <strong>{s.vehicleLabel}</strong>
-                          <div className="muted" style={{ fontSize: "0.75rem" }}>{s.vehicleName}{s.vehicleStatus === "InMaintenance" ? " · en taller" : ""}</div>
+                          <div className="muted t-small">{s.vehicleName}{s.vehicleStatus === "InMaintenance" ? " · en taller" : ""}</div>
                         </td>
                         <td>{s.title}</td>
                         <td>{s.dueText}</td>
@@ -90,20 +90,20 @@ export function FleetMaintenancePage() {
 
           {data.inShop.length > 0 && (
             <section className="card pad" style={{ marginBottom: 20 }}>
-              <h3 style={{ marginTop: 0 }}>En taller ahora (no disponibles)</h3>
+              <h3>En taller ahora (no disponibles)</h3>
               {jobsTable(data.inShop, false)}
             </section>
           )}
 
           {data.scheduled.length > 0 && (
             <section className="card pad" style={{ marginBottom: 20 }}>
-              <h3 style={{ marginTop: 0 }}>Programados</h3>
+              <h3>Programados</h3>
               {jobsTable(data.scheduled, false)}
             </section>
           )}
 
           <section className="card pad">
-            <h3 style={{ marginTop: 0 }}>Últimos trabajos</h3>
+            <h3>Últimos trabajos</h3>
             {data.recent.length === 0 ? <p className="muted" style={{ margin: 0 }}>Todavía no hay trabajos cargados.</p> : jobsTable(data.recent, seesCosts)}
           </section>
         </>
