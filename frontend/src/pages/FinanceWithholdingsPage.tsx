@@ -80,15 +80,15 @@ export function FinanceWithholdingsPage() {
 
       <div className="card pad stack" style={{ gap: 8 }}>
         <h3 style={{ margin: 0 }}>Regímenes (RG 830, Anexo VIII)</h3>
-        <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}>Los valores iniciales se confirman con el estudio contra el anexo vigente antes de empezar a retener.</p>
-        <table style={{ fontSize: "0.85rem" }}>
-          <thead><tr><th>Código</th><th>Régimen</th><th style={{ textAlign: "right" }}>Mínimo no sujeto (mes)</th><th style={{ textAlign: "right" }}>Inscripto</th><th style={{ textAlign: "right" }}>No inscripto</th><th style={{ textAlign: "right" }}>Retención mínima</th><th>Fuente</th><th /></tr></thead>
+        <p className="muted t-small" style={{ margin: 0 }}>Los valores iniciales se confirman con el estudio contra el anexo vigente antes de empezar a retener.</p>
+        <table>
+          <thead><tr><th>Código</th><th>Régimen</th><th className="t-right">Mínimo no sujeto (mes)</th><th className="t-right">Inscripto</th><th className="t-right">No inscripto</th><th className="t-right">Retención mínima</th><th>Fuente</th><th /></tr></thead>
           <tbody>
             {settings?.regimes.map((r) => (
               <tr key={r.id}>
-                <td>{r.code}</td><td>{r.name}</td><td style={{ textAlign: "right" }}>{money(r.nonTaxableAmount)}</td>
-                <td style={{ textAlign: "right" }}>{r.rateRegistered} %</td><td style={{ textAlign: "right" }}>{r.rateUnregistered} %</td>
-                <td style={{ textAlign: "right" }}>{money(r.minimumWithholding)}</td><td className="muted" style={{ fontSize: "0.75rem" }}>{r.source}</td>
+                <td>{r.code}</td><td>{r.name}</td><td className="t-right">{money(r.nonTaxableAmount)}</td>
+                <td className="t-right">{r.rateRegistered} %</td><td className="t-right">{r.rateUnregistered} %</td>
+                <td className="t-right">{money(r.minimumWithholding)}</td><td className="muted t-small">{r.source}</td>
                 <td><button type="button" className="btn ghost compact" onClick={() => setRegimeEdit({ ...r })}>Editar</button></td>
               </tr>
             ))}
@@ -115,9 +115,9 @@ export function FinanceWithholdingsPage() {
 
       <div className="card pad stack" style={{ gap: 8 }}>
         <h3 style={{ margin: 0 }}>Proveedores</h3>
-        <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}>Solo se retiene a los proveedores con condición cargada. Verificá la condición en la constancia de inscripción de ARCA.</p>
+        <p className="muted t-small" style={{ margin: 0 }}>Solo se retiene a los proveedores con condición cargada. Verificá la condición en la constancia de inscripción de ARCA.</p>
         <input placeholder="Buscar proveedor por nombre o CUIT" value={search} onChange={(e) => setSearch(e.target.value)} style={{ maxWidth: 360 }} />
-        <table style={{ fontSize: "0.85rem" }}>
+        <table>
           <thead><tr><th>Proveedor</th><th>Condición</th><th>Régimen</th><th>Excluido hasta</th></tr></thead>
           <tbody>
             {visibleSuppliers.map((s) => {
@@ -131,7 +131,7 @@ export function FinanceWithholdingsPage() {
               });
               return (
                 <tr key={s.id}>
-                  <td>{s.name}<div className="muted" style={{ fontSize: "0.75rem" }}>{s.taxId || "sin CUIT"}{s.iva ? ` · IVA: ${s.iva}` : ""}</div></td>
+                  <td>{s.name}<div className="muted t-small">{s.taxId || "sin CUIT"}{s.iva ? ` · IVA: ${s.iva}` : ""}</div></td>
                   <td>
                     <select value={p?.condition ?? ""} onChange={(e) => e.target.value && save({ condition: e.target.value as SupplierWithholdingProfile["condition"] })}>
                       <option value="">No se retiene</option>
@@ -158,19 +158,19 @@ export function FinanceWithholdingsPage() {
           <label style={{ maxWidth: 170 }}>Hasta<input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
           <button type="button" className="btn" disabled={withheld.length === 0} onClick={() => void run(async () => { await api.downloadSicore(from, to); return "✓ Archivo para SICORE descargado."; })}>⬇️ Archivo SICORE</button>
         </div>
-        <table style={{ fontSize: "0.85rem" }}>
-          <thead><tr><th>Fecha</th><th>Certificado</th><th>Proveedor</th><th>Régimen</th><th>OP</th><th style={{ textAlign: "right" }}>Base del mes</th><th style={{ textAlign: "right" }}>Retenido</th><th /></tr></thead>
+        <table>
+          <thead><tr><th>Fecha</th><th>Certificado</th><th>Proveedor</th><th>Régimen</th><th>OP</th><th className="t-right">Base del mes</th><th className="t-right">Retenido</th><th /></tr></thead>
           <tbody>
             {withheld.map((w) => (
               <tr key={w.id}>
                 <td>{day(w.date)}</td><td>{w.certificateNumber}</td><td>{w.supplierName}</td><td>{w.regimeCode}</td><td>{w.paymentOrderNumber}</td>
-                <td style={{ textAlign: "right" }}>{money(w.priorBase + w.base)}</td><td style={{ textAlign: "right", fontWeight: 700 }}>{money(w.amount)}</td>
+                <td className="t-right">{money(w.priorBase + w.base)}</td><td className="t-right t-strong">{money(w.amount)}</td>
                 <td><Link className="btn ghost compact" to={`/finanzas/retenciones/${w.id}/certificado`}>Certificado</Link></td>
               </tr>
             ))}
-            {withheld.length === 0 && <tr><td colSpan={8} className="muted" style={{ padding: 14 }}>Sin retenciones en el período.</td></tr>}
+            {withheld.length === 0 && <tr><td colSpan={8} className="muted">Sin retenciones en el período.</td></tr>}
           </tbody>
-          {withheld.length > 0 && <tfoot><tr style={{ fontWeight: 800 }}><td colSpan={6}>Total a depositar</td><td style={{ textAlign: "right" }}>{money(withheld.reduce((s, w) => s + w.amount, 0))}</td><td /></tr></tfoot>}
+          {withheld.length > 0 && <tfoot><tr className="t-strong"><td colSpan={6}>Total a depositar</td><td className="t-right">{money(withheld.reduce((s, w) => s + w.amount, 0))}</td><td /></tr></tfoot>}
         </table>
       </div>
     </div>

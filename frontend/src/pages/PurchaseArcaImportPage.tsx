@@ -143,36 +143,32 @@ export function PurchaseArcaImportPage() {
           style={{ flex: "1 1 320px", maxWidth: 520 }}
         />
 
-        <div style={{ display: "flex", gap: "6px" }}>
+        <div className="tab-row" role="group" aria-label="Estado" style={{ marginBottom: 0 }}>
           <button
             type="button"
-            className={`btn ${statusFilter === "Pending" ? "btn-primary" : "btn-outline"}`}
+            className={`tab-btn${statusFilter === "Pending" ? " active" : ""}`}
             onClick={() => setStatusFilter("Pending")}
-            style={{ fontSize: "0.85rem" }}
           >
             Pendientes de Carga
           </button>
           <button
             type="button"
-            className={`btn ${statusFilter === "Registered" ? "btn-primary" : "btn-outline"}`}
+            className={`tab-btn${statusFilter === "Registered" ? " active" : ""}`}
             onClick={() => setStatusFilter("Registered")}
-            style={{ fontSize: "0.85rem" }}
           >
             Registrados
           </button>
           <button
             type="button"
-            className={`btn ${statusFilter === "Ignored" ? "btn-primary" : "btn-outline"}`}
+            className={`tab-btn${statusFilter === "Ignored" ? " active" : ""}`}
             onClick={() => setStatusFilter("Ignored")}
-            style={{ fontSize: "0.85rem" }}
           >
             Ignorados
           </button>
           <button
             type="button"
-            className={`btn ${statusFilter === "All" ? "btn-primary" : "btn-outline"}`}
+            className={`tab-btn${statusFilter === "All" ? " active" : ""}`}
             onClick={() => setStatusFilter("All")}
-            style={{ fontSize: "0.85rem" }}
           >
             Todos
           </button>

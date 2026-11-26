@@ -159,21 +159,16 @@ export function PurchaseRequestsPage() {
             </thead>
             <tbody>
               {requests.map((r) => {
-                const priorityColor =
-                  r.priority === "Urgent"
-                    ? { bg: "var(--lc-danger-bg)", text: "var(--lc-danger)" }
-                    : r.priority === "High"
-                    ? { bg: "var(--lc-warn-bg)", text: "var(--lc-warn)" }
-                    : { bg: "var(--lc-surface-2)", text: "var(--lc-ink-2)" };
+                const priorityTone = r.priority === "Urgent" ? "danger" : r.priority === "High" ? "warn" : "off";
 
                 const statusBadge =
                   r.status === "Approved"
-                    ? { bg: "var(--lc-ok-bg)", text: "var(--lc-ok)", label: "Aprobada" }
+                    ? { tone: "ok", label: "Aprobada" }
                     : r.status === "Ordered"
-                    ? { bg: "var(--lc-info-bg)", text: "var(--lc-info)", label: "En OC" }
+                    ? { tone: "info", label: "En OC" }
                     : r.status === "Rejected"
-                    ? { bg: "var(--lc-danger-bg)", text: "var(--lc-danger)", label: "Rechazada" }
-                    : { bg: "var(--lc-warn-bg)", text: "var(--lc-warn)", label: "Pendiente" };
+                    ? { tone: "danger", label: "Rechazada" }
+                    : { tone: "warn", label: "Pendiente" };
 
                 const quoteCount = r.quotations?.length || 0;
                 const selectedQuote = r.quotations?.find((q) => q.isSelected);
@@ -195,7 +190,7 @@ export function PurchaseRequestsPage() {
                       {r.department}
                     </td>
                     <td>
-                      <span className="t-small t-strong" style={{ padding: "2px 8px", borderRadius: "12px", background: priorityColor.bg, color: priorityColor.text }}>
+                      <span className={`badge ${priorityTone}`}>
                         {r.priority === "Urgent" ? "🚨 Urgente" : r.priority === "High" ? "⚡ Alta" : r.priority === "Low" ? "Baja" : "Normal"}
                       </span>
                     </td>
@@ -212,7 +207,7 @@ export function PurchaseRequestsPage() {
                       </Link>
                     </td>
                     <td className="t-center">
-                      <span className="t-small t-strong" style={{ padding: "3px 8px", borderRadius: "10px", background: statusBadge.bg, color: statusBadge.text }}>
+                      <span className={`badge ${statusBadge.tone}`}>
                         {statusBadge.label}
                       </span>
                     </td>
@@ -280,8 +275,8 @@ export function PurchaseRequestsPage() {
 
       {/* Reject Modal */}
       {rejectModalId && (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-          <div className="card pad" style={{ width: "450px", maxWidth: "90%" }}>
+        <div className="modal-backdrop" role="dialog" aria-modal="true">
+          <div className="modal-card" style={{ width: "min(450px, 100%)" }}>
             <h3 className="t-danger">Rechazar Solicitud de Compra</h3>
             <p className="muted">
               Por favor indique el motivo por el cual se rechaza esta solicitud:

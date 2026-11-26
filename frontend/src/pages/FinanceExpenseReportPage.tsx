@@ -123,8 +123,8 @@ export function FinanceExpenseReportPage() {
           <h3 style={{ margin: 0 }}>Gastos</h3>
           {open && !draft && <button type="button" className="btn compact" onClick={() => setDraft(emptyLine(report.lines.at(-1)?.date.slice(0, 10) ?? report.weekStart.slice(0, 10)))}>＋ Gasto</button>}
         </div>
-        <table style={{ fontSize: "0.86rem" }}>
-          <thead><tr><th>Fecha</th><th>Categoría</th><th>Proveedor</th><th>Comprobante</th><th style={{ textAlign: "right" }}>Importe</th><th /></tr></thead>
+        <table>
+          <thead><tr><th>Fecha</th><th>Categoría</th><th>Proveedor</th><th>Comprobante</th><th className="t-right">Importe</th><th /></tr></thead>
           <tbody>
             {report.lines.map((l) => {
               const limit = overLimit(l);
@@ -132,12 +132,12 @@ export function FinanceExpenseReportPage() {
                 <tr key={l.id}>
                   <td>{day(l.date)}</td>
                   <td>{l.categoryName}{l.people > 1 ? ` · ${l.people} pers.` : ""}{l.liters ? ` · ${l.liters} l` : ""}</td>
-                  <td>{l.supplierName}{l.supplierTaxId && <div className="muted" style={{ fontSize: "0.74rem" }}>{l.supplierTaxId}</div>}</td>
+                  <td>{l.supplierName}{l.supplierTaxId && <div className="muted t-small">{l.supplierTaxId}</div>}</td>
                   <td>{EXPENSE_VOUCHERS[l.voucherType]} {l.voucherNumber}
-                    {l.voucherType === "A" && <div style={{ fontSize: "0.74rem", color: l.purchaseInvoiceId ? "var(--lc-ok)" : "var(--lc-danger)" }}>{l.purchaseInvoiceId ? `Compras ${l.purchaseInvoiceNumber}` : "Falta vincular en Compras"}</div>}
+                    {l.voucherType === "A" && <div className="t-small" style={{ color: l.purchaseInvoiceId ? "var(--lc-ok)" : "var(--lc-danger)" }}>{l.purchaseInvoiceId ? `Compras ${l.purchaseInvoiceNumber}` : "Falta vincular en Compras"}</div>}
                   </td>
-                  <td style={{ textAlign: "right" }}>$ {money(l.amount)}
-                    {limit != null && <div style={{ fontSize: "0.74rem", color: "var(--lc-warn)" }}>⚠ supera el tope ($ {money(limit)})</div>}
+                  <td className="t-right">$ {money(l.amount)}
+                    {limit != null && <div className="t-small t-warn">⚠ supera el tope ($ {money(limit)})</div>}
                   </td>
                   <td className="row" style={{ gap: 4, justifyContent: "flex-end" }}>
                     {open && <>
@@ -198,7 +198,7 @@ export function FinanceExpenseReportPage() {
                 </select>
               </label>
             )}
-            {overLimit(draft) != null && <div style={{ color: "var(--lc-warn)", fontSize: "0.82rem" }}>⚠ Supera el tope de $ {money(overLimit(draft)!)}: se puede cargar igual y se avisa al aprobar.</div>}
+            {overLimit(draft) != null && <div className="t-warn t-small">⚠ Supera el tope de $ {money(overLimit(draft)!)}: se puede cargar igual y se avisa al aprobar.</div>}
             <div className="row" style={{ gap: 8 }}>
               <button type="submit" className="btn">{draft.id ? "Guardar" : "Agregar"}</button>
               <button type="button" className="btn ghost" onClick={() => setDraft(null)}>{draft.id ? "Cancelar" : "Terminar"}</button>

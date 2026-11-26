@@ -70,13 +70,13 @@ export function FinanceSufferedTaxesPage() {
 
       <div className="card pad stack" style={{ gap: 8 }}>
         <h3 style={{ margin: 0 }}>Totales del período</h3>
-        <table style={{ fontSize: "0.85rem" }}>
-          <thead><tr><th>Impuesto</th><th>Tipo</th><th>Jurisdicción</th><th style={{ textAlign: "right" }}>Comprobantes</th><th style={{ textAlign: "right" }}>Importe</th></tr></thead>
+        <table>
+          <thead><tr><th>Impuesto</th><th>Tipo</th><th>Jurisdicción</th><th className="t-right">Comprobantes</th><th className="t-right">Importe</th></tr></thead>
           <tbody>
             {data?.totals.map((t) => (
               <tr key={`${t.tax}-${t.kind}-${t.jurisdiction ?? ""}`}>
                 <td>{t.tax}</td><td>{t.kind}</td><td>{t.jurisdiction ? `${t.jurisdiction} · ${t.jurisdictionName}` : t.tax === "IIBB" ? <span className="muted">sin jurisdicción</span> : "—"}</td>
-                <td style={{ textAlign: "right" }}>{t.count}</td><td style={{ textAlign: "right" }}>$ {money(t.amount)}</td>
+                <td className="t-right">{t.count}</td><td className="t-right">$ {money(t.amount)}</td>
               </tr>
             ))}
             {data && data.totals.length === 0 && <tr><td colSpan={5} className="muted">Sin retenciones ni percepciones en el período.</td></tr>}
@@ -86,15 +86,15 @@ export function FinanceSufferedTaxesPage() {
 
       <div className="card pad stack" style={{ gap: 8 }}>
         <h3 style={{ margin: 0 }}>Detalle</h3>
-        <table style={{ fontSize: "0.85rem" }}>
-          <thead><tr><th>Fecha</th><th>Origen</th><th>Impuesto</th><th>Agente</th><th>Comprobante</th><th>Jurisdicción</th><th style={{ textAlign: "right" }}>Importe</th></tr></thead>
+        <table>
+          <thead><tr><th>Fecha</th><th>Origen</th><th>Impuesto</th><th>Agente</th><th>Comprobante</th><th>Jurisdicción</th><th className="t-right">Importe</th></tr></thead>
           <tbody>
             {data?.rows.map((r) => (
               <tr key={`${r.source}-${r.sourceId}-${r.tax}`}>
                 <td>{day(r.date)}</td>
                 <td>{SOURCES[r.source]}</td>
                 <td>{r.tax} · {r.kind}</td>
-                <td>{r.agentName}<div className="muted" style={{ fontSize: "0.75rem" }}>{r.agentTaxId || "sin CUIT"}</div></td>
+                <td>{r.agentName}<div className="muted t-small">{r.agentTaxId || "sin CUIT"}</div></td>
                 <td>{r.voucher}</td>
                 <td>
                   {r.tax === "IIBB" && r.source !== "Bank" ? (
@@ -107,7 +107,7 @@ export function FinanceSufferedTaxesPage() {
                     </select>
                   ) : r.source === "Bank" && r.tax === "IIBB" ? <span className="muted">SIRCREB</span> : "—"}
                 </td>
-                <td style={{ textAlign: "right" }}>$ {money(r.amount)}</td>
+                <td className="t-right">$ {money(r.amount)}</td>
               </tr>
             ))}
             {data && data.rows.length === 0 && <tr><td colSpan={7} className="muted">Sin movimientos.</td></tr>}

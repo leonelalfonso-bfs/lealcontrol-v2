@@ -93,8 +93,8 @@ export function CashFlowPage() {
       {error && <div className="alert">{error}</div>}
       <div className="grid-3">
         <section className="card pad"><span className="eyebrow">DISPONIBILIDAD HOY</span><h2>{money(available)}</h2><p className="muted">{fci > 0 ? `Bancos, cajas y billeteras ${money(cash)} + fondos comunes ${money(fci)}.` : "Bancos, cajas y billeteras ARS."}</p></section>
-        <section className="card pad"><span className="eyebrow">INGRESOS PROYECTADOS</span><h2 style={{ color: "#4f9d72" }}>{money(inflows)}</h2><p className="muted">Facturas y cheques recibidos.</p></section>
-        <section className="card pad"><span className="eyebrow">EGRESOS PROYECTADOS</span><h2 style={{ color: "#c55b4f" }}>{money(outflows)}</h2><p className="muted">Compras, cheques emitidos y OP.</p></section>
+        <section className="card pad"><span className="eyebrow">INGRESOS PROYECTADOS</span><h2>{money(inflows)}</h2><p className="muted">Facturas y cheques recibidos.</p></section>
+        <section className="card pad"><span className="eyebrow">EGRESOS PROYECTADOS</span><h2>{money(outflows)}</h2><p className="muted">Compras, cheques emitidos y OP.</p></section>
       </div>
       <section className="card pad" style={{ marginTop: 20 }}>
         <div className="toolbar" style={{ justifyContent: "space-between" }}>

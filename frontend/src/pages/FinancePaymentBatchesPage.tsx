@@ -82,16 +82,16 @@ export function FinancePaymentBatchesPage() {
 
       <div className="card pad stack" style={{ gap: 8 }}>
         <h3 style={{ margin: 0 }}>Transferencias pendientes</h3>
-        <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}>Órdenes de pago con transferencia desde esta cuenta que el banco todavía no debitó y no están en otro lote.</p>
-        <table style={{ fontSize: "0.85rem" }}>
-          <thead><tr><th /><th>Fecha</th><th>Orden de pago</th><th>Proveedor</th><th>CBU del proveedor</th><th style={{ textAlign: "right" }}>Importe</th></tr></thead>
+        <p className="muted t-small" style={{ margin: 0 }}>Órdenes de pago con transferencia desde esta cuenta que el banco todavía no debitó y no están en otro lote.</p>
+        <table>
+          <thead><tr><th /><th>Fecha</th><th>Orden de pago</th><th>Proveedor</th><th>CBU del proveedor</th><th className="t-right">Importe</th></tr></thead>
           <tbody>
             {candidates.map((c) => (
               <tr key={c.movementId}>
                 <td><input type="checkbox" aria-label={`Incluir ${c.orderNumber}`} disabled={!!c.problem} checked={selected.has(c.movementId)} onChange={() => toggle(c.movementId)} /></td>
                 <td>{day(c.date)}</td>
                 <td>{c.orderNumber}</td>
-                <td>{c.supplierName}<div className="muted" style={{ fontSize: "0.75rem" }}>{c.supplierTaxId || "sin CUIT"}</div></td>
+                <td>{c.supplierName}<div className="muted t-small">{c.supplierTaxId || "sin CUIT"}</div></td>
                 <td>
                   {c.cbu && !(c.supplierId && c.supplierId in cbuEdit) ? (
                     <span>{c.cbu} {c.supplierId && <button type="button" className="btn ghost compact" onClick={() => setCbuEdit({ ...cbuEdit, [c.supplierId!]: c.cbu ?? "" })}>Cambiar</button>}</span>
@@ -109,9 +109,9 @@ export function FinancePaymentBatchesPage() {
                       <button type="submit" className="btn ghost compact">Guardar</button>
                     </form>
                   ) : null}
-                  {c.problem && <div className="muted" style={{ fontSize: "0.75rem", color: "var(--danger, var(--lc-danger))" }}>{c.problem}</div>}
+                  {c.problem && <div className="muted t-small" style={{ color: "var(--danger, var(--lc-danger))" }}>{c.problem}</div>}
                 </td>
-                <td style={{ textAlign: "right" }}>$ {money(c.amount)}</td>
+                <td className="t-right">$ {money(c.amount)}</td>
               </tr>
             ))}
             {candidates.length === 0 && <tr><td colSpan={6} className="muted">No hay transferencias pendientes en esta cuenta.</td></tr>}
@@ -133,8 +133,8 @@ export function FinancePaymentBatchesPage() {
 
       <div className="card pad stack" style={{ gap: 8 }}>
         <h3 style={{ margin: 0 }}>Lotes generados</h3>
-        <table style={{ fontSize: "0.85rem" }}>
-          <thead><tr><th>Lote</th><th>Cuenta</th><th>Fecha de pago</th><th>Transferencias</th><th style={{ textAlign: "right" }}>Total</th><th>Estado</th><th /></tr></thead>
+        <table>
+          <thead><tr><th>Lote</th><th>Cuenta</th><th>Fecha de pago</th><th>Transferencias</th><th className="t-right">Total</th><th>Estado</th><th /></tr></thead>
           <tbody>
             {batches.map((b) => (
               <tr key={b.id}>
@@ -142,7 +142,7 @@ export function FinancePaymentBatchesPage() {
                 <td>{accounts.find((a) => a.id === b.accountId)?.name ?? "—"}</td>
                 <td>{day(b.requestDate)}{b.consolidated ? " · consolidado" : ""}</td>
                 <td>{b.items.map((i) => `${i.paymentOrderNumber} ${i.supplierName}`).join(" · ")}</td>
-                <td style={{ textAlign: "right" }}>$ {money(b.total)}</td>
+                <td className="t-right">$ {money(b.total)}</td>
                 <td>{b.status === "Generated" ? "Generado" : "Anulado"}</td>
                 <td className="row" style={{ gap: 6 }}>
                   {b.status === "Generated" && <>

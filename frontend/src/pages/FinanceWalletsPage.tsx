@@ -62,14 +62,14 @@ export function FinanceWalletsPage() {
 
       <div className="card pad stack" style={{ gap: 8 }}>
         <h3 style={{ margin: 0 }}>Billeteras</h3>
-        <table style={{ fontSize: "0.88rem" }}>
-          <thead><tr><th>Empleado</th><th style={{ textAlign: "right" }}>Saldo</th><th style={{ textAlign: "right" }}>En rendiciones abiertas</th><th /></tr></thead>
+        <table>
+          <thead><tr><th>Empleado</th><th className="t-right">Saldo</th><th className="t-right">En rendiciones abiertas</th><th /></tr></thead>
           <tbody>
             {wallets.map((w) => (
               <tr key={w.id}>
                 <td>{w.name}</td>
-                <td style={{ textAlign: "right", fontWeight: 700 }}>$ {money(w.balance)}</td>
-                <td style={{ textAlign: "right" }}>{w.openReports > 0 ? `$ ${money(w.pendingAmount)} (${w.openReports})` : "—"}</td>
+                <td className="t-right t-strong">$ {money(w.balance)}</td>
+                <td className="t-right">{w.openReports > 0 ? `$ ${money(w.pendingAmount)} (${w.openReports})` : "—"}</td>
                 <td className="row" style={{ gap: 6, justifyContent: "flex-end" }}>
                   <button type="button" className="btn ghost compact" onClick={() => setDeposit({ walletId: w.id, fromAccountId: banks[0]?.id ?? "", amount: "", date: todayAr() })}>💸 Depositar viáticos</button>
                   <button type="button" className="btn compact" onClick={() => void run(async () => {
@@ -128,8 +128,8 @@ export function FinanceWalletsPage() {
 
       <div className="card pad stack" style={{ gap: 8 }}>
         <h3 style={{ margin: 0 }}>Rendiciones</h3>
-        <table style={{ fontSize: "0.88rem" }}>
-          <thead><tr><th>N.º</th><th>Empleado</th><th>Semana</th><th>Vehículo / OS</th><th style={{ textAlign: "right" }}>Gastos</th><th style={{ textAlign: "right" }}>Total</th><th>Estado</th></tr></thead>
+        <table>
+          <thead><tr><th>N.º</th><th>Empleado</th><th>Semana</th><th>Vehículo / OS</th><th className="t-right">Gastos</th><th className="t-right">Total</th><th>Estado</th></tr></thead>
           <tbody>
             {reports.map((r) => (
               <tr key={r.id} style={{ cursor: "pointer" }} onClick={() => navigate(`/finanzas/rendiciones/${r.id}`)}>
@@ -137,8 +137,8 @@ export function FinanceWalletsPage() {
                 <td>{r.employeeName}</td>
                 <td>{day(r.weekStart)}</td>
                 <td>{[r.vehiclePlate, r.serviceOrderLabel].filter(Boolean).join(" · ") || "—"}</td>
-                <td style={{ textAlign: "right" }}>{r.lines}</td>
-                <td style={{ textAlign: "right" }}>$ {money(r.total)}</td>
+                <td className="t-right">{r.lines}</td>
+                <td className="t-right">$ {money(r.total)}</td>
                 <td>{r.status === "Open" ? "Abierta" : "Aprobada"}</td>
               </tr>
             ))}
@@ -158,7 +158,7 @@ export function FinanceWalletsPage() {
           <label style={{ maxWidth: 130 }}>Hospedaje 1 pers.<input type="number" step="0.01" value={policy.lodgingOneUsd} onChange={(e) => setPolicy({ ...policy, lodgingOneUsd: Number(e.target.value) })} /></label>
           <label style={{ maxWidth: 130 }}>Hospedaje 2 pers.<input type="number" step="0.01" value={policy.lodgingTwoUsd} onChange={(e) => setPolicy({ ...policy, lodgingTwoUsd: Number(e.target.value) })} /></label>
           <button type="submit" className="btn ghost">Guardar</button>
-          <span className="muted" style={{ fontSize: "0.78rem" }}>Al dólar billete vendedor del Banco Nación. Pasarse no bloquea: avisa para aprobar a conciencia.</span>
+          <span className="muted t-small">Al dólar billete vendedor del Banco Nación. Pasarse no bloquea: avisa para aprobar a conciencia.</span>
         </form>
       )}
     </div>
