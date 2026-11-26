@@ -290,13 +290,13 @@ export const ProductsPage: React.FC = () => {
       </div>
 
       {/* Live Exchange Rate Bar from DolarApi (BNA Vendedor & BNA Mayorista Vendedor) */}
-      <div className="card pad" style={{ marginBottom: "16px", background: "rgba(10, 122, 106, 0.08)", border: "1px solid rgba(10, 122, 106, 0.25)" }}>
+      <div className="card pad" style={{ marginBottom: "16px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <span style={{ fontSize: "1.1rem" }}>🟢</span>
             <div>
               <strong>Cotización Live DolarApi (Banco Nación)</strong>
-              <div className="muted" style={{ fontSize: "0.78rem" }}>
+              <div className="muted t-small">
                 Utilizado para la conversión de precios y presupuestos en ARS
               </div>
             </div>
@@ -304,17 +304,17 @@ export const ProductsPage: React.FC = () => {
 
           {rates ? (
             <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center" }}>
-              <div className="badge ok" style={{ fontSize: "0.82rem", padding: "6px 14px", display: "flex", gap: "6px" }}>
+              <div className="badge ok t-small" style={{ padding: "6px 14px", display: "flex", gap: "6px" }}>
                 <span>u$s Billete (BNA Venta):</span>
                 <strong>${rates.usdBillete.venta.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</strong>
               </div>
-              <div className="badge warn" style={{ fontSize: "0.82rem", padding: "6px 14px", display: "flex", gap: "6px" }}>
+              <div className="badge warn t-small" style={{ padding: "6px 14px", display: "flex", gap: "6px" }}>
                 <span>u$s Divisa (BNA Mayorista Venta):</span>
                 <strong>${rates.usdDivisa.venta.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</strong>
               </div>
             </div>
           ) : (
-            <div className="muted" style={{ fontSize: "0.8rem" }}>Cargando cotización en vivo...</div>
+            <div className="muted t-small">Cargando cotización en vivo...</div>
           )}
         </div>
       </div>
@@ -391,7 +391,7 @@ export const ProductsPage: React.FC = () => {
       {/* Main Content Table */}
       <section className="card pad">
         {loading ? (
-          <div className="muted" style={{ padding: "32px", textAlign: "center" }}>
+          <div className="muted t-center" style={{ padding: "32px" }}>
             Cargando catálogo de productos...
           </div>
         ) : (
@@ -399,17 +399,17 @@ export const ProductsPage: React.FC = () => {
             <table>
               <thead>
                 <tr>
-                  <th style={{ width: 50, textAlign: "center" }}>Foto</th>
+                  <th className="t-center" style={{ width: 50 }}>Foto</th>
                   <th>Código / SKU</th>
                   <th>Descripción del Artículo</th>
                   <th>Tipo</th>
                   <th>Portal B2B</th>
                   <th>Categoría</th>
                   <th>Moneda</th>
-                  <th style={{ textAlign: "right" }}>Precio Base</th>
-                  <th style={{ textAlign: "right" }}>Equiv. ARS</th>
-                  <th style={{ textAlign: "center" }}>Stock / Trazabilidad</th>
-                  <th style={{ textAlign: "right" }}>Acciones</th>
+                  <th className="t-right">Precio Base</th>
+                  <th className="t-right">Equiv. ARS</th>
+                  <th className="t-center">Stock / Trazabilidad</th>
+                  <th className="t-right">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -428,7 +428,7 @@ export const ProductsPage: React.FC = () => {
 
                   return (
                     <tr key={item.id} onClick={() => navigate(`/productos/${item.id}/editar`)}>
-                      <td style={{ textAlign: "center" }}>
+                      <td className="t-center">
                         {item.imagePath ? (
                           <img
                             src={item.imagePath}
@@ -465,7 +465,7 @@ export const ProductsPage: React.FC = () => {
                       <td>
                         <div><strong>{item.name}</strong></div>
                         {item.description && (
-                          <div className="muted" style={{ fontSize: "0.8rem" }}>{item.description}</div>
+                          <div className="muted t-small">{item.description}</div>
                         )}
                       </td>
                       <td>
@@ -475,9 +475,9 @@ export const ProductsPage: React.FC = () => {
                       </td>
                       <td>
                         {isPublic ? (
-                          <span className="badge ok" style={{ fontSize: "0.74rem" }}>🌐 Catálogo</span>
+                          <span className="badge ok t-small">🌐 Catálogo</span>
                         ) : (
-                          <span className="badge off" style={{ fontSize: "0.74rem" }}>🔒 Interno</span>
+                          <span className="badge off t-small">🔒 Interno</span>
                         )}
                       </td>
                       <td className="muted">
@@ -488,20 +488,20 @@ export const ProductsPage: React.FC = () => {
                           {curr.label}
                         </span>
                       </td>
-                      <td style={{ textAlign: "right", fontFamily: "monospace", fontWeight: "bold" }}>
+                      <td className="t-right t-mono t-strong">
                         {curr.symbol} {item.basePrice.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                       </td>
-                      <td style={{ textAlign: "right", fontFamily: "monospace", color: "var(--primary)", fontWeight: "700" }}>
+                      <td className="t-right t-mono t-accent t-strong">
                         $ {priceInArs.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
-                      <td style={{ textAlign: "center" }}>
+                      <td className="t-center">
                         <div style={{ display: "flex", gap: "6px", justifyContent: "center", alignItems: "center" }}>
                           {item.type === "Service" || !item.trackStock ? (
-                            <span className="badge off" style={{ fontSize: "0.72rem" }}>
+                            <span className="badge off t-small">
                               🛠️ Sin stock
                             </span>
                           ) : (
-                            <span className="badge ok" style={{ fontSize: "0.76rem" }}>
+                            <span className="badge ok t-small">
                               {item.stock} {item.baseUnit}
                             </span>
                           )}
@@ -509,7 +509,7 @@ export const ProductsPage: React.FC = () => {
                           {item.trackLot && <span className="tag">Lote</span>}
                         </div>
                       </td>
-                      <td style={{ textAlign: "right" }}>
+                      <td className="t-right">
                         <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
                           <button
                             type="button"
@@ -517,16 +517,14 @@ export const ProductsPage: React.FC = () => {
                               e.stopPropagation();
                               navigate(`/productos/${item.id}/editar`);
                             }}
-                            className="btn ghost"
-                            style={{ padding: "4px 10px", fontSize: "0.75rem" }}
+                            className="btn ghost compact"
                           >
                             Editar
                           </button>
                           <button
                             type="button"
                             onClick={(e) => handleDelete(e, item.id, item.name)}
-                            className="btn danger"
-                            style={{ padding: "4px 10px", fontSize: "0.75rem" }}
+                            className="btn danger compact"
                           >
                             Eliminar
                           </button>
@@ -537,7 +535,7 @@ export const ProductsPage: React.FC = () => {
                 })}
                 {products.length === 0 && (
                   <tr>
-                    <td colSpan={9} className="muted" style={{ textAlign: "center", padding: "32px" }}>
+                    <td colSpan={9} className="muted t-center">
                       No se encontraron artículos con los filtros seleccionados.
                     </td>
                   </tr>
@@ -550,18 +548,8 @@ export const ProductsPage: React.FC = () => {
 
       {/* Modal Nueva Categoría */}
       {showCategoryModal && (
-        <div style={{
-          position: "fixed",
-          inset: 0,
-          background: "rgba(0,0,0,0.6)",
-          backdropFilter: "blur(4px)",
-          zIndex: 100,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "16px"
-        }}>
-          <div className="card pad" style={{ maxWidth: "460px", width: "100%", background: "var(--lc-surface)", borderRadius: "16px" }}>
+        <div className="modal-backdrop" role="dialog" aria-modal="true">
+          <div className="modal-card" style={{ width: "min(460px, 100%)" }}>
             <h3>Nueva Categoría de Catálogo</h3>
             <form onSubmit={handleCreateCategory} className="stack" style={{ marginTop: "16px" }}>
               <label>
@@ -608,47 +596,37 @@ export const ProductsPage: React.FC = () => {
 
       {/* Modal Resumen de Importación de Productos */}
       {importStatus && (
-        <div style={{
-          position: "fixed",
-          inset: 0,
-          background: "rgba(15, 23, 42, 0.65)",
-          backdropFilter: "blur(4px)",
-          zIndex: 9999,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "16px"
-        }}>
-          <div className="card pad" style={{ maxWidth: "560px", width: "100%", background: "var(--lc-surface)", borderRadius: "16px", boxShadow: "0 20px 40px rgba(0,0,0,0.25)" }}>
+        <div className="modal-backdrop" role="dialog" aria-modal="true">
+          <div className="modal-card" style={{ width: "min(560px, 100%)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
-              <span style={{ fontSize: "1.6rem" }}>{importStatus.failed === 0 ? "🎉" : "📋"}</span>
+              <span className="t-xl">{importStatus.failed === 0 ? "🎉" : "📋"}</span>
               <div>
-                <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800 }}>
+                <h3 style={{ margin: 0 }}>
                   Resultado de la Importación
                 </h3>
-                <div className="muted" style={{ fontSize: "0.85rem" }}>
+                <div className="muted t-small">
                   Procesamiento de catálogo desde archivo Excel
                 </div>
               </div>
             </div>
 
             <div style={{ display: "flex", gap: "12px", marginBottom: "16px" }}>
-              <div style={{ flex: 1, padding: "12px", borderRadius: "10px", background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.3)", textAlign: "center" }}>
-                <div style={{ fontSize: "1.4rem", fontWeight: 900, color: "var(--lc-ok)" }}>{importStatus.success}</div>
-                <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--lc-ok)" }}>Productos Importados</div>
+              <div className="t-center" style={{ flex: 1, padding: "12px", borderRadius: "10px", background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.3)" }}>
+                <div className="t-ok" style={{ fontSize: "1.4rem", fontWeight: 900 }}>{importStatus.success}</div>
+                <div className="t-small t-strong t-ok">Productos Importados</div>
               </div>
               {importStatus.failed > 0 && (
-                <div style={{ flex: 1, padding: "12px", borderRadius: "10px", background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.3)", textAlign: "center" }}>
-                  <div style={{ fontSize: "1.4rem", fontWeight: 900, color: "var(--lc-danger)" }}>{importStatus.failed}</div>
-                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--lc-danger)" }}>Filas con Observación</div>
+                <div className="t-center" style={{ flex: 1, padding: "12px", borderRadius: "10px", background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.3)" }}>
+                  <div className="t-danger" style={{ fontSize: "1.4rem", fontWeight: 900 }}>{importStatus.failed}</div>
+                  <div className="t-small t-strong t-danger">Filas con Observación</div>
                 </div>
               )}
             </div>
 
             {importStatus.errors.length > 0 && (
-              <div style={{ maxHeight: "180px", overflowY: "auto", background: "var(--lc-surface-2)", border: "1px solid var(--lc-line)", borderRadius: "8px", padding: "10px 14px", marginBottom: "16px" }}>
-                <div style={{ fontWeight: 800, fontSize: "0.8rem", color: "var(--lc-ink-3)", marginBottom: "6px" }}>DETALLE DE OBSERVACIONES:</div>
-                <ul style={{ margin: 0, paddingLeft: "16px", fontSize: "0.82rem", color: "var(--lc-danger)" }}>
+              <div className="box" style={{ maxHeight: "180px", overflowY: "auto", marginBottom: "16px" }}>
+                <div className="t-strong t-small muted" style={{ marginBottom: "6px" }}>DETALLE DE OBSERVACIONES:</div>
+                <ul className="t-small t-danger" style={{ margin: 0, paddingLeft: "16px" }}>
                   {importStatus.errors.map((err, idx) => (
                     <li key={idx} style={{ marginBottom: "4px" }}>{err}</li>
                   ))}

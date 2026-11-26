@@ -510,11 +510,6 @@ export function InventoryPage() {
               className="btn ghost"
               onClick={handleAutoReorder}
               disabled={reordering || criticalCount === 0}
-              style={{
-                borderColor: criticalCount > 0 ? "var(--color-primary)" : undefined,
-                color: criticalCount > 0 ? "var(--color-primary)" : undefined,
-                fontWeight: 600
-              }}
             >
               ⚡ Reabastecimiento Automático ({criticalCount})
             </button>
@@ -534,7 +529,7 @@ export function InventoryPage() {
 
       {error && <div className="alert">{error}</div>}
       {successMsg && (
-        <div className="alert ok" style={{ background: "var(--lc-ok-bg)", border: "1px solid var(--lc-ok)", color: "var(--lc-ok)" }}>
+        <div className="alert ok">
           {successMsg}
         </div>
       )}
@@ -577,32 +572,32 @@ export function InventoryPage() {
           <div className="kpi kpi-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", marginBottom: 20 }}>
             <div className="card">
               <span className="muted">Stock Físico Real</span>
-              <strong style={{ fontSize: "1.5rem" }}>{totalPhysical.toLocaleString("es-AR")} u.</strong>
-              <div className="muted" style={{ fontSize: "0.75rem", marginTop: 4 }}>En estanterías y depósitos</div>
+              <strong className="t-xl">{totalPhysical.toLocaleString("es-AR")} u.</strong>
+              <div className="muted t-small" style={{ marginTop: 4 }}>En estanterías y depósitos</div>
             </div>
             <div className="card">
               <span className="muted">Stock Reservado</span>
-              <strong style={{ fontSize: "1.5rem", color: totalReserved > 0 ? "#d97706" : "inherit" }}>
+              <strong className="t-xl" style={{ color: totalReserved > 0 ? "#d97706" : "inherit" }}>
                 {totalReserved.toLocaleString("es-AR")} u.
               </strong>
-              <div className="muted" style={{ fontSize: "0.75rem", marginTop: 4 }}>Comprometido en Ventas</div>
+              <div className="muted t-small" style={{ marginTop: 4 }}>Comprometido en Ventas</div>
             </div>
             <div className="card">
               <span className="muted">Disponible para Venta</span>
-              <strong style={{ fontSize: "1.5rem", color: totalAvailable > 0 ? "var(--lc-ok)" : "var(--lc-danger)" }}>
+              <strong className="t-xl" style={{ color: totalAvailable > 0 ? "var(--lc-ok)" : "var(--lc-danger)" }}>
                 {totalAvailable.toLocaleString("es-AR")} u.
               </strong>
-              <div className="muted" style={{ fontSize: "0.75rem", marginTop: 4 }}>Físico Neto - Reservas</div>
+              <div className="muted t-small" style={{ marginTop: 4 }}>Físico Neto - Reservas</div>
             </div>
             <div className="card">
               <span className="muted">Stock Entrante (Compras)</span>
-              <strong style={{ fontSize: "1.5rem", color: "var(--lc-info)" }}>{totalIncoming.toLocaleString("es-AR")} u.</strong>
-              <div className="muted" style={{ fontSize: "0.75rem", marginTop: 4 }}>En Recepción de Proveedores</div>
+              <strong className="t-xl t-info">{totalIncoming.toLocaleString("es-AR")} u.</strong>
+              <div className="muted t-small" style={{ marginTop: 4 }}>En Recepción de Proveedores</div>
             </div>
             <div className="card">
               <span className="muted">Unidades en tránsito</span>
-              <strong style={{ fontSize: "1.5rem", color: "var(--lc-violet)" }}>{totalInTransit.toLocaleString("es-AR")} u.</strong>
-              <div className="muted" style={{ fontSize: "0.75rem", marginTop: 4 }}>Despachadas, aún sin recepción</div>
+              <strong className="t-xl t-violet">{totalInTransit.toLocaleString("es-AR")} u.</strong>
+              <div className="muted t-small" style={{ marginTop: 4 }}>Despachadas, aún sin recepción</div>
             </div>
             <div className="card">
               <span className="muted">Valorización Stock</span>
@@ -612,14 +607,14 @@ export function InventoryPage() {
                 {totalValuationArs > 0 && `$${totalValuationArs.toLocaleString("es-AR", { minimumFractionDigits: 2 })}`}
                 {totalValuationUsd === 0 && totalValuationArs === 0 && "$0,00"}
               </strong>
-              <div className="muted" style={{ fontSize: "0.75rem", marginTop: 4 }}>Costo reposición total</div>
+              <div className="muted t-small" style={{ marginTop: 4 }}>Costo reposición total</div>
             </div>
             <div className="card" style={{ borderColor: criticalCount > 0 ? "#fca5a5" : undefined }}>
               <span className="muted">Alertas de Reposición</span>
-              <strong style={{ fontSize: "1.5rem", color: criticalCount > 0 ? "var(--lc-danger)" : "var(--lc-ok)" }}>
+              <strong className="t-xl" style={{ color: criticalCount > 0 ? "var(--lc-danger)" : "var(--lc-ok)" }}>
                 {criticalCount} artículos
               </strong>
-              <div className="muted" style={{ fontSize: "0.75rem", marginTop: 4 }}>Bajo el stock de seguridad</div>
+              <div className="muted t-small" style={{ marginTop: 4 }}>Bajo el stock de seguridad</div>
             </div>
           </div>
 
@@ -718,7 +713,7 @@ export function InventoryPage() {
               {loading ? (
                 <p className="pad muted">Cargando matriz de inventario en tiempo real…</p>
               ) : groupedProducts.length === 0 ? (
-                <p className="pad muted" style={{ textAlign: "center" }}>No hay artículos registrados para este filtro.</p>
+                <p className="pad muted t-center">No hay artículos registrados para este filtro.</p>
               ) : (
                 <div className="table-wrap">
                   <table>
@@ -731,21 +726,21 @@ export function InventoryPage() {
                           .map((w) => {
                             const whTotal = items.filter((i) => i.warehouseId === w.id).reduce((s, i) => s + i.physicalStock, 0);
                             return (
-                              <th key={w.id} style={{ textAlign: "right", minWidth: 120, background: "rgba(13, 148, 136, 0.03)" }}>
+                              <th className="t-right" key={w.id} style={{ minWidth: 120, background: "rgba(13, 148, 136, 0.03)" }}>
                                 <div>{w.type === "MainWarehouse" ? "🏭" : w.type === "Workshop" ? "🔬" : "🚚"} {w.name}</div>
-                                <span className="muted" style={{ fontSize: "0.72rem", fontWeight: "normal" }}>
+                                <span className="muted t-small" style={{ fontWeight: "normal" }}>
                                   ({whTotal.toLocaleString("es-AR")} u.)
                                 </span>
                               </th>
                             );
                           })}
-                        <th style={{ textAlign: "right", minWidth: 100 }}>Total Físico</th>
-                        <th style={{ textAlign: "right", minWidth: 90 }}>En Tránsito</th>
-                        <th style={{ textAlign: "right", minWidth: 80 }}>Reservado</th>
-                        <th style={{ textAlign: "right", minWidth: 100 }}>Disponible</th>
-                        <th style={{ textAlign: "right", minWidth: 80 }}>Mínimo</th>
+                        <th className="t-right" style={{ minWidth: 100 }}>Total Físico</th>
+                        <th className="t-right" style={{ minWidth: 90 }}>En Tránsito</th>
+                        <th className="t-right" style={{ minWidth: 80 }}>Reservado</th>
+                        <th className="t-right" style={{ minWidth: 100 }}>Disponible</th>
+                        <th className="t-right" style={{ minWidth: 80 }}>Mínimo</th>
                         <th>Estado</th>
-                        <th style={{ textAlign: "right", minWidth: 160 }}>Acciones</th>
+                        <th className="t-right" style={{ minWidth: 160 }}>Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -763,18 +758,15 @@ export function InventoryPage() {
                               const st = p.byWarehouse.get(w.id);
                               const qty = st ? st.physicalStock : 0;
                               return (
-                                <td
+                                <td className="t-right"
                                   key={w.id}
-                                  style={{
-                                    textAlign: "right",
-                                    background: qty > 0 ? "rgba(13, 148, 136, 0.02)" : undefined
-                                  }}
+                                  style={{ background: qty > 0 ? "rgba(13, 148, 136, 0.02)" : undefined }}
                                 >
                                   {qty > 0 ? (
                                     <div>
-                                      <strong style={{ fontSize: "0.95rem" }}>{qty.toLocaleString("es-AR")} u.</strong>
+                                      <strong>{qty.toLocaleString("es-AR")} u.</strong>
                                       {st && st.reservedStock > 0 && (
-                                        <div className="muted" style={{ fontSize: "0.72rem", color: "var(--lc-warn)" }}>
+                                        <div className="muted t-small t-warn">
                                           🔒 {st.reservedStock} res.
                                         </div>
                                       )}
@@ -786,21 +778,21 @@ export function InventoryPage() {
                               );
                             })}
 
-                          <td style={{ textAlign: "right" }}>
-                            <strong style={{ fontSize: "1rem" }}>{p.totalPhysical.toLocaleString("es-AR")} u.</strong>
+                          <td className="t-right">
+                            <strong>{p.totalPhysical.toLocaleString("es-AR")} u.</strong>
                           </td>
 
-                          <td style={{ textAlign: "right" }}>
+                          <td className="t-right">
                             {p.inTransitStock > 0 ? (
-                              <strong style={{ color: "var(--lc-violet)" }}>🚚 {p.inTransitStock.toLocaleString("es-AR")}</strong>
+                              <strong className="t-violet">🚚 {p.inTransitStock.toLocaleString("es-AR")}</strong>
                             ) : (
                               <span className="muted">—</span>
                             )}
                           </td>
 
-                          <td style={{ textAlign: "right" }}>
+                          <td className="t-right">
                             {p.totalReserved > 0 ? (
-                              <span className="badge warn" style={{ fontSize: "0.78rem" }}>
+                              <span className="badge warn t-small">
                                 🔒 {p.totalReserved.toLocaleString("es-AR")}
                               </span>
                             ) : (
@@ -808,7 +800,7 @@ export function InventoryPage() {
                             )}
                           </td>
 
-                          <td style={{ textAlign: "right" }}>
+                          <td className="t-right">
                             <strong
                               style={{
                                 color: p.totalAvailable > 0 ? "var(--lc-ok)" : "var(--lc-danger)",
@@ -819,7 +811,7 @@ export function InventoryPage() {
                             </strong>
                           </td>
 
-                          <td style={{ textAlign: "right" }}>
+                          <td className="t-right">
                             <span className="muted">{p.minimumStock.toLocaleString("es-AR")} u.</span>
                           </td>
 
@@ -829,12 +821,11 @@ export function InventoryPage() {
                             {p.status === "OutStock" && <span className="badge prio-high">🔴 Sin Stock</span>}
                           </td>
 
-                          <td style={{ textAlign: "right" }}>
+                          <td className="t-right">
                             <div className="row" style={{ justifyContent: "flex-end", gap: 6 }}>
                               <button
                                 type="button"
-                                className="btn ghost"
-                                style={{ padding: "4px 8px", fontSize: "0.78rem" }}
+                                className="btn ghost compact"
                                 title="Transferir entre depósitos"
                                 onClick={() => handleOpenTransferForProduct(p.productId)}
                               >
@@ -842,8 +833,7 @@ export function InventoryPage() {
                               </button>
                               <button
                                 type="button"
-                                className="btn ghost"
-                                style={{ padding: "4px 8px", fontSize: "0.78rem" }}
+                                className="btn ghost compact"
                                 title="Ajuste / Recuento de Stock"
                                 onClick={() => handleOpenAdjustForGrouped(p)}
                               >
@@ -851,8 +841,7 @@ export function InventoryPage() {
                               </button>
                               <button
                                 type="button"
-                                className="btn ghost"
-                                style={{ padding: "4px 8px", fontSize: "0.78rem" }}
+                                className="btn ghost compact"
                                 title="Ver Kardex"
                                 onClick={() => {
                                   setKardexProductFilter(p.productId);
@@ -876,7 +865,7 @@ export function InventoryPage() {
               {loading ? (
                 <p className="pad muted">Cargando matriz de inventario en tiempo real…</p>
               ) : items.length === 0 ? (
-                <p className="pad muted" style={{ textAlign: "center" }}>No hay artículos registrados en este depósito o filtro.</p>
+                <p className="pad muted t-center">No hay artículos registrados en este depósito o filtro.</p>
               ) : (
                 <div className="table-wrap">
                   <table>
@@ -884,14 +873,14 @@ export function InventoryPage() {
                       <tr>
                         <th>Artículo / Código</th>
                         <th>Depósito & Ubicación</th>
-                        <th style={{ textAlign: "right" }}>Stock Físico</th>
-                        <th style={{ textAlign: "right" }}>Reservado</th>
-                        <th style={{ textAlign: "right" }}>Disponible</th>
-                        <th style={{ textAlign: "right" }}>Entrante</th>
-                        <th style={{ textAlign: "right" }}>Proyectado</th>
-                        <th style={{ textAlign: "right" }}>Mínimo</th>
+                        <th className="t-right">Stock Físico</th>
+                        <th className="t-right">Reservado</th>
+                        <th className="t-right">Disponible</th>
+                        <th className="t-right">Entrante</th>
+                        <th className="t-right">Proyectado</th>
+                        <th className="t-right">Mínimo</th>
                         <th>Estado</th>
-                        <th style={{ textAlign: "right" }}>Acciones</th>
+                        <th className="t-right">Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -899,47 +888,44 @@ export function InventoryPage() {
                         <tr key={item.id}>
                           <td>
                             <strong>📦 {item.productCode}</strong>
-                            <div className="muted" style={{ fontSize: "0.85rem" }}>{item.productName}</div>
+                            <div className="muted t-small">{item.productName}</div>
                           </td>
                           <td>
                             <div style={{ fontWeight: 500 }}>🏢 {item.warehouseName}</div>
-                            <div className="muted" style={{ fontSize: "0.78rem" }}>📍 {item.warehouseLocation || "Estantería Principal"}</div>
+                            <div className="muted t-small">📍 {item.warehouseLocation || "Estantería Principal"}</div>
                           </td>
-                          <td style={{ textAlign: "right" }}>
+                          <td className="t-right">
                             <strong>{item.physicalStock.toLocaleString("es-AR")} u.</strong>
                           </td>
-                          <td style={{ textAlign: "right" }}>
+                          <td className="t-right">
                             {item.reservedStock > 0 ? (
-                              <span className="badge warn" style={{ fontSize: "0.78rem" }}>
+                              <span className="badge warn t-small">
                                 🔒 {item.reservedStock.toLocaleString("es-AR")}
                               </span>
                             ) : (
                               <span className="muted">0</span>
                             )}
                           </td>
-                          <td style={{ textAlign: "right" }}>
+                          <td className="t-right">
                             <strong
-                              style={{
-                                color: item.availableStock > 0 ? "var(--lc-ok)" : "var(--lc-danger)",
-                                fontSize: "0.95rem"
-                              }}
+                              style={{ color: item.availableStock > 0 ? "var(--lc-ok)" : "var(--lc-danger)" }}
                             >
                               {item.availableStock.toLocaleString("es-AR")} u.
                             </strong>
                           </td>
-                          <td style={{ textAlign: "right" }}>
+                          <td className="t-right">
                             {item.incomingStock > 0 ? (
-                              <span style={{ color: "var(--lc-info)", fontWeight: 600 }}>
+                              <span className="t-info t-strong">
                                 📥 +{item.incomingStock.toLocaleString("es-AR")}
                               </span>
                             ) : (
                               <span className="muted">—</span>
                             )}
                           </td>
-                          <td style={{ textAlign: "right" }}>
+                          <td className="t-right">
                             <span className="muted">{item.forecastedStock.toLocaleString("es-AR")} u.</span>
                           </td>
-                          <td style={{ textAlign: "right" }}>
+                          <td className="t-right">
                             <span className="muted">{item.minimumStock.toLocaleString("es-AR")} u.</span>
                           </td>
                           <td>
@@ -947,12 +933,11 @@ export function InventoryPage() {
                             {item.status === "LowStock" && <span className="badge warn">🟡 Reposición</span>}
                             {item.status === "OutStock" && <span className="badge prio-high">🔴 Sin Stock</span>}
                           </td>
-                          <td style={{ textAlign: "right" }}>
+                          <td className="t-right">
                             <div className="row" style={{ justifyContent: "flex-end", gap: 6 }}>
                               <button
                                 type="button"
-                                className="btn ghost"
-                                style={{ padding: "4px 8px", fontSize: "0.78rem" }}
+                                className="btn ghost compact"
                                 title="Ajuste de Conteo Físico"
                                 onClick={() => handleOpenAdjust(item)}
                               >
@@ -960,8 +945,7 @@ export function InventoryPage() {
                               </button>
                               <button
                                 type="button"
-                                className="btn ghost"
-                                style={{ padding: "4px 8px", fontSize: "0.78rem" }}
+                                className="btn ghost compact"
                                 title="Ver Kardex"
                                 onClick={() => {
                                   setKardexProductFilter(item.productId);
@@ -1004,7 +988,7 @@ export function InventoryPage() {
             {loading ? (
               <p className="pad muted">Cargando transferencias internas…</p>
             ) : transfers.length === 0 ? (
-              <p className="pad muted" style={{ textAlign: "center" }}>No hay transferencias de stock registradas.</p>
+              <p className="pad muted t-center">No hay transferencias de stock registradas.</p>
             ) : (
               <div className="table-wrap">
                 <table>
@@ -1017,7 +1001,7 @@ export function InventoryPage() {
                       <th>Operador / Chofer</th>
                       <th>Despachado / Recibido</th>
                       <th>Estado</th>
-                      <th style={{ textAlign: "right" }}>Acción</th>
+                      <th className="t-right">Acción</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1025,14 +1009,14 @@ export function InventoryPage() {
                       <tr key={t.id}>
                         <td>
                           <strong>🚚 {t.transferNumber}</strong>
-                          <div className="muted" style={{ fontSize: "0.78rem" }}>
+                          <div className="muted t-small">
                             {new Date(t.createdAtUtc).toLocaleDateString("es-AR")}
                           </div>
                         </td>
                         <td>🏢 {t.originWarehouseName}</td>
                         <td>🎯 {t.destinationWarehouseName}</td>
                         <td>
-                          <div style={{ fontSize: "0.85rem" }}>
+                          <div className="t-small">
                             {t.items?.map((it, idx) => (
                               <div key={idx}>
                                 • <strong>{it.quantity} u.</strong> - {it.productCode} ({it.productName})
@@ -1043,9 +1027,9 @@ export function InventoryPage() {
                         </td>
                         <td>👤 {t.operatorName || "Logística"}</td>
                         <td>
-                          <div style={{ fontSize: "0.8rem" }}>
+                          <div className="t-small">
                             {t.dispatchedAtUtc && <div>Desp: {new Date(t.dispatchedAtUtc).toLocaleString("es-AR")}</div>}
-                            {t.receivedAtUtc && <div style={{ color: "var(--lc-ok)" }}>Recib: {new Date(t.receivedAtUtc).toLocaleString("es-AR")}</div>}
+                            {t.receivedAtUtc && <div className="t-ok">Recib: {new Date(t.receivedAtUtc).toLocaleString("es-AR")}</div>}
                           </div>
                         </td>
                         <td>
@@ -1054,12 +1038,11 @@ export function InventoryPage() {
                           {t.status === "Draft" && <span className="badge">📝 Borrador</span>}
                           {t.status === "Cancelled" && <span className="badge prio-high">❌ Cancelado</span>}
                         </td>
-                        <td style={{ textAlign: "right" }}>
+                        <td className="t-right">
                           {t.status === "InTransit" && (
                             <button
                               type="button"
-                              className="btn"
-                              style={{ padding: "5px 12px", fontSize: "0.82rem" }}
+                              className="btn compact"
                               onClick={() => handleReceiveTransfer(t.id)}
                             >
                               📥 Recibir en Destino
@@ -1128,7 +1111,7 @@ export function InventoryPage() {
             {loading ? (
               <p className="pad muted">Cargando libro Kardex y movimientos…</p>
             ) : movements.length === 0 ? (
-              <p className="pad muted" style={{ textAlign: "center" }}>No hay movimientos registrados para el filtro seleccionado.</p>
+              <p className="pad muted t-center">No hay movimientos registrados para el filtro seleccionado.</p>
             ) : (
               <div className="table-wrap">
                 <table>
@@ -1139,8 +1122,8 @@ export function InventoryPage() {
                       <th>Depósito</th>
                       <th>Operación</th>
                       <th>Operador</th>
-                      <th style={{ textAlign: "right" }}>Cantidad</th>
-                      <th style={{ textAlign: "right" }}>Saldo Resultante</th>
+                      <th className="t-right">Cantidad</th>
+                      <th className="t-right">Saldo Resultante</th>
                       <th>N° Serie / Lote</th>
                       <th>Referencia & Motivo</th>
                     </tr>
@@ -1153,11 +1136,11 @@ export function InventoryPage() {
                           <td>{new Date(m.createdAtUtc).toLocaleString("es-AR")}</td>
                           <td>
                             <strong>📦 {m.productCode}</strong>
-                            <div className="muted" style={{ fontSize: "0.78rem" }}>{m.productName}</div>
+                            <div className="muted t-small">{m.productName}</div>
                           </td>
                           <td>🏢 {m.warehouseName}</td>
                           <td>
-                            <span className="badge" style={{ fontSize: "0.78rem" }}>
+                            <span className="badge t-small">
                               {m.movementType === "PhysicalCountAdjustment"
                                 ? "⚖️ Ajuste Conteo"
                                 : m.movementType === "PurchaseReception"
@@ -1176,12 +1159,12 @@ export function InventoryPage() {
                             </span>
                           </td>
                           <td>👤 {m.operatorName || "Sistema"}</td>
-                          <td style={{ textAlign: "right" }}>
+                          <td className="t-right">
                             <strong style={{ color: isPositive ? "var(--lc-ok)" : "var(--lc-danger)" }}>
                               {isPositive ? `+${m.quantity}` : m.quantity} u.
                             </strong>
                           </td>
-                          <td style={{ textAlign: "right" }}>
+                          <td className="t-right">
                             <strong>{m.newPhysicalStock} u.</strong>
                           </td>
                           <td>
@@ -1191,7 +1174,7 @@ export function InventoryPage() {
                           </td>
                           <td>
                             <div style={{ fontWeight: 500 }}>{m.referenceNumber || m.referenceType}</div>
-                            <div className="muted" style={{ fontSize: "0.8rem" }}>{m.notes}</div>
+                            <div className="muted t-small">{m.notes}</div>
                           </td>
                         </tr>
                       );
@@ -1218,7 +1201,7 @@ export function InventoryPage() {
               <div key={wh.id} className="card pad stack" style={{ gap: 12, justifyContent: "space-between" }}>
                 <div>
                   <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-                    <span className="badge ok" style={{ fontSize: "0.78rem" }}>
+                    <span className="badge ok t-small">
                       {wh.type === "MainWarehouse"
                         ? "🏭 Almacén Principal"
                         : wh.type === "Workshop"
@@ -1230,9 +1213,9 @@ export function InventoryPage() {
                     <strong className="muted">{wh.code}</strong>
                   </div>
 
-                  <h3 style={{ marginTop: 10, marginBottom: 4 }}>{wh.name}</h3>
+                  <h3 style={{ marginBottom: 4 }}>{wh.name}</h3>
 
-                  <div className="stack" style={{ gap: 4, fontSize: "0.85rem", color: "var(--color-muted)" }}>
+                  <div className="stack t-small" style={{ gap: 4, color: "var(--color-muted)" }}>
                     {wh.address && <div>📍 {wh.address}</div>}
                     {wh.assignedTechnicianName && <div>👤 Técnico: <strong>{wh.assignedTechnicianName}</strong></div>}
                   </div>
@@ -1241,8 +1224,7 @@ export function InventoryPage() {
                 <div className="row" style={{ justifyContent: "flex-end", marginTop: 8 }}>
                   <button
                     type="button"
-                    className="btn ghost"
-                    style={{ padding: "4px 10px", fontSize: "0.82rem" }}
+                    className="btn ghost compact"
                     onClick={() => handleOpenEditWarehouse(wh)}
                   >
                     ✏️ Editar
@@ -1259,7 +1241,7 @@ export function InventoryPage() {
         <div className="modal-backdrop">
           <div className="modal-card card pad" style={{ maxWidth: 540 }}>
             <h3>⚖️ Ajuste de Conteo Físico & Inventario</h3>
-            <p className="muted" style={{ fontSize: "0.85rem", margin: "4px 0 16px 0" }}>
+            <p className="muted t-small" style={{ margin: "4px 0 16px 0" }}>
               {selectedStock.productCode} — {selectedStock.productName}
             </p>
 
@@ -1374,7 +1356,7 @@ export function InventoryPage() {
         <div className="modal-backdrop">
           <div className="modal-card card pad" style={{ maxWidth: 650 }}>
             <h3>🚚 Nueva Transferencia Interna de Mercadería</h3>
-            <p className="muted" style={{ fontSize: "0.85rem", margin: "4px 0 16px 0" }}>
+            <p className="muted t-small" style={{ margin: "4px 0 16px 0" }}>
               Genera un remito interno de traslado entre depósitos o hacia móviles técnicos.
             </p>
 
@@ -1434,7 +1416,7 @@ export function InventoryPage() {
               <div className="stack" style={{ gap: 8 }}>
                 <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
                   <strong>Ítems a Transferir</strong>
-                  <button type="button" className="btn ghost" style={{ padding: "3px 8px", fontSize: "0.8rem" }} onClick={handleAddTransferLine}>
+                  <button type="button" className="btn ghost compact" onClick={handleAddTransferLine}>
                     ➕ Agregar Artículo
                   </button>
                 </div>
@@ -1442,7 +1424,7 @@ export function InventoryPage() {
                 {transferLines.map((line, idx) => (
                   <div key={idx} className="card pad row" style={{ gap: 10, alignItems: "flex-end" }}>
                     <div style={{ flex: 3 }}>
-                      <label style={{ fontSize: "0.8rem" }}>Artículo</label>
+                      <label>Artículo</label>
                       <select
                         value={line.productId}
                         onChange={(e) => handleUpdateTransferLine(idx, "productId", e.target.value)}
@@ -1457,7 +1439,7 @@ export function InventoryPage() {
                     </div>
 
                     <div style={{ flex: 1 }}>
-                      <label style={{ fontSize: "0.8rem" }}>Cantidad</label>
+                      <label>Cantidad</label>
                       <input
                         type="number"
                         min="0.01"
@@ -1469,7 +1451,7 @@ export function InventoryPage() {
                     </div>
 
                     <div style={{ flex: 2 }}>
-                      <label style={{ fontSize: "0.8rem" }}>S/N / Lote (Opcional)</label>
+                      <label>S/N / Lote (Opcional)</label>
                       <input
                         value={line.serialNumbers}
                         onChange={(e) => handleUpdateTransferLine(idx, "serialNumbers", e.target.value)}
@@ -1480,8 +1462,7 @@ export function InventoryPage() {
                     {transferLines.length > 1 && (
                       <button
                         type="button"
-                        className="btn ghost"
-                        style={{ color: "var(--lc-danger)", padding: "6px 8px" }}
+                        className="btn ghost btn-outline danger compact"
                         onClick={() => handleRemoveTransferLine(idx)}
                       >
                         🗑️
