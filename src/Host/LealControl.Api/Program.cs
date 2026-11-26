@@ -101,6 +101,8 @@ try
 
     builder.Services.AddSingleton<IClock, SystemClock>();
     builder.Services.AddHttpClient<BcraApiClient>();
+    builder.Services.AddSingleton<LealControl.BuildingBlocks.Notices.INoticeProvider, LealControl.Api.Automation.UnansweredQuoteNotices>();
+    builder.Services.AddHostedService<LealControl.Api.Automation.QuoteFollowUpBackgroundService>();
     builder.Services.AddCrmModule(builder.Configuration);
     builder.Services.AddSalesModule(builder.Configuration);
     builder.Services.AddCommunicationsModule(builder.Configuration);

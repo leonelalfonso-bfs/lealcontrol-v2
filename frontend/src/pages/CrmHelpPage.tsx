@@ -68,6 +68,23 @@ export function CrmHelpPage() {
           <div><h3>En el cierre</h3><p>Importe final y evidencia si se gana; motivo y competidor si se pierde.</p></div>
         </div>
       </section>
+
+      <section className="card pad">
+        <h2>Seguimiento automático y avisos</h2>
+        <ul>
+          <li>
+            <strong>Presupuesto sin respuesta:</strong> pasados 5 días hábiles desde que se envió, si sigue en estado Enviado
+            y el cliente no escribió un mail después (en una conversación vinculada a él), el sistema crea un llamado de
+            seguimiento para ese día, en la oportunidad del presupuesto. Se crea una sola vez por envío.
+          </li>
+          <li>
+            <strong>Mis avisos y el resumen diario:</strong> "Actividades vencidas y de hoy", "Presupuestos sin respuesta"
+            (con el importe, si tu perfil ve importes) y "Oportunidades sin movimiento" (15 días sin cambios ni actividades,
+            o los días configurados en la oportunidad). Cada uno se activa o desactiva en Mis avisos.
+          </li>
+          <li>El presupuesto sale del aviso al aceptarlo, rechazarlo o pasarlo a pedido; la actividad, al marcarla como hecha.</li>
+        </ul>
+      </section>
     </div>
   );
 }

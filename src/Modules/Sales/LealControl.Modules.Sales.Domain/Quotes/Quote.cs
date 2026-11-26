@@ -94,6 +94,12 @@ public sealed class Quote : AggregateRoot<QuoteId>
 
     public string? OwnerName { get; private set; }
 
+    /// <summary>Cuándo se envió al cliente; desde ahí corren los días hábiles para el seguimiento.</summary>
+    public DateTime? SentAtUtc { get; private set; }
+
+    /// <summary>Cuándo se creó la actividad automática de seguimiento en el CRM (una sola por envío).</summary>
+    public DateTime? FollowUpCreatedAtUtc { get; private set; }
+
     public DateTime CreatedAtUtc { get; private set; }
 
     public DateTime UpdatedAtUtc { get; private set; }
@@ -280,9 +286,13 @@ public sealed class Quote : AggregateRoot<QuoteId>
         }
 
         Status = QuoteStatus.Sent;
+        SentAtUtc = utcNow;
+        FollowUpCreatedAtUtc = null;
         UpdatedAtUtc = utcNow;
         return Result.Success();
     }
+
+    public void MarkFollowUpCreated(DateTime utcNow) => FollowUpCreatedAtUtc = utcNow;
 
     public Result AcceptAndWin(DateTime utcNow)
     {

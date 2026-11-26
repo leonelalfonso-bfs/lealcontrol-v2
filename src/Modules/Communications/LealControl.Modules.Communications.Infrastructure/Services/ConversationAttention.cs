@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using LealControl.BuildingBlocks.Time;
 using LealControl.Modules.Communications.Infrastructure.Domain;
 using LealControl.Modules.Communications.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -15,31 +16,8 @@ namespace LealControl.Modules.Communications.Infrastructure.Services;
 /// </summary>
 public static class ConversationAttention
 {
-    /// <summary>Hora argentina (sin horario de verano).</summary>
-    private static readonly TimeSpan ArgentinaOffset = TimeSpan.FromHours(-3);
-
-    /// <summary>
-    /// El instante tal que todo mensaje recibido antes lleva al menos <paramref name="businessHours"/> horas hábiles
-    /// sin respuesta. Las horas hábiles son las de lunes a viernes, día completo, en hora argentina.
-    /// </summary>
-    public static DateTime Cutoff(DateTime nowUtc, int businessHours)
-    {
-        var cursor = DateTime.SpecifyKind(nowUtc, DateTimeKind.Utc) + ArgentinaOffset;
-        var remaining = TimeSpan.FromHours(businessHours);
-        while (true)
-        {
-            // El día al que pertenece el cursor: una medianoche es el final del día anterior.
-            var day = (cursor.TimeOfDay == TimeSpan.Zero ? cursor.AddDays(-1) : cursor).Date;
-            if (day.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday))
-            {
-                var available = cursor - day;
-                if (remaining <= available)
-                    return DateTime.SpecifyKind(cursor - remaining - ArgentinaOffset, DateTimeKind.Utc);
-                remaining -= available;
-            }
-            cursor = day;
-        }
-    }
+    /// <summary>El instante tal que todo mensaje recibido antes lleva al menos esas horas hábiles sin respuesta.</summary>
+    public static DateTime Cutoff(DateTime nowUtc, int businessHours) => ArgentinaTime.BusinessCutoff(nowUtc, businessHours);
 
     public static IQueryable<Conversation> Unattended(IQueryable<Conversation> conversations, DateTime cutoffUtc) =>
         conversations.Where(c => c.LastIncomingAtUtc != null && c.LastIncomingAtUtc <= cutoffUtc

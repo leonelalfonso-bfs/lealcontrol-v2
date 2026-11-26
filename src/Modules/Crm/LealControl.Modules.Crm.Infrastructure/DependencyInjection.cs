@@ -32,6 +32,8 @@ public static class DependencyInjection
         services.AddScoped<ILeadRepository, LeadRepository>();
         services.AddScoped<IOpportunityRepository, OpportunityRepository>();
         services.AddScoped<IActivityRepository, ActivityRepository>();
+        services.AddSingleton<LealControl.BuildingBlocks.Notices.INoticeProvider, Notices.DueActivityNotices>();
+        services.AddSingleton<LealControl.BuildingBlocks.Notices.INoticeProvider, Notices.StaleOpportunityNotices>();
         services.AddScoped<ICustomerDirectory, CustomerDirectory>();
         services.AddScoped<IOpportunityLookup, OpportunityLookup>();
         services.AddScoped<IOpportunityQuoteSync, OpportunityQuoteSync>();
