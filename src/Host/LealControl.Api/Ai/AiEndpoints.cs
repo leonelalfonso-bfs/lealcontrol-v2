@@ -17,7 +17,7 @@ using Microsoft.Extensions.Logging;
 
 namespace LealControl.Api.Ai;
 
-public sealed record AiSettingsRequest(string? ApiKey, decimal MonthlyBudgetUsd, bool MailReadingEnabled, bool AutoOpportunities, string? BusinessDescription, bool SupervisorEnabled = false);
+public sealed record AiSettingsRequest(string? ApiKey, decimal MonthlyBudgetUsd, bool MailReadingEnabled, bool AutoOpportunities, string? BusinessDescription, bool SupervisorEnabled = false, bool WebCuitLookupEnabled = true);
 
 public static class AiEndpoints
 {
@@ -39,6 +39,7 @@ public static class AiEndpoints
     {
         services.AddSingleton<AiKeyProtector>();
         services.AddSingleton<IAiClient, ClaudeAiClient>();
+        services.AddSingleton<IAiArcaCuitLookup, ScopedAiArcaCuitLookup>();
         services.AddSingleton<AiMailReader>();
         services.AddSingleton<AiSupervisor>();
         services.AddSingleton<LealControl.BuildingBlocks.Notices.INoticeProvider, AiBriefingNotices>();
@@ -66,6 +67,7 @@ public static class AiEndpoints
                 settings.MonthlyBudgetUsd,
                 settings.MailReadingEnabled,
                 settings.AutoOpportunities,
+                settings.WebCuitLookupEnabled,
                 settings.SupervisorEnabled,
                 supervisorModel = AiModels.Supervisor,
                 settings.BusinessDescription,
@@ -92,7 +94,7 @@ public static class AiEndpoints
             }
             if ((body.MailReadingEnabled || body.SupervisorEnabled) && settings.ProtectedApiKey is null)
                 return Results.BadRequest(new { error = "Cargá la clave de la API antes de activar la IA." });
-            settings.Update(body.MonthlyBudgetUsd, body.MailReadingEnabled, body.AutoOpportunities, body.SupervisorEnabled, body.BusinessDescription, now);
+            settings.Update(body.MonthlyBudgetUsd, body.MailReadingEnabled, body.AutoOpportunities, body.SupervisorEnabled, body.BusinessDescription, now, body.WebCuitLookupEnabled);
             await db.SaveChangesAsync(ct);
             return Results.NoContent();
         });

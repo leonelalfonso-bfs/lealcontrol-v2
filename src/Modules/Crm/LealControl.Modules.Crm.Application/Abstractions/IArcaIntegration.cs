@@ -12,6 +12,12 @@ public interface IArcaIntegration
         string cuit,
         CancellationToken cancellationToken = default);
 
+    Task<Result<ArcaCuitLookupResult>> LookupCuitForTenantAsync(
+        string connectionString,
+        Guid tenantId,
+        string cuit,
+        CancellationToken cancellationToken = default);
+
     Task<Result<ArcaSalesPointsDto>> ListSalesPointsAsync(CancellationToken cancellationToken = default);
 
     Task<Result<ArcaLastAuthorizedDto>> GetLastAuthorizedAsync(

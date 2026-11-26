@@ -30,6 +30,7 @@ internal sealed class CustomerConfiguration : IEntityTypeConfiguration<Customer>
         builder.Property(x => x.TaxCondition).HasConversion<string>().HasMaxLength(40);
         builder.Property(x => x.IibbRegime).HasConversion<string>().HasMaxLength(40);
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.AddedAutomatically).HasColumnName("added_automatically").HasDefaultValue(false);
 
         builder.OwnsOne(x => x.Document, document =>
         {

@@ -27,7 +27,7 @@ public sealed class AiSupervisorTests : IAsyncLifetime
         public string? LastUser;
         public string Link = "";
         public Task<AiCompletion> CompleteJsonAsync(string apiKey, string model, string system, string user,
-            IReadOnlyDictionary<string, JsonElement> schema, int maxTokens, CancellationToken ct, bool deeper = false)
+            IReadOnlyDictionary<string, JsonElement> schema, int maxTokens, CancellationToken ct, bool deeper = false, bool webSearch = false)
         {
             Calls++;
             LastUser = user;

@@ -125,6 +125,12 @@ public static class CrmEndpoints
             return result.ToHttp();
         });
 
+        customers.MapPost("/{id:guid}/mark-reviewed", async (Guid id, ISender sender, CancellationToken cancellationToken) =>
+        {
+            var result = await sender.Send(new MarkCustomerReviewedCommand(id), cancellationToken);
+            return result.ToHttp();
+        });
+
         customers.MapPost("/{id:guid}/locations", async (
             Guid id,
             AddCustomerLocationCommand body,

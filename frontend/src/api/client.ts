@@ -381,6 +381,8 @@ export const api = {
     request<CustomerDetail>("/api/v1/crm/customers", { method: "POST", body: JSON.stringify(body) }),
   updateCustomer: (id: string, body: CustomerWrite) =>
     request<CustomerDetail>(`/api/v1/crm/customers/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  markCustomerReviewed: (id: string) =>
+    request<CustomerDetail>(`/api/v1/crm/customers/${id}/mark-reviewed`, { method: "POST" }),
   updateCustomerBcra: (id: string, body: { creditRating?: string; worstSituation?: number; totalDebt?: number; rejectedChequesCount?: number; recommendation?: string }) =>
     request<CustomerDetail>(`/api/v1/crm/customers/${id}/bcra-sync`, { method: "POST", body: JSON.stringify(body) }),
   addLocation: (id: string, body: object) =>
@@ -561,7 +563,7 @@ export const api = {
   saveCommunicationSettings: (unattendedAfterHours: number) =>
     request<{ unattendedAfterHours: number }>("/api/v1/communications/settings", { method: "PUT", body: JSON.stringify({ unattendedAfterHours }) }),
   getAiSettings: () => request<import("./types").AiSettings>("/api/v1/communications/ai/settings"),
-  saveAiSettings: (body: { apiKey: string | null; monthlyBudgetUsd: number; mailReadingEnabled: boolean; autoOpportunities: boolean; supervisorEnabled: boolean; businessDescription: string }) =>
+  saveAiSettings: (body: { apiKey: string | null; monthlyBudgetUsd: number; mailReadingEnabled: boolean; autoOpportunities: boolean; webCuitLookupEnabled?: boolean; supervisorEnabled: boolean; businessDescription: string }) =>
     request<void>("/api/v1/communications/ai/settings", { method: "PUT", body: JSON.stringify(body) }),
   testAiSettings: () => request<{ ok: boolean; detail: string }>("/api/v1/communications/ai/settings/test", { method: "POST" }),
   listMailAccounts: () => request<import("./types").MailAccount[]>("/api/v1/communications/accounts"),

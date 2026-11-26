@@ -62,7 +62,8 @@ public sealed record CustomerDetailDto(
     IReadOnlyList<EquipmentDto> Equipments,
     IReadOnlyList<FiscalRateDto> FiscalRates,
     DateTime CreatedAtUtc,
-    DateTime UpdatedAtUtc);
+    DateTime UpdatedAtUtc,
+    bool AddedAutomatically = false);
 
 public sealed record AddressDto(
     string Street,
@@ -212,5 +213,6 @@ public static class CustomerMappings
             r.RetentionExclusionExpiresOn,
             r.ExclusionCertificateNumber)).ToList(),
         customer.CreatedAtUtc,
-        customer.UpdatedAtUtc);
+        customer.UpdatedAtUtc,
+        customer.AddedAutomatically);
 }

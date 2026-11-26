@@ -84,6 +84,12 @@ export function CrmHelpPage() {
             casillas genéricas como <code>info@</code>, <code>compras@</code> o <code>facturacion@</code>).
           </li>
           <li>
+            <strong>Alta automática con ARCA y filtro «A revisar»:</strong> cuando llega un pedido comercial de una empresa nueva,
+            si el mail trae CUIT (o si la IA lo encuentra en internet cuando esa opción está activa), valida los datos en el padrón
+            de ARCA y da de alta el cliente con la etiqueta <em>Cargado automáticamente</em> (siempre con condición fiscal válida).
+            Desde Clientes podés filtrar por <strong>A revisar</strong> para controlarlos antes de emitir la primera factura.
+          </li>
+          <li>
             <strong>Presupuesto sin respuesta:</strong> pasados 5 días hábiles desde que se envió, si sigue en estado Enviado
             y el cliente no escribió un mail después (en una conversación vinculada a él), el sistema crea un llamado de
             seguimiento para ese día, en la oportunidad del presupuesto. Se crea una sola vez por envío.

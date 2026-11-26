@@ -95,6 +95,7 @@ function parseCustomerRow(row: Record<string, unknown>) {
 export function CustomersPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const [onlyToReview, setOnlyToReview] = useState(false);
   const [items, setItems] = useState<CustomerSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -109,6 +110,9 @@ export function CustomersPage() {
   useEffect(() => {
     load("");
   }, []);
+
+  const toReviewCount = items.filter((c) => c.addedAutomatically).length;
+  const visibleItems = onlyToReview ? items.filter((c) => c.addedAutomatically) : items;
 
   const handleImportCustomers = async (rows: Record<string, unknown>[]) => {
     try {
@@ -187,10 +191,17 @@ export function CustomersPage() {
           value={search}
           onChange={setSearch}
           onSearch={(term) => load(term)}
-          resultCount={items.length}
+          resultCount={visibleItems.length}
           placeholder="Buscar por razón social, CUIT, email o teléfono"
           style={{ flex: "1 1 320px", maxWidth: 520 }}
         />
+        <button
+          type="button"
+          className={onlyToReview ? "btn" : "btn ghost"}
+          onClick={() => setOnlyToReview((v) => !v)}
+        >
+          A revisar{toReviewCount > 0 ? ` (${toReviewCount})` : ""}
+        </button>
       </div>
 
       <div className="card">
@@ -205,10 +216,13 @@ export function CustomersPage() {
             </tr>
           </thead>
           <tbody>
-            {items.map((c) => (
+            {visibleItems.map((c) => (
               <tr key={c.id} onClick={() => navigate(`/clientes/${c.id}`)}>
                 <td>
-                  <strong>{c.legalName}</strong>
+                  <div className="row" style={{ gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                    <strong>{c.legalName}</strong>
+                    {c.addedAutomatically && <span className="badge warn">Cargado automáticamente</span>}
+                  </div>
                   {c.tradeName && <div className="muted">{c.tradeName}</div>}
                 </td>
                 <td>
@@ -223,7 +237,11 @@ export function CustomersPage() {
             ))}
           </tbody>
         </table>
-        {items.length === 0 && <p className="pad muted">No hay resultados.</p>}
+        {visibleItems.length === 0 && (
+          <p className="pad muted">
+            {onlyToReview ? "No hay clientes pendientes de revisión." : "No hay resultados."}
+          </p>
+        )}
       </div>
     </>
   );
