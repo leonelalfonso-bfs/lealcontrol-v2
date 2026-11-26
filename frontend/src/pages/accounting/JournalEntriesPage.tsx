@@ -61,7 +61,7 @@ export function JournalEntriesPage() {
           <button type="button" className="btn ghost" onClick={() => window.print()}>
             🖨️ Imprimir / PDF
           </button>
-          <Link to="/contabilidad/asientos/nuevo" className="btn" style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)", color: "#fff", fontWeight: 700 }}>
+          <Link to="/contabilidad/asientos/nuevo" className="btn" style={{ background: "linear-gradient(135deg, var(--lc-accent), var(--lc-accent))", color: "#fff", fontWeight: 700 }}>
             ➕ Nuevo Asiento Manual
           </Link>
         </div>
@@ -148,12 +148,12 @@ export function JournalEntriesPage() {
                       {isExp && entry.lines && entry.lines.length > 0 && (
                         <tr style={{ background: "rgba(13, 148, 136, 0.03)", borderBottom: "1px solid var(--surface-border)" }}>
                           <td colSpan={8} style={{ padding: "12px 24px 18px 48px" }}>
-                            <div style={{ fontWeight: 700, fontSize: "0.85rem", marginBottom: 8, color: "#0f766e" }}>
+                            <div style={{ fontWeight: 700, fontSize: "0.85rem", marginBottom: 8, color: "var(--lc-accent-strong)" }}>
                               Detalle de Renglones Imputados:
                             </div>
-                            <table style={{ width: "100%", fontSize: "0.86rem", background: "#fff", borderRadius: 6, border: "1px solid #e2e8f0" }}>
+                            <table style={{ width: "100%", fontSize: "0.86rem", background: "var(--lc-surface)", borderRadius: 6, border: "1px solid var(--lc-line)" }}>
                               <thead>
-                                <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+                                <tr style={{ background: "var(--lc-surface-2)", borderBottom: "1px solid var(--lc-line)" }}>
                                   <th style={{ width: 120 }}>Cuenta</th>
                                   <th>Denominación</th>
                                   <th style={{ width: 160 }}>Centro Costo</th>
@@ -164,7 +164,7 @@ export function JournalEntriesPage() {
                               </thead>
                               <tbody>
                                 {entry.lines.map((l: any, idx: number) => (
-                                  <tr key={idx} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                                  <tr key={idx} style={{ borderBottom: "1px solid var(--lc-surface-2)" }}>
                                     <td><span style={{ fontWeight: 700 }}>{l.accountCode}</span></td>
                                     <td>{l.accountName}</td>
                                     <td><span className="muted">{l.costCenterCode || "—"}</span></td>

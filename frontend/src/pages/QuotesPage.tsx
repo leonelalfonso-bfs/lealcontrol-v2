@@ -302,7 +302,7 @@ export function QuotesPage() {
                               onClick={(e) => void openConvertModal(e, q.id)}
                               className="btn"
                               disabled={converting}
-                              style={{ padding: "4px 10px", fontSize: "0.75rem", background: "linear-gradient(180deg, #0284c7, #0369a1)" }}
+                              style={{ padding: "4px 10px", fontSize: "0.75rem", background: "linear-gradient(180deg, var(--lc-info), var(--lc-info))" }}
                             >
                               Convertir a Pedido
                             </button>
@@ -332,7 +332,7 @@ export function QuotesPage() {
                               type="button"
                               onClick={(e) => handleDeleteQuote(e, q.id, q.quoteNumber)}
                               className="btn ghost"
-                              style={{ padding: "4px 10px", fontSize: "0.75rem", color: "#b91c1c" }}
+                              style={{ padding: "4px 10px", fontSize: "0.75rem", color: "var(--lc-danger)" }}
                             >
                               Eliminar
                             </button>

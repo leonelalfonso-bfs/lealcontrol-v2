@@ -52,11 +52,11 @@ export function InventoryValuationCard() {
   };
 
   return (
-    <div className="card pad" style={{ border: "1px solid #b45309", background: "rgba(180, 83, 9, 0.02)" }}>
+    <div className="card pad" style={{ border: "1px solid var(--lc-warn)", background: "rgba(180, 83, 9, 0.02)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
         <div style={{ fontSize: "28px" }}>📦</div>
         <div>
-          <h3 style={{ margin: 0, color: "#92400e" }}>Existencias y costo de ventas</h3>
+          <h3 style={{ margin: 0, color: "var(--lc-warn)" }}>Existencias y costo de ventas</h3>
           <p className="muted" style={{ margin: 0, fontSize: "12px" }}>
             Stock a fin de mes al último costo de compra; la diferencia con Mercaderías va a CMV.
           </p>
@@ -122,7 +122,7 @@ export function InventoryValuationCard() {
         <button type="button" className="btn ghost" onClick={load} disabled={busy || !date}>👁️ Valuar existencias</button>
         <button type="button" className="btn" onClick={post}
           disabled={busy || !preview || preview.difference === 0 || preview.existingEntryNumber != null}
-          style={{ background: "#b45309", color: "#fff", fontWeight: 700 }}>
+          style={{ background: "var(--lc-warn)", color: "#fff", fontWeight: 700 }}>
           Registrar ajuste
         </button>
       </div>

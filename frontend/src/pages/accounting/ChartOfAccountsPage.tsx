@@ -60,7 +60,7 @@ export function ChartOfAccountsPage() {
           <Link
             to="/contabilidad/plan-cuentas/nuevo"
             className="btn"
-            style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)", color: "#fff", fontWeight: 700 }}
+            style={{ background: "linear-gradient(135deg, var(--lc-accent), var(--lc-accent))", color: "#fff", fontWeight: 700 }}
           >
             ➕ Nueva Cuenta Contable
           </Link>
@@ -79,7 +79,7 @@ export function ChartOfAccountsPage() {
             placeholder="🔍 Buscar por código o denominación de cuenta..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid #cbd5e1" }}
+            style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)" }}
           />
         </div>
 
@@ -118,7 +118,7 @@ export function ChartOfAccountsPage() {
           <div className="table-wrap">
             <table className="table" style={{ width: "100%", fontSize: "0.88rem", borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ background: "var(--surface-sunken)", borderBottom: "2px solid #cbd5e1" }}>
+                <tr style={{ background: "var(--surface-sunken)", borderBottom: "2px solid var(--lc-line-2)" }}>
                   <th style={{ width: 140 }}>Código</th>
                   <th>Denominación de la Cuenta</th>
                   <th style={{ width: 110 }}>Capítulo</th>
@@ -135,18 +135,18 @@ export function ChartOfAccountsPage() {
                   const isGroup = !acc.isDirectPosting;
 
                   return (
-                    <tr key={acc.id} style={{ background: isGroup ? "rgba(241, 245, 249, 0.5)" : "transparent", borderBottom: "1px solid #e2e8f0" }}>
-                      <td style={{ fontFamily: "monospace", fontWeight: isGroup ? 800 : 500, color: isGroup ? "#0f172a" : "#0d9488" }}>
+                    <tr key={acc.id} style={{ background: isGroup ? "rgba(241, 245, 249, 0.5)" : "transparent", borderBottom: "1px solid var(--lc-line)" }}>
+                      <td style={{ fontFamily: "monospace", fontWeight: isGroup ? 800 : 500, color: isGroup ? "var(--lc-ink)" : "var(--lc-accent-strong)" }}>
                         {acc.code}
                       </td>
                       <td>
                         <div style={{ paddingLeft: indent, display: "flex", alignItems: "center", gap: 8 }}>
                           <span>{isGroup ? "📁" : "📄"}</span>
-                          <span style={{ fontWeight: isGroup ? 800 : 500, color: isGroup ? "#0f172a" : "#334155" }}>
+                          <span style={{ fontWeight: isGroup ? 800 : 500, color: isGroup ? "var(--lc-ink)" : "var(--lc-ink-2)" }}>
                             {acc.name}
                           </span>
                           {acc.adjustsForInflation && (
-                            <span style={{ fontSize: "0.68rem", padding: "2px 6px", background: "#fef3c7", color: "#92400e", borderRadius: 4, fontWeight: 700 }}>
+                            <span style={{ fontSize: "0.68rem", padding: "2px 6px", background: "var(--lc-warn-bg)", color: "var(--lc-warn)", borderRadius: 4, fontWeight: 700 }}>
                               AxI (RT6)
                             </span>
                           )}
@@ -198,7 +198,7 @@ export function ChartOfAccountsPage() {
                             className="btn ghost compact"
                             title="Eliminar cuenta"
                             onClick={() => handleDelete(acc)}
-                            style={{ padding: "3px 8px", fontSize: "0.75rem", color: "#ef4444" }}
+                            style={{ padding: "3px 8px", fontSize: "0.75rem", color: "var(--lc-danger)" }}
                           >
                             🗑️
                           </button>

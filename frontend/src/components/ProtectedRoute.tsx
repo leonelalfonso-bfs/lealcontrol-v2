@@ -13,8 +13,8 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "var(--surface-canvas, #0f172a)",
-        color: "var(--ink, #ffffff)",
+        background: "var(--surface-canvas, var(--lc-ink))",
+        color: "var(--ink, #fff)",
         fontSize: "1rem"
       }}>
         <div style={{ textAlign: "center" }}>

@@ -441,12 +441,12 @@ export function RemitoFormPage() {
                             setItems(next);
                           }}
                           placeholder="Números de serie / lote (opcional, ej: S/N 847291)..."
-                          style={{ fontSize: "0.8rem", color: "#2563eb" }}
+                          style={{ fontSize: "0.8rem", color: "var(--lc-info)" }}
                         />
                       </div>
                     </td>
                     {orderId && (
-                      <td style={{ textAlign: "center", fontWeight: "bold", color: "#64748b" }}>
+                      <td style={{ textAlign: "center", fontWeight: "bold", color: "var(--lc-ink-3)" }}>
                         {item.orderedQty ?? item.quantity} / {item.deliveredQty ?? 0} / {item.pendingQty ?? item.quantity}
                       </td>
                     )}
@@ -520,7 +520,7 @@ export function RemitoFormPage() {
           <button
             className="btn"
             disabled={saving || orderFullyRemitted}
-            style={{ background: "linear-gradient(180deg, #2563eb, #1d4ed8)", padding: "10px 24px", fontSize: "1rem" }}
+            style={{ background: "linear-gradient(180deg, var(--lc-info), var(--lc-info))", padding: "10px 24px", fontSize: "1rem" }}
           >
             {saving ? "Emitiendo Remito…" : "🚚 Generar y Guardar Remito"}
           </button>

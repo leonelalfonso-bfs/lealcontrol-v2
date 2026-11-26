@@ -73,13 +73,13 @@ export function BcraCreditReportModal({ isOpen, cuit, customerId, customerName, 
   const getRatingBadge = (rating: string) => {
     switch (rating) {
       case "A":
-        return { bg: "#ecfdf5", border: "#10b981", text: "#047857", label: "Calificación A (Excelente)", icon: "🟢" };
+        return { bg: "var(--lc-ok-bg)", border: "var(--lc-ok)", text: "var(--lc-ok)", label: "Calificación A (Excelente)", icon: "🟢" };
       case "B":
-        return { bg: "#fefce8", border: "#eab308", text: "#854d0e", label: "Calificación B (Precaución)", icon: "🟡" };
+        return { bg: "#fefce8", border: "var(--lc-warn)", text: "#854d0e", label: "Calificación B (Precaución)", icon: "🟡" };
       case "C":
-        return { bg: "#fff7ed", border: "#f97316", text: "#9a3412", label: "Calificación C (Riesgo Alto)", icon: "🟠" };
+        return { bg: "var(--lc-warn-bg)", border: "#f97316", text: "#9a3412", label: "Calificación C (Riesgo Alto)", icon: "🟠" };
       default:
-        return { bg: "#fef2f2", border: "#ef4444", text: "#991b1b", label: "Calificación D (Crítico / No Apto)", icon: "🔴" };
+        return { bg: "var(--lc-danger-bg)", border: "var(--lc-danger)", text: "var(--lc-danger)", label: "Calificación D (Crítico / No Apto)", icon: "🔴" };
     }
   };
 
@@ -98,7 +98,7 @@ export function BcraCreditReportModal({ isOpen, cuit, customerId, customerName, 
       padding: "20px"
     }}>
       <div style={{
-        background: "#ffffff",
+        background: "var(--lc-surface)",
         borderRadius: "12px",
         width: "100%",
         maxWidth: "750px",
@@ -111,8 +111,8 @@ export function BcraCreditReportModal({ isOpen, cuit, customerId, customerName, 
         {/* Header */}
         <div style={{
           padding: "16px 20px",
-          background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
-          color: "#ffffff",
+          background: "linear-gradient(135deg, var(--lc-ink) 0%, var(--lc-ink) 100%)",
+          color: "#fff",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center"
@@ -124,7 +124,7 @@ export function BcraCreditReportModal({ isOpen, cuit, customerId, customerName, 
                 Informe Crediticio BCRA (Central de Deudores)
               </h2>
             </div>
-            <div style={{ fontSize: "0.78rem", color: "#94a3b8", marginTop: "2px" }}>
+            <div style={{ fontSize: "0.78rem", color: "var(--lc-ink-3)", marginTop: "2px" }}>
               Consulta oficial del Banco Central de la República Argentina para CUIT {cuit}
             </div>
           </div>
@@ -133,7 +133,7 @@ export function BcraCreditReportModal({ isOpen, cuit, customerId, customerName, 
             style={{
               background: "rgba(255,255,255,0.2)",
               border: "none",
-              color: "#ffffff",
+              color: "#fff",
               width: "32px",
               height: "32px",
               borderRadius: "50%",
@@ -151,14 +151,14 @@ export function BcraCreditReportModal({ isOpen, cuit, customerId, customerName, 
         {/* Body */}
         <div style={{ padding: "20px", overflowY: "auto", flex: 1 }}>
           {loading && (
-            <div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
+            <div style={{ padding: "40px", textAlign: "center", color: "var(--lc-ink-3)" }}>
               <div style={{ fontSize: "2rem", marginBottom: "8px" }}>⏳</div>
               <strong>Consultando Central de Deudores del BCRA...</strong>
             </div>
           )}
 
           {error && (
-            <div style={{ background: "#fef2f2", border: "1px solid #f87171", color: "#991b1b", padding: "12px 16px", borderRadius: "8px", fontSize: "0.85rem" }}>
+            <div style={{ background: "var(--lc-danger-bg)", border: "1px solid var(--lc-danger)", color: "var(--lc-danger)", padding: "12px 16px", borderRadius: "8px", fontSize: "0.85rem" }}>
               ⚠️ {error}
             </div>
           )}
@@ -179,11 +179,11 @@ export function BcraCreditReportModal({ isOpen, cuit, customerId, customerName, 
                       <span>{badge.icon}</span>
                       <span>{badge.label}</span>
                     </div>
-                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#64748b" }}>
+                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--lc-ink-3)" }}>
                       Período BCRA: {report.period}
                     </span>
                   </div>
-                  <div style={{ fontSize: "0.85rem", color: "#1e293b", fontWeight: 600 }}>
+                  <div style={{ fontSize: "0.85rem", color: "var(--lc-ink)", fontWeight: 600 }}>
                     {report.commercialRecommendation}
                   </div>
                 </div>
@@ -191,56 +191,56 @@ export function BcraCreditReportModal({ isOpen, cuit, customerId, customerName, 
 
               {/* General Metrics Grid */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px", marginBottom: "16px" }}>
-                <div style={{ background: "#f8fafc", padding: "12px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
-                  <div style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>
+                <div style={{ background: "var(--lc-surface-2)", padding: "12px", borderRadius: "8px", border: "1px solid var(--lc-line)" }}>
+                  <div style={{ fontSize: "0.72rem", color: "var(--lc-ink-3)", fontWeight: 700, textTransform: "uppercase" }}>
                     Situación Crediticia
                   </div>
-                  <div style={{ fontSize: "1.1rem", fontWeight: 800, color: report.worstSituation === 1 ? "#047857" : "#b91c1c", marginTop: "2px" }}>
+                  <div style={{ fontSize: "1.1rem", fontWeight: 800, color: report.worstSituation === 1 ? "var(--lc-ok)" : "var(--lc-danger)", marginTop: "2px" }}>
                     Situación {report.worstSituation}
                   </div>
-                  <div style={{ fontSize: "0.72rem", color: "#475569", marginTop: "2px" }}>
+                  <div style={{ fontSize: "0.72rem", color: "var(--lc-ink-2)", marginTop: "2px" }}>
                     {report.situationDescription}
                   </div>
                 </div>
 
-                <div style={{ background: "#f8fafc", padding: "12px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
-                  <div style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>
+                <div style={{ background: "var(--lc-surface-2)", padding: "12px", borderRadius: "8px", border: "1px solid var(--lc-line)" }}>
+                  <div style={{ fontSize: "0.72rem", color: "var(--lc-ink-3)", fontWeight: 700, textTransform: "uppercase" }}>
                     Deuda Bancaria Total
                   </div>
-                  <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#0f172a", marginTop: "2px", fontFamily: "monospace" }}>
+                  <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--lc-ink)", marginTop: "2px", fontFamily: "monospace" }}>
                     $ {report.totalDebtPesos.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                   </div>
-                  <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "2px" }}>
+                  <div style={{ fontSize: "0.72rem", color: "var(--lc-ink-3)", marginTop: "2px" }}>
                     En {report.entitiesCount} entidad(es) financiera(s)
                   </div>
                 </div>
 
-                <div style={{ background: "#f8fafc", padding: "12px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
-                  <div style={{ fontSize: "0.72rem", color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>
+                <div style={{ background: "var(--lc-surface-2)", padding: "12px", borderRadius: "8px", border: "1px solid var(--lc-line)" }}>
+                  <div style={{ fontSize: "0.72rem", color: "var(--lc-ink-3)", fontWeight: 700, textTransform: "uppercase" }}>
                     Cheques Rechazados
                   </div>
-                  <div style={{ fontSize: "1.1rem", fontWeight: 800, color: report.rejectedChequesCount > 0 ? "#b91c1c" : "#047857", marginTop: "2px" }}>
+                  <div style={{ fontSize: "1.1rem", fontWeight: 800, color: report.rejectedChequesCount > 0 ? "var(--lc-danger)" : "var(--lc-ok)", marginTop: "2px" }}>
                     {report.rejectedChequesCount} cheque(s)
                   </div>
-                  <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "2px" }}>
+                  <div style={{ fontSize: "0.72rem", color: "var(--lc-ink-3)", marginTop: "2px" }}>
                     {report.rejectedChequesAmount > 0 ? `$ ${report.rejectedChequesAmount.toLocaleString("es-AR")}` : "Sin cheques sin fondos"}
                   </div>
                 </div>
               </div>
 
               {/* Entities Table */}
-              <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "8px", overflow: "hidden" }}>
-                <div style={{ background: "#f1f5f9", padding: "8px 12px", fontWeight: 700, fontSize: "0.8rem", color: "#334155" }}>
+              <div style={{ background: "var(--lc-surface)", border: "1px solid var(--lc-line)", borderRadius: "8px", overflow: "hidden" }}>
+                <div style={{ background: "var(--lc-surface-2)", padding: "8px 12px", fontWeight: 700, fontSize: "0.8rem", color: "var(--lc-ink-2)" }}>
                   Detalle de Entidades Financieras Registradas:
                 </div>
                 {report.entities.length === 0 ? (
-                  <div style={{ padding: "16px", textAlign: "center", color: "#047857", fontSize: "0.85rem" }}>
+                  <div style={{ padding: "16px", textAlign: "center", color: "var(--lc-ok)", fontSize: "0.85rem" }}>
                     ✓ No registra deuda en ninguna entidad bancaria del sistema financiero argentino.
                   </div>
                 ) : (
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
                     <thead>
-                      <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", textAlign: "left", color: "#64748b" }}>
+                      <tr style={{ background: "var(--lc-surface-2)", borderBottom: "1px solid var(--lc-line)", textAlign: "left", color: "var(--lc-ink-3)" }}>
                         <th style={{ padding: "6px 10px" }}>Entidad Financiera</th>
                         <th style={{ padding: "6px 10px", textAlign: "center" }}>Situación</th>
                         <th style={{ padding: "6px 10px", textAlign: "right" }}>Monto ($)</th>
@@ -249,16 +249,16 @@ export function BcraCreditReportModal({ isOpen, cuit, customerId, customerName, 
                     </thead>
                     <tbody>
                       {report.entities.map((ent, idx) => (
-                        <tr key={idx} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                          <td style={{ padding: "6px 10px", fontWeight: 600, color: "#1e293b" }}>{ent.entity}</td>
+                        <tr key={idx} style={{ borderBottom: "1px solid var(--lc-surface-2)" }}>
+                          <td style={{ padding: "6px 10px", fontWeight: 600, color: "var(--lc-ink)" }}>{ent.entity}</td>
                           <td style={{ padding: "6px 10px", textAlign: "center" }}>
                             <span style={{
                               padding: "2px 8px",
                               borderRadius: "10px",
                               fontSize: "0.72rem",
                               fontWeight: 700,
-                              background: ent.situation === 1 ? "#ecfdf5" : "#fef2f2",
-                              color: ent.situation === 1 ? "#047857" : "#b91c1c"
+                              background: ent.situation === 1 ? "var(--lc-ok-bg)" : "var(--lc-danger-bg)",
+                              color: ent.situation === 1 ? "var(--lc-ok)" : "var(--lc-danger)"
                             }}>
                               Sit. {ent.situation}
                             </span>
@@ -266,7 +266,7 @@ export function BcraCreditReportModal({ isOpen, cuit, customerId, customerName, 
                           <td style={{ padding: "6px 10px", textAlign: "right", fontFamily: "monospace" }}>
                             $ {(ent.amountThousands * 1000).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                           </td>
-                          <td style={{ padding: "6px 10px", textAlign: "center", color: "#64748b" }}>
+                          <td style={{ padding: "6px 10px", textAlign: "center", color: "var(--lc-ink-3)" }}>
                             {ent.daysOverdue > 0 ? `${ent.daysOverdue} días` : "Al día"}
                           </td>
                         </tr>
@@ -280,8 +280,8 @@ export function BcraCreditReportModal({ isOpen, cuit, customerId, customerName, 
         </div>
 
         {/* Footer */}
-        <div style={{ padding: "12px 20px", background: "#f8fafc", borderTop: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
-          <div style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
+        <div style={{ padding: "12px 20px", background: "var(--lc-surface-2)", borderTop: "1px solid var(--lc-line)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+          <div style={{ fontSize: "0.72rem", color: "var(--lc-ink-3)" }}>
             Fuente: Central de Deudores BCRA (Normativa Ley 25.326 de Protección de Datos Personales)
           </div>
           <div style={{ display: "flex", gap: "10px" }}>
@@ -293,7 +293,7 @@ export function BcraCreditReportModal({ isOpen, cuit, customerId, customerName, 
                 className="btn"
                 style={{
                   background: saveSuccess ? "#059669" : "linear-gradient(135deg, #0d9488, #0f766e)",
-                  color: "#ffffff",
+                  color: "#fff",
                   fontWeight: 700,
                   fontSize: "0.85rem",
                   padding: "8px 16px"
@@ -310,7 +310,7 @@ export function BcraCreditReportModal({ isOpen, cuit, customerId, customerName, 
             )}
             <button
               onClick={onClose}
-              style={{ background: "#0f172a", color: "#ffffff", border: "none", padding: "8px 18px", borderRadius: "6px", fontWeight: 700, cursor: "pointer", fontSize: "0.85rem" }}
+              style={{ background: "var(--lc-ink)", color: "#fff", border: "none", padding: "8px 18px", borderRadius: "6px", fontWeight: 700, cursor: "pointer", fontSize: "0.85rem" }}
             >
               Cerrar
             </button>

@@ -86,25 +86,25 @@ export function PurchaseRequestsPage() {
       {/* KPI Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", marginBottom: "20px" }}>
         <div className="card pad" style={{ background: "linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(217, 119, 6, 0.05))" }}>
-          <div style={{ fontSize: "0.82rem", fontWeight: "bold", color: "#b45309", textTransform: "uppercase" }}>
+          <div style={{ fontSize: "0.82rem", fontWeight: "bold", color: "var(--lc-warn)", textTransform: "uppercase" }}>
             Pendientes de Aprobación
           </div>
-          <div style={{ fontSize: "1.6rem", fontWeight: "bold", marginTop: "4px", color: "#b45309" }}>
+          <div style={{ fontSize: "1.6rem", fontWeight: "bold", marginTop: "4px", color: "var(--lc-warn)" }}>
             {pendingCount}
           </div>
         </div>
 
         <div className="card pad" style={{ background: "linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(5, 150, 105, 0.05))" }}>
-          <div style={{ fontSize: "0.82rem", fontWeight: "bold", color: "#047857", textTransform: "uppercase" }}>
+          <div style={{ fontSize: "0.82rem", fontWeight: "bold", color: "var(--lc-ok)", textTransform: "uppercase" }}>
             Aprobadas (Listas para Cotizar / OC)
           </div>
-          <div style={{ fontSize: "1.6rem", fontWeight: "bold", marginTop: "4px", color: "#047857" }}>
+          <div style={{ fontSize: "1.6rem", fontWeight: "bold", marginTop: "4px", color: "var(--lc-ok)" }}>
             {approvedCount}
           </div>
         </div>
 
         <div className="card pad" style={{ background: "linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(2, 132, 199, 0.05))" }}>
-          <div style={{ fontSize: "0.82rem", fontWeight: "bold", color: "#0369a1", textTransform: "uppercase" }}>
+          <div style={{ fontSize: "0.82rem", fontWeight: "bold", color: "var(--lc-info)", textTransform: "uppercase" }}>
             Total Solicitudes Históricas
           </div>
           <div style={{ fontSize: "1.6rem", fontWeight: "bold", marginTop: "4px" }}>
@@ -162,19 +162,19 @@ export function PurchaseRequestsPage() {
               {requests.map((r) => {
                 const priorityColor =
                   r.priority === "Urgent"
-                    ? { bg: "#fef2f2", text: "#b91c1c" }
+                    ? { bg: "var(--lc-danger-bg)", text: "var(--lc-danger)" }
                     : r.priority === "High"
-                    ? { bg: "#fffbeb", text: "#b45309" }
-                    : { bg: "#f1f5f9", text: "#475569" };
+                    ? { bg: "var(--lc-warn-bg)", text: "var(--lc-warn)" }
+                    : { bg: "var(--lc-surface-2)", text: "var(--lc-ink-2)" };
 
                 const statusBadge =
                   r.status === "Approved"
-                    ? { bg: "#ecfdf5", text: "#047857", label: "Aprobada" }
+                    ? { bg: "var(--lc-ok-bg)", text: "var(--lc-ok)", label: "Aprobada" }
                     : r.status === "Ordered"
-                    ? { bg: "#eff6ff", text: "#1d4ed8", label: "En OC" }
+                    ? { bg: "var(--lc-info-bg)", text: "var(--lc-info)", label: "En OC" }
                     : r.status === "Rejected"
-                    ? { bg: "#fef2f2", text: "#b91c1c", label: "Rechazada" }
-                    : { bg: "#fffbeb", text: "#b45309", label: "Pendiente" };
+                    ? { bg: "var(--lc-danger-bg)", text: "var(--lc-danger)", label: "Rechazada" }
+                    : { bg: "var(--lc-warn-bg)", text: "var(--lc-warn)", label: "Pendiente" };
 
                 const quoteCount = r.quotations?.length || 0;
                 const selectedQuote = r.quotations?.find((q) => q.isSelected);
@@ -182,7 +182,7 @@ export function PurchaseRequestsPage() {
                 return (
                   <tr key={r.id} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
                     <td style={{ padding: "12px 8px", fontWeight: "bold", fontFamily: "monospace" }}>
-                      <Link to={`/compras/solicitudes/${r.id}`} style={{ color: "#2563eb", textDecoration: "none" }}>
+                      <Link to={`/compras/solicitudes/${r.id}`} style={{ color: "var(--lc-info)", textDecoration: "none" }}>
                         {r.requestNumber}
                       </Link>
                     </td>
@@ -236,7 +236,7 @@ export function PurchaseRequestsPage() {
                               onClick={() => handleApprove(r.id)}
                               disabled={actionLoading}
                               className="btn"
-                              style={{ padding: "4px 8px", fontSize: "0.8rem", background: "#059669", color: "white" }}
+                              style={{ padding: "4px 8px", fontSize: "0.8rem", background: "var(--lc-ok)", color: "white" }}
                               title="Aprobar para que compras gestione la OC"
                             >
                               ✓ Aprobar
@@ -246,7 +246,7 @@ export function PurchaseRequestsPage() {
                               onClick={() => setRejectModalId(r.id)}
                               disabled={actionLoading}
                               className="btn btn-outline"
-                              style={{ padding: "4px 8px", fontSize: "0.8rem", color: "#b91c1c" }}
+                              style={{ padding: "4px 8px", fontSize: "0.8rem", color: "var(--lc-danger)" }}
                               title="Rechazar solicitud"
                             >
                               ✕
@@ -262,7 +262,7 @@ export function PurchaseRequestsPage() {
                                 : `/compras/ordenes/nueva?request_id=${r.id}`
                             }
                             className="btn"
-                            style={{ padding: "4px 8px", fontSize: "0.8rem", background: "#3b82f6", color: "white", textDecoration: "none", fontWeight: "bold" }}
+                            style={{ padding: "4px 8px", fontSize: "0.8rem", background: "var(--lc-info)", color: "white", textDecoration: "none", fontWeight: "bold" }}
                             title="Generar Orden de Compra formal"
                           >
                             📝 Generar OC
@@ -270,7 +270,7 @@ export function PurchaseRequestsPage() {
                         )}
 
                         {r.status === "Ordered" && (
-                          <span style={{ fontSize: "0.82rem", color: "#0284c7", fontWeight: "bold" }}>
+                          <span style={{ fontSize: "0.82rem", color: "var(--lc-info)", fontWeight: "bold" }}>
                             ✓ OC Generada
                           </span>
                         )}
@@ -288,7 +288,7 @@ export function PurchaseRequestsPage() {
       {rejectModalId && (
         <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
           <div className="card pad" style={{ background: "white", width: "450px", maxWidth: "90%" }}>
-            <h3 style={{ marginTop: 0, color: "#b91c1c" }}>Rechazar Solicitud de Compra</h3>
+            <h3 style={{ marginTop: 0, color: "var(--lc-danger)" }}>Rechazar Solicitud de Compra</h3>
             <p style={{ fontSize: "0.88rem", color: "var(--ink-soft)" }}>
               Por favor indique el motivo por el cual se rechaza esta solicitud:
             </p>
@@ -305,7 +305,7 @@ export function PurchaseRequestsPage() {
                 <button type="button" onClick={() => setRejectModalId(null)} className="btn btn-outline">
                   Cancelar
                 </button>
-                <button type="submit" disabled={actionLoading} className="btn" style={{ background: "#b91c1c", color: "white" }}>
+                <button type="submit" disabled={actionLoading} className="btn" style={{ background: "var(--lc-danger)", color: "white" }}>
                   Confirmar Rechazo
                 </button>
               </div>

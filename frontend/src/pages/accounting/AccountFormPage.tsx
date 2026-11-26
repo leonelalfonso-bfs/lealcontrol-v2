@@ -116,17 +116,17 @@ export function AccountFormPage() {
     <div className="page-wide" style={{ paddingBottom: 60 }}>
       {/* Breadcrumb & Header */}
       <div style={{ marginBottom: 20 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "#64748b", marginBottom: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "var(--lc-ink-3)", marginBottom: 6 }}>
           <Link to="/contabilidad" style={{ color: "inherit", textDecoration: "none" }}>Contabilidad</Link>
           <span>›</span>
           <Link to="/contabilidad/plan-cuentas" style={{ color: "inherit", textDecoration: "none" }}>Plan de Cuentas</Link>
           <span>›</span>
-          <span style={{ color: "#0d9488", fontWeight: 700 }}>{isEditing ? `Editar [${code}]` : "Nueva Cuenta"}</span>
+          <span style={{ color: "var(--lc-accent-strong)", fontWeight: 700 }}>{isEditing ? `Editar [${code}]` : "Nueva Cuenta"}</span>
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
-            <h1 style={{ margin: "0 0 4px", fontSize: "1.75rem", fontWeight: 800, color: "#0f172a" }}>
+            <h1 style={{ margin: "0 0 4px", fontSize: "1.75rem", fontWeight: 800, color: "var(--lc-ink)" }}>
               {isEditing ? `🏛️ Cuenta: ${code} - ${name}` : "➕ Nueva Cuenta Contable"}
             </h1>
             <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
@@ -143,7 +143,7 @@ export function AccountFormPage() {
               onClick={handleSubmit}
               disabled={saving}
               className="btn"
-              style={{ background: "#0d9488", color: "#fff", fontWeight: 800, padding: "8px 24px", fontSize: "0.92rem", minWidth: 160 }}
+              style={{ background: "var(--lc-accent)", color: "#fff", fontWeight: 800, padding: "8px 24px", fontSize: "0.92rem", minWidth: 160 }}
             >
               {saving ? "Guardando..." : "💾 Guardar Cuenta"}
             </button>
@@ -152,14 +152,14 @@ export function AccountFormPage() {
       </div>
 
       {error && (
-        <div className="alert" style={{ marginBottom: 20, background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", padding: "14px 18px", borderRadius: 8, fontSize: "0.92rem" }}>
+        <div className="alert" style={{ marginBottom: 20, background: "var(--lc-danger-bg)", color: "var(--lc-danger)", border: "1px solid var(--lc-danger-bg)", padding: "14px 18px", borderRadius: 8, fontSize: "0.92rem" }}>
           ⚠️ {error}
         </div>
       )}
 
       <form onSubmit={handleSubmit}>
-        <div className="card pad" style={{ marginBottom: 24, borderLeft: "5px solid #0d9488" }}>
-          <div style={{ fontWeight: 800, fontSize: "1rem", color: "#0f766e", marginBottom: 14 }}>
+        <div className="card pad" style={{ marginBottom: 24, borderLeft: "5px solid var(--lc-accent)" }}>
+          <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--lc-accent-strong)", marginBottom: 14 }}>
             1. CLASIFICACIÓN JERÁRQUICA & DENOMINACIÓN
           </div>
 
@@ -172,7 +172,7 @@ export function AccountFormPage() {
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 placeholder="ej. 1.1.02.001"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontWeight: 800, fontSize: "0.95rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontWeight: 800, fontSize: "0.95rem" }}
               />
             </div>
 
@@ -184,7 +184,7 @@ export function AccountFormPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="ej. Banco Galicia Cta Cte $ ARS"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               />
             </div>
 
@@ -193,7 +193,7 @@ export function AccountFormPage() {
               <select
                 value={accountType}
                 onChange={(e) => setAccountType(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               >
                 <option value="Asset">1. ACTIVO (Bienes y Derechos)</option>
                 <option value="Liability">2. PASIVO (Obligaciones y Deudas)</option>
@@ -215,7 +215,7 @@ export function AccountFormPage() {
                     setLevel(p.level + 1);
                   }
                 }}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               >
                 <option value="">-- Cuenta Raíz / Capítulo Principal --</option>
                 {accounts
@@ -237,15 +237,15 @@ export function AccountFormPage() {
                 max="8"
                 value={level}
                 onChange={(e) => setLevel(parseInt(e.target.value) || 1)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               />
             </div>
           </div>
         </div>
 
         {/* SECCIÓN 2: ATRIBUTOS OPERATIVOS */}
-        <div className="card pad" style={{ marginBottom: 30, borderLeft: "5px solid #3b82f6" }}>
-          <div style={{ fontWeight: 800, fontSize: "1rem", color: "#1d4ed8", marginBottom: 14 }}>
+        <div className="card pad" style={{ marginBottom: 30, borderLeft: "5px solid var(--lc-info)" }}>
+          <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--lc-info)", marginBottom: 14 }}>
             2. ATRIBUTOS OPERATIVOS & FISCALES
           </div>
 
@@ -255,7 +255,7 @@ export function AccountFormPage() {
               <select
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               >
                 <option value="ARS">ARS - Pesos Argentinos ($)</option>
                 <option value="USD">USD - Dólares Estadounidenses (U$S)</option>
@@ -303,10 +303,10 @@ export function AccountFormPage() {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            background: "#f8fafc",
+            background: "var(--lc-surface-2)",
             padding: "16px 24px",
             borderRadius: 10,
-            border: "1px solid #e2e8f0"
+            border: "1px solid var(--lc-line)"
           }}
         >
           <Link to="/contabilidad/plan-cuentas" className="btn ghost" style={{ padding: "9px 20px" }}>
@@ -316,7 +316,7 @@ export function AccountFormPage() {
             type="submit"
             disabled={saving}
             className="btn"
-            style={{ background: "#0d9488", color: "#fff", fontWeight: 800, padding: "10px 28px", fontSize: "0.95rem", minWidth: 200 }}
+            style={{ background: "var(--lc-accent)", color: "#fff", fontWeight: 800, padding: "10px 28px", fontSize: "0.95rem", minWidth: 200 }}
           >
             {saving ? "Guardando..." : "💾 Guardar Cuenta Contable"}
           </button>

@@ -105,7 +105,7 @@ export function QualityPg11R01Page() {
         <div>
           <Link to="/calidad/documentos/PG11-R01" style={{ fontSize: 13 }}>← Plantilla PG11-R01</Link>
           <h1 style={{ margin: "8px 0 0" }}>PG11-R01 · Validación del método</h1>
-          <p style={{ color: "#64748b", marginTop: 6 }}>
+          <p style={{ color: "var(--lc-ink-3)", marginTop: 6 }}>
             Informes de validación por método/IT con PDF de evidencia.
           </p>
         </div>
@@ -120,7 +120,7 @@ export function QualityPg11R01Page() {
       {(error || msg) && (
         <div
           className="card pad"
-          style={{ marginTop: 12, background: error ? "#fef2f2" : "#f0fdf4", color: error ? "#991b1b" : "#166534" }}
+          style={{ marginTop: 12, background: error ? "var(--lc-danger-bg)" : "var(--lc-ok-bg)", color: error ? "var(--lc-danger)" : "var(--lc-ok)" }}
         >
           {error || msg}
         </div>

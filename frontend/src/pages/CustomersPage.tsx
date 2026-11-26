@@ -179,8 +179,8 @@ export function CustomersPage() {
           style={{
             marginBottom: 16,
             background: "rgba(16, 185, 129, 0.12)",
-            borderColor: "#10b981",
-            color: "#065f46",
+            borderColor: "var(--lc-ok)",
+            color: "var(--lc-ok)",
             fontWeight: 600
           }}
         >

@@ -114,16 +114,16 @@ export function OrganizationPositionFormPage() {
       {/* Header */}
       <div className="page-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "#64748b", marginBottom: 6 }}>
-            <Link to="/rrhh" style={{ color: "#64748b", textDecoration: "none" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "var(--lc-ink-3)", marginBottom: 6 }}>
+            <Link to="/rrhh" style={{ color: "var(--lc-ink-3)", textDecoration: "none" }}>
               RRHH
             </Link>
             <span>›</span>
-            <Link to="/rrhh/organigrama" style={{ color: "#64748b", textDecoration: "none" }}>
+            <Link to="/rrhh/organigrama" style={{ color: "var(--lc-ink-3)", textDecoration: "none" }}>
               Organigrama & Puestos
             </Link>
             <span>›</span>
-            <span style={{ color: "#0f172a", fontWeight: 600 }}>{isEditing ? `Editar: ${title}` : "Nuevo Puesto"}</span>
+            <span style={{ color: "var(--lc-ink)", fontWeight: 600 }}>{isEditing ? `Editar: ${title}` : "Nuevo Puesto"}</span>
           </div>
           <h1 style={{ margin: 0 }}>{isEditing ? `✏️ Editar Puesto: ${title}` : "➕ Nuevo Puesto en Organigrama"}</h1>
           <p className="muted" style={{ margin: "4px 0 0 0" }}>
@@ -217,7 +217,7 @@ export function OrganizationPositionFormPage() {
         </div>
 
         {/* Tarjeta 2: Misión y Responsabilidades */}
-        <div className="card pad stack" style={{ gap: 16, borderLeft: "5px solid #3b82f6" }}>
+        <div className="card pad stack" style={{ gap: 16, borderLeft: "5px solid var(--lc-info)" }}>
           <h2 style={{ fontSize: "1.15rem", margin: 0 }}>2. Misión y Responsabilidades del Puesto</h2>
 
           <label>
@@ -244,7 +244,7 @@ export function OrganizationPositionFormPage() {
         </div>
 
         {/* Tarjeta 3: Perfil, Competencias & KPIs */}
-        <div className="card pad stack" style={{ gap: 16, borderLeft: "5px solid #10b981" }}>
+        <div className="card pad stack" style={{ gap: 16, borderLeft: "5px solid var(--lc-ok)" }}>
           <h2 style={{ fontSize: "1.15rem", margin: 0 }}>3. Perfil Requerido, Competencias y Métricas (KPIs)</h2>
 
           <div className="grid-2">

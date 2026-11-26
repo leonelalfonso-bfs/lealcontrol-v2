@@ -140,8 +140,8 @@ export function GrainContractDetailPage() {
               className="btn primary"
               onClick={() => setShowFixModal(true)}
               style={{
-                background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
-                color: "#ffffff",
+                background: "linear-gradient(135deg, var(--lc-info) 0%, var(--lc-info) 100%)",
+                color: "#fff",
                 fontWeight: 700,
                 border: "none"
               }}
@@ -154,8 +154,8 @@ export function GrainContractDetailPage() {
             className="btn primary"
             onClick={() => setShowDelModal(true)}
             style={{
-              background: "linear-gradient(135deg, #0d9488 0%, #0f766e 100%)",
-              color: "#ffffff",
+              background: "linear-gradient(135deg, var(--lc-accent) 0%, var(--lc-accent) 100%)",
+              color: "#fff",
               fontWeight: 700,
               border: "none"
             }}
@@ -176,18 +176,18 @@ export function GrainContractDetailPage() {
         <div className="card" style={{ padding: "16px" }}>
           <div style={{ fontSize: "0.78rem", color: "var(--ink-soft)", fontWeight: 700 }}>VOLUMEN TOTAL</div>
           <div style={{ fontSize: "1.3rem", fontWeight: 800 }}>{contract.totalTons.toLocaleString("es-AR")} Tn</div>
-          <div style={{ fontSize: "0.8rem", color: "#0d9488" }}>{contract.deliveredTons.toLocaleString("es-AR")} Tn entregadas ({delProg}%)</div>
+          <div style={{ fontSize: "0.8rem", color: "var(--lc-accent-strong)" }}>{contract.deliveredTons.toLocaleString("es-AR")} Tn entregadas ({delProg}%)</div>
         </div>
 
         <div className="card" style={{ padding: "16px" }}>
           <div style={{ fontSize: "0.78rem", color: "var(--ink-soft)", fontWeight: 700 }}>PRECIO / BASE</div>
           <div style={{ fontSize: "1.3rem", fontWeight: 800 }}>{contract.currency} {contract.pricePerTon.toLocaleString("es-AR")}</div>
-          <div style={{ fontSize: "0.8rem", color: "#2563eb" }}>{contract.fixedTons.toLocaleString("es-AR")} Tn fijadas ({fixProg}%)</div>
+          <div style={{ fontSize: "0.8rem", color: "var(--lc-info)" }}>{contract.fixedTons.toLocaleString("es-AR")} Tn fijadas ({fixProg}%)</div>
         </div>
 
         <div className="card" style={{ padding: "16px" }}>
           <div style={{ fontSize: "0.78rem", color: "var(--ink-soft)", fontWeight: 700 }}>COMISIÓN CORRETAJE</div>
-          <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#10b981" }}>USD {contract.brokerCommissionAmount.toLocaleString("es-AR")}</div>
+          <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "var(--lc-ok)" }}>USD {contract.brokerCommissionAmount.toLocaleString("es-AR")}</div>
           <div style={{ fontSize: "0.8rem", color: "var(--ink-soft)" }}>Tasa: {contract.brokerCommissionPercentage}%</div>
         </div>
       </div>
@@ -255,7 +255,7 @@ export function GrainContractDetailPage() {
               </div>
               <div>
                 <span style={{ color: "var(--ink-soft)" }}>Estado Operativo:</span>
-                <div><strong style={{ color: "#10b981" }}>{contract.status}</strong></div>
+                <div><strong style={{ color: "var(--lc-ok)" }}>{contract.status}</strong></div>
               </div>
               <div>
                 <span style={{ color: "var(--ink-soft)" }}>Observaciones:</span>
@@ -302,8 +302,8 @@ export function GrainContractDetailPage() {
                     <td>{del.driverName}</td>
                     <td>{(del.grossWeightKg / 1000).toFixed(2)} Tn / {(del.tareWeightKg / 1000).toFixed(2)} Tn</td>
                     <td>{del.humidityPercentage}%</td>
-                    <td><strong style={{ color: "#0d9488" }}>{del.commercialNetWeightTons.toLocaleString("es-AR")} Tn</strong></td>
-                    <td><span style={{ color: "#10b981", fontWeight: 700 }}>{del.status}</span></td>
+                    <td><strong style={{ color: "var(--lc-accent-strong)" }}>{del.commercialNetWeightTons.toLocaleString("es-AR")} Tn</strong></td>
+                    <td><span style={{ color: "var(--lc-ok)", fontWeight: 700 }}>{del.status}</span></td>
                   </tr>
                 ))}
               </tbody>
@@ -345,8 +345,8 @@ export function GrainContractDetailPage() {
                     <td>{new Date(f.fixationDateUtc).toLocaleDateString("es-AR")}</td>
                     <td><strong>{f.fixedTons.toLocaleString("es-AR")} Tn</strong></td>
                     <td>{f.currency} {f.pricePerTon.toLocaleString("es-AR")}</td>
-                    <td><strong style={{ color: "#10b981" }}>USD {f.brokerageAmount.toLocaleString("es-AR")}</strong></td>
-                    <td><span style={{ color: "#2563eb", fontWeight: 700 }}>{f.status}</span></td>
+                    <td><strong style={{ color: "var(--lc-ok)" }}>USD {f.brokerageAmount.toLocaleString("es-AR")}</strong></td>
+                    <td><span style={{ color: "var(--lc-info)", fontWeight: 700 }}>{f.status}</span></td>
                   </tr>
                 ))}
               </tbody>

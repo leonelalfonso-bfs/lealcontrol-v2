@@ -13,7 +13,7 @@ export function DirectoryHelpPage() {
           <Link to="/clientes" className="btn btn-outline">
             👥 Clientes
           </Link>
-          <Link to="/proveedores" className="btn btn-primary" style={{ background: "#0d9488" }}>
+          <Link to="/proveedores" className="btn btn-primary" style={{ background: "var(--lc-accent)" }}>
             🏭 Proveedores
           </Link>
         </div>
@@ -22,7 +22,7 @@ export function DirectoryHelpPage() {
       <div style={{ display: "grid", gap: "24px", maxWidth: "900px" }}>
         {/* Card 1: Padron ARCA / AFIP */}
         <section className="card pad stack">
-          <h2 style={{ margin: "0 0 10px 0", color: "#0d9488" }}>1. Consulta Automática al Padrón ARCA / AFIP</h2>
+          <h2 style={{ margin: "0 0 10px 0", color: "var(--lc-accent-strong)" }}>1. Consulta Automática al Padrón ARCA / AFIP</h2>
           <p>
             Agilidad y precisión fiscal al dar de alta nuevos clientes y proveedores:
           </p>
@@ -35,7 +35,7 @@ export function DirectoryHelpPage() {
 
         {/* Card 2: Plantas & Puntos de Entrega */}
         <section className="card pad stack">
-          <h2 style={{ margin: "0 0 10px 0", color: "#0d9488" }}>2. Múltiples Plantas / Sucursales por Empresa</h2>
+          <h2 style={{ margin: "0 0 10px 0", color: "var(--lc-accent-strong)" }}>2. Múltiples Plantas / Sucursales por Empresa</h2>
           <p>
             Especialmente diseñado para clientes industriales con sedes y depósitos en distintas localidades:
           </p>
@@ -47,7 +47,7 @@ export function DirectoryHelpPage() {
 
         {/* Card 3: Personas de Contacto */}
         <section className="card pad stack">
-          <h2 style={{ margin: "0 0 10px 0", color: "#0d9488" }}>3. Directorio de Contactos & Roles</h2>
+          <h2 style={{ margin: "0 0 10px 0", color: "var(--lc-accent-strong)" }}>3. Directorio de Contactos & Roles</h2>
           <p>
             Organización del organigrama de tus clientes y proveedores:
           </p>

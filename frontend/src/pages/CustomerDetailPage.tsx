@@ -174,9 +174,9 @@ export function CustomerDetailPage() {
     const due = new Date(nextDueDate);
     const now = new Date();
     const diffDays = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays < 0) return <span className="badge off" style={{ backgroundColor: "#ef4444", color: "#fff" }}>🔴 Vencido ({Math.abs(diffDays)}d)</span>;
-    if (diffDays <= 30) return <span className="badge" style={{ backgroundColor: "#f59e0b", color: "#fff" }}>🟡 Vence en {diffDays}d</span>;
-    return <span className="badge" style={{ backgroundColor: "#10b981", color: "#fff" }}>🟢 Al día ({due.toLocaleDateString()})</span>;
+    if (diffDays < 0) return <span className="badge off" style={{ backgroundColor: "var(--lc-danger)", color: "#fff" }}>🔴 Vencido ({Math.abs(diffDays)}d)</span>;
+    if (diffDays <= 30) return <span className="badge" style={{ backgroundColor: "var(--lc-warn)", color: "#fff" }}>🟡 Vence en {diffDays}d</span>;
+    return <span className="badge" style={{ backgroundColor: "var(--lc-ok)", color: "#fff" }}>🟢 Al día ({due.toLocaleDateString()})</span>;
   };
 
   return (
@@ -187,15 +187,15 @@ export function CustomerDetailPage() {
           <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", marginBottom: "4px" }}>
             <h1 style={{ margin: 0 }}>{customer.legalName}</h1>
             {isBoth ? (
-              <span style={{ padding: "4px 10px", borderRadius: "12px", background: "#dbeafe", color: "#1e40af", fontSize: "0.82rem", fontWeight: "bold", border: "1px solid #bfdbfe" }}>
+              <span style={{ padding: "4px 10px", borderRadius: "12px", background: "var(--lc-info-bg)", color: "var(--lc-info)", fontSize: "0.82rem", fontWeight: "bold", border: "1px solid var(--lc-info-bg)" }}>
                 🤝 Cliente y Proveedor
               </span>
             ) : isPureSupplier ? (
-              <span style={{ padding: "4px 10px", borderRadius: "12px", background: "#fef3c7", color: "#92400e", fontSize: "0.82rem", fontWeight: "bold", border: "1px solid #fde68a" }}>
+              <span style={{ padding: "4px 10px", borderRadius: "12px", background: "var(--lc-warn-bg)", color: "var(--lc-warn)", fontSize: "0.82rem", fontWeight: "bold", border: "1px solid var(--lc-warn-bg)" }}>
                 🏢 Proveedor Oficial
               </span>
             ) : (
-              <span style={{ padding: "4px 10px", borderRadius: "12px", background: "#ecfdf5", color: "#065f46", fontSize: "0.82rem", fontWeight: "bold", border: "1px solid #a7f3d0" }}>
+              <span style={{ padding: "4px 10px", borderRadius: "12px", background: "var(--lc-ok-bg)", color: "var(--lc-ok)", fontSize: "0.82rem", fontWeight: "bold", border: "1px solid #a7f3d0" }}>
                 👤 Cliente Comercial
               </span>
             )}
@@ -229,7 +229,7 @@ export function CustomerDetailPage() {
             type="button"
             className="btn"
             onClick={() => setShowBcraModal(true)}
-            style={{ background: "linear-gradient(135deg, #0f172a, #334155)", color: "#ffffff", fontWeight: 700 }}
+            style={{ background: "linear-gradient(135deg, var(--lc-ink), var(--lc-ink-2))", color: "#fff", fontWeight: 700 }}
           >
             🏛️ Informe BCRA
           </button>
@@ -239,7 +239,7 @@ export function CustomerDetailPage() {
             ← Volver a {returnUrl === "/directorio" ? "Directorio" : isPureSupplier ? "Proveedores" : "Clientes"}
           </Link>
           {waPhone && (
-            <button className="btn" type="button" onClick={() => openWhatsApp(waPhone)} style={{ background: "#22c55e", color: "white" }}>
+            <button className="btn" type="button" onClick={() => openWhatsApp(waPhone)} style={{ background: "var(--lc-ok)", color: "white" }}>
               💬 WhatsApp
             </button>
           )}
@@ -303,7 +303,7 @@ export function CustomerDetailPage() {
             <div className="muted" style={{ fontSize: "0.8rem", textTransform: "uppercase", fontWeight: "bold" }}>
               Oportunidades CRM
             </div>
-            <div style={{ fontSize: "1.4rem", fontWeight: "bold", color: "#2563eb", marginTop: "4px" }}>
+            <div style={{ fontSize: "1.4rem", fontWeight: "bold", color: "var(--lc-info)", marginTop: "4px" }}>
               💼 {opps.length}
             </div>
           </div>
@@ -312,8 +312,8 @@ export function CustomerDetailPage() {
             <div className="muted" style={{ fontSize: "0.8rem", textTransform: "uppercase", fontWeight: "bold" }}>
               Comprobantes de Compra
             </div>
-            <div style={{ fontSize: "0.95rem", fontWeight: "bold", color: "#047857", marginTop: "8px" }}>
-              <Link to={`/compras/facturas?search=${encodeURIComponent(customer.legalName)}`} style={{ textDecoration: "none", color: "#047857" }}>
+            <div style={{ fontSize: "0.95rem", fontWeight: "bold", color: "var(--lc-ok)", marginTop: "8px" }}>
+              <Link to={`/compras/facturas?search=${encodeURIComponent(customer.legalName)}`} style={{ textDecoration: "none", color: "var(--lc-ok)" }}>
                 📑 Ver Facturas Asociadas →
               </Link>
             </div>
@@ -405,7 +405,7 @@ export function CustomerDetailPage() {
                   <button
                     type="button"
                     onClick={() => openWhatsApp(customer.whatsApp!)}
-                    style={{ background: "none", border: "none", color: "#16a34a", cursor: "pointer", fontWeight: "bold", padding: 0 }}
+                    style={{ background: "none", border: "none", color: "var(--lc-ok)", cursor: "pointer", fontWeight: "bold", padding: 0 }}
                   >
                     💬 {customer.whatsApp}
                   </button>
@@ -449,8 +449,8 @@ export function CustomerDetailPage() {
                       <div>
                         <strong>{c.name}</strong>
                         <span className="muted" style={{ fontSize: "0.82rem", marginLeft: "6px" }}>({label(c.role)})</span>
-                        {c.isPrimary && <span style={{ marginLeft: "6px", fontSize: "0.75rem", padding: "2px 6px", borderRadius: "8px", background: "#ecfdf5", color: "#065f46", fontWeight: "bold" }}>Principal</span>}
-                        {locName && <span style={{ marginLeft: "6px", fontSize: "0.75rem", padding: "2px 6px", borderRadius: "8px", background: "#f1f5f9", color: "#475569" }}>📌 {locName}</span>}
+                        {c.isPrimary && <span style={{ marginLeft: "6px", fontSize: "0.75rem", padding: "2px 6px", borderRadius: "8px", background: "var(--lc-ok-bg)", color: "var(--lc-ok)", fontWeight: "bold" }}>Principal</span>}
+                        {locName && <span style={{ marginLeft: "6px", fontSize: "0.75rem", padding: "2px 6px", borderRadius: "8px", background: "var(--lc-surface-2)", color: "var(--lc-ink-2)" }}>📌 {locName}</span>}
                       </div>
                       {(c.whatsApp || c.phone) && (
                         <button
@@ -504,7 +504,7 @@ export function CustomerDetailPage() {
                   <button
                     type="button"
                     className="btn btn-outline"
-                    style={{ padding: "4px 10px", fontSize: "0.8rem", color: "#ef4444" }}
+                    style={{ padding: "4px 10px", fontSize: "0.8rem", color: "var(--lc-danger)" }}
                     onClick={async () => {
                       if (confirm(`¿Eliminar la planta ${l.name}?`)) {
                         await api.deleteLocation(customer.id, l.id);
@@ -543,8 +543,8 @@ export function CustomerDetailPage() {
               <div key={c.id} style={{ marginBottom: 12, padding: "14px 16px", borderRadius: 8, border: "1px solid var(--surface-border)", background: "white" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
-                    <strong style={{ fontSize: "0.95rem" }}>{c.name}</strong> ({label(c.role)}) {c.isPrimary && <span style={{ marginLeft: 6, fontSize: "0.75rem", padding: "2px 6px", borderRadius: 6, background: "#ecfdf5", color: "#065f46", fontWeight: "bold" }}>Principal</span>}
-                    {locName && <span style={{ marginLeft: 8, fontSize: "0.75rem", padding: "2px 6px", borderRadius: 6, background: "#f1f5f9", color: "#475569" }}>📌 Planta: {locName}</span>}
+                    <strong style={{ fontSize: "0.95rem" }}>{c.name}</strong> ({label(c.role)}) {c.isPrimary && <span style={{ marginLeft: 6, fontSize: "0.75rem", padding: "2px 6px", borderRadius: 6, background: "var(--lc-ok-bg)", color: "var(--lc-ok)", fontWeight: "bold" }}>Principal</span>}
+                    {locName && <span style={{ marginLeft: 8, fontSize: "0.75rem", padding: "2px 6px", borderRadius: 6, background: "var(--lc-surface-2)", color: "var(--lc-ink-2)" }}>📌 Planta: {locName}</span>}
                     <div className="muted" style={{ fontSize: "0.85rem", marginTop: 4 }}>
                       {c.email && `✉️ Email: ${c.email} `}
                       {c.phone && `| 📞 Tel: ${c.phone} `}
@@ -556,7 +556,7 @@ export function CustomerDetailPage() {
                       <button
                         type="button"
                         className="btn btn-outline"
-                        style={{ padding: "4px 10px", fontSize: "0.8rem", color: "#16a34a" }}
+                        style={{ padding: "4px 10px", fontSize: "0.8rem", color: "var(--lc-ok)" }}
                         onClick={() => openWhatsApp(c.whatsApp || c.phone || "", undefined, c.name)}
                       >
                         💬 WA
@@ -573,7 +573,7 @@ export function CustomerDetailPage() {
                     <button
                       type="button"
                       className="btn btn-outline"
-                      style={{ padding: "4px 10px", fontSize: "0.8rem", color: "#ef4444" }}
+                      style={{ padding: "4px 10px", fontSize: "0.8rem", color: "var(--lc-danger)" }}
                       onClick={async () => {
                         if (confirm(`¿Eliminar a ${c.name}?`)) {
                           await api.deleteContact(customer.id, c.id);
@@ -635,7 +635,7 @@ export function CustomerDetailPage() {
                   <button
                     type="button"
                     className="btn btn-outline"
-                    style={{ padding: "4px 10px", fontSize: "0.8rem", color: "#ef4444" }}
+                    style={{ padding: "4px 10px", fontSize: "0.8rem", color: "var(--lc-danger)" }}
                     onClick={async () => {
                       if (confirm(`¿Eliminar equipo ${eq.internalCode}?`)) {
                         await api.deleteEquipment(customer.id, eq.id);
@@ -928,7 +928,7 @@ function EquipmentForm({ customerId, locations, onCreated }: { customerId: strin
         <label>Último Service / Calibración<input type="date" value={lastCalibrationDate} onChange={(e) => setLastCalibrationDate(e.target.value)} style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} /></label>
       </div>
 
-      <div style={{ background: "#f8fafc", padding: 12, borderRadius: 8, border: "1px dashed var(--surface-border)" }}>
+      <div style={{ background: "var(--lc-surface-2)", padding: 12, borderRadius: 8, border: "1px dashed var(--surface-border)" }}>
         <strong>+ Atributos Personalizados</strong>
         <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
           <input value={customKey} onChange={(e) => setCustomKey(e.target.value)} placeholder="Nombre del campo" style={{ flex: 1, padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} />
@@ -940,7 +940,7 @@ function EquipmentForm({ customerId, locations, onCreated }: { customerId: strin
             {Object.entries(customAttributes).map(([k, v]) => (
               <span key={k} className="badge" style={{ display: "flex", gap: 6, alignItems: "center" }}>
                 {k}: {v}
-                <button type="button" style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer" }} onClick={() => removeCustomAttr(k)}>✕</button>
+                <button type="button" style={{ background: "none", border: "none", color: "var(--lc-danger)", cursor: "pointer" }} onClick={() => removeCustomAttr(k)}>✕</button>
               </span>
             ))}
           </div>
@@ -1022,7 +1022,7 @@ function RateForm({ customerId, rates, onCreated }: { customerId: string; rates:
       {hasRetentionExclusion && <label>Vencimiento retención<input type="date" value={retentionExclusionExpiresOn} onChange={(e) => setRetentionExclusionExpiresOn(e.target.value)} /></label>}
       {(hasPerceptionExclusion || hasRetentionExclusion) &&
         <label>Número de certificado<input type="text" value={exclusionCertificateNumber} onChange={(e) => setExclusionCertificateNumber(e.target.value)} /></label>}
-      {error && <p role="alert" style={{ color: "#b91c1c", gridColumn: "1 / -1", margin: 0 }}>{error}</p>}
+      {error && <p role="alert" style={{ color: "var(--lc-danger)", gridColumn: "1 / -1", margin: 0 }}>{error}</p>}
       <button className="btn btn-primary" disabled={saving}>{saving ? "Guardando…" : "Guardar alícuota"}</button>
     </form>
   );

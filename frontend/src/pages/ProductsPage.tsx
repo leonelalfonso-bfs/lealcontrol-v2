@@ -561,7 +561,7 @@ export const ProductsPage: React.FC = () => {
           justifyContent: "center",
           padding: "16px"
         }}>
-          <div className="card pad" style={{ maxWidth: "460px", width: "100%", background: "#fff", borderRadius: "16px" }}>
+          <div className="card pad" style={{ maxWidth: "460px", width: "100%", background: "var(--lc-surface)", borderRadius: "16px" }}>
             <h3>Nueva Categoría de Catálogo</h3>
             <form onSubmit={handleCreateCategory} className="stack" style={{ marginTop: "16px" }}>
               <label>
@@ -619,7 +619,7 @@ export const ProductsPage: React.FC = () => {
           justifyContent: "center",
           padding: "16px"
         }}>
-          <div className="card pad" style={{ maxWidth: "560px", width: "100%", background: "#fff", borderRadius: "16px", boxShadow: "0 20px 40px rgba(0,0,0,0.25)" }}>
+          <div className="card pad" style={{ maxWidth: "560px", width: "100%", background: "var(--lc-surface)", borderRadius: "16px", boxShadow: "0 20px 40px rgba(0,0,0,0.25)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
               <span style={{ fontSize: "1.6rem" }}>{importStatus.failed === 0 ? "🎉" : "📋"}</span>
               <div>
@@ -634,21 +634,21 @@ export const ProductsPage: React.FC = () => {
 
             <div style={{ display: "flex", gap: "12px", marginBottom: "16px" }}>
               <div style={{ flex: 1, padding: "12px", borderRadius: "10px", background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.3)", textAlign: "center" }}>
-                <div style={{ fontSize: "1.4rem", fontWeight: 900, color: "#059669" }}>{importStatus.success}</div>
-                <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#065f46" }}>Productos Importados</div>
+                <div style={{ fontSize: "1.4rem", fontWeight: 900, color: "var(--lc-ok)" }}>{importStatus.success}</div>
+                <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--lc-ok)" }}>Productos Importados</div>
               </div>
               {importStatus.failed > 0 && (
                 <div style={{ flex: 1, padding: "12px", borderRadius: "10px", background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.3)", textAlign: "center" }}>
-                  <div style={{ fontSize: "1.4rem", fontWeight: 900, color: "#dc2626" }}>{importStatus.failed}</div>
-                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#991b1b" }}>Filas con Observación</div>
+                  <div style={{ fontSize: "1.4rem", fontWeight: 900, color: "var(--lc-danger)" }}>{importStatus.failed}</div>
+                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--lc-danger)" }}>Filas con Observación</div>
                 </div>
               )}
             </div>
 
             {importStatus.errors.length > 0 && (
-              <div style={{ maxHeight: "180px", overflowY: "auto", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "10px 14px", marginBottom: "16px" }}>
-                <div style={{ fontWeight: 800, fontSize: "0.8rem", color: "#64748b", marginBottom: "6px" }}>DETALLE DE OBSERVACIONES:</div>
-                <ul style={{ margin: 0, paddingLeft: "16px", fontSize: "0.82rem", color: "#dc2626" }}>
+              <div style={{ maxHeight: "180px", overflowY: "auto", background: "var(--lc-surface-2)", border: "1px solid var(--lc-line)", borderRadius: "8px", padding: "10px 14px", marginBottom: "16px" }}>
+                <div style={{ fontWeight: 800, fontSize: "0.8rem", color: "var(--lc-ink-3)", marginBottom: "6px" }}>DETALLE DE OBSERVACIONES:</div>
+                <ul style={{ margin: 0, paddingLeft: "16px", fontSize: "0.82rem", color: "var(--lc-danger)" }}>
                   {importStatus.errors.map((err, idx) => (
                     <li key={idx} style={{ marginBottom: "4px" }}>{err}</li>
                   ))}

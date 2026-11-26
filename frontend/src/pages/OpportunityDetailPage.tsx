@@ -152,11 +152,11 @@ export function OpportunityDetailPage() {
           <h1>{opportunity.title}</h1>
           <p className="muted">
             {customerName ? (
-              <Link to={`/clientes/${opportunity.customerId}`} style={{ fontWeight: 600, color: "#0d9488" }}>
+              <Link to={`/clientes/${opportunity.customerId}`} style={{ fontWeight: 600, color: "var(--lc-accent-strong)" }}>
                 🏢 {customerName}
               </Link>
             ) : (
-              <span style={{ color: "#f59e0b" }}>⚠️ Cliente pendiente de vincular</span>
+              <span style={{ color: "var(--lc-warn)" }}>⚠️ Cliente pendiente de vincular</span>
             )}
           </p>
         </div>
@@ -179,7 +179,7 @@ export function OpportunityDetailPage() {
             <button
               type="button"
               className="btn btn-outline"
-              style={{ color: "#d97706", borderColor: "#f59e0b" }}
+              style={{ color: "var(--lc-warn)", borderColor: "var(--lc-warn)" }}
               onClick={() => {
                 setTargetStage("Negotiation");
                 setShowStageModal(true);
@@ -191,7 +191,7 @@ export function OpportunityDetailPage() {
             <button
               type="button"
               className="btn btn-outline"
-              style={{ color: "#d97706", borderColor: "#f59e0b" }}
+              style={{ color: "var(--lc-warn)", borderColor: "var(--lc-warn)" }}
               onClick={() => {
                 setTargetStage("Discovery");
                 setShowStageModal(true);
@@ -212,7 +212,7 @@ export function OpportunityDetailPage() {
       {error && <div className="alert">{error}</div>}
 
       {isClosed && (
-        <div className="hint" style={{ background: "#ecfdf5", color: "#065f46", border: "1px solid #34d399", marginBottom: 12 }}>
+        <div className="hint" style={{ background: "var(--lc-ok-bg)", color: "var(--lc-ok)", border: "1px solid #34d399", marginBottom: 12 }}>
           Esta oportunidad está <strong>{label(opportunity.stage)}</strong> y quedó bloqueada para edición comercial.
           Podés consultar el historial; para volver a editar usá <strong>Reabrir oportunidad</strong> con un motivo.
         </div>
@@ -307,12 +307,12 @@ export function OpportunityDetailPage() {
               </button>
             </div>
             {isClosed && (
-              <div className="hint" style={{ background: "#f8fafc", color: "#475569", border: "1px solid #cbd5e1" }}>
+              <div className="hint" style={{ background: "var(--lc-surface-2)", color: "var(--lc-ink-2)", border: "1px solid var(--lc-line-2)" }}>
                 No se pueden crear ni editar presupuestos mientras la oportunidad esté cerrada.
               </div>
             )}
             {!opportunity.customerId && !isClosed && (
-              <div className="hint" style={{ background: "#fef3c7", color: "#92400e", border: "1px solid #f59e0b" }}>
+              <div className="hint" style={{ background: "var(--lc-warn-bg)", color: "var(--lc-warn)", border: "1px solid var(--lc-warn)" }}>
                 ⚠️ Vinculá un cliente antes de preparar la propuesta formal.
               </div>
             )}

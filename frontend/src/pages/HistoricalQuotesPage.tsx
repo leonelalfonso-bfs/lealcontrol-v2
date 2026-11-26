@@ -97,8 +97,8 @@ export function HistoricalQuoteDetailPage() {
     </div>
     {error && <div className="alert">{error}</div>}
     <article id="historical-quote-sheet" className="card pad" style={{ maxWidth: 1000, margin: "0 auto", background: "white", color: "#182434" }}>
-      <header style={{ borderBottom: "2px solid #206bc4", paddingBottom: 16, marginBottom: 20 }}>
-        <strong style={{ color: "#206bc4" }}>PRESUPUESTO HISTÓRICO</strong>
+      <header style={{ borderBottom: "2px solid var(--lc-info)", paddingBottom: 16, marginBottom: 20 }}>
+        <strong style={{ color: "var(--lc-info)" }}>PRESUPUESTO HISTÓRICO</strong>
         <h2 style={{ margin: "8px 0" }}>{quote.quoteNumber} · revisión {quote.revision}</h2>
         <small>Reproducción de los datos guardados en el ERP anterior. Documento de consulta; no editable.</small>
       </header>

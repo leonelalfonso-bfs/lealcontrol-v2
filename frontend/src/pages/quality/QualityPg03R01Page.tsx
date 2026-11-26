@@ -199,12 +199,12 @@ export function QualityPg03R01Page() {
         <div>
           <Link to="/calidad/documentos/PG03-R01" style={{ fontSize: 13 }}>← Plantilla PG03-R01</Link>
           <h1 style={{ margin: "8px 0 0" }}>PG03-R01 · Seguimiento de quejas</h1>
-          <p style={{ color: "#64748b", marginTop: 6, maxWidth: 720 }}>
+          <p style={{ color: "var(--lc-ink-3)", marginTop: 6, maxWidth: 720 }}>
             Cada queja se <strong>genera en el sistema</strong> (número QJ-AAAA-NNNN, plazos SLA y workflow).
             El PDF de evidencia es opcional; el registro no es un Word subido.
           </p>
           {overdueOpen > 0 && (
-            <p style={{ color: "#b91c1c", fontWeight: 700, marginTop: 8 }}>
+            <p style={{ color: "var(--lc-danger)", fontWeight: 700, marginTop: 8 }}>
               {overdueOpen} queja(s) abierta(s) fuera de plazo
             </p>
           )}
@@ -247,7 +247,7 @@ export function QualityPg03R01Page() {
       {(error || msg) && (
         <div
           className="card pad"
-          style={{ marginTop: 12, background: error ? "#fef2f2" : "#f0fdf4", color: error ? "#991b1b" : "#166534" }}
+          style={{ marginTop: 12, background: error ? "var(--lc-danger-bg)" : "var(--lc-ok-bg)", color: error ? "var(--lc-danger)" : "var(--lc-ok)" }}
         >
           {error || msg}
         </div>
@@ -329,7 +329,7 @@ export function QualityPg03R01Page() {
                       key={r.id}
                       style={{
                         cursor: "pointer",
-                        background: selectedId === r.id ? "#ecfeff" : r.isOverdue ? "#fef2f2" : undefined
+                        background: selectedId === r.id ? "#ecfeff" : r.isOverdue ? "var(--lc-danger-bg)" : undefined
                       }}
                       onClick={() => setSelectedId(r.id)}
                     >
@@ -357,9 +357,9 @@ export function QualityPg03R01Page() {
           ) : (
             <>
               <h3 style={{ marginTop: 0 }}>{selected.number}</h3>
-              <p style={{ marginTop: 0, color: "#64748b", fontSize: 13 }}>
+              <p style={{ marginTop: 0, color: "var(--lc-ink-3)", fontSize: 13 }}>
                 {statusLabel(selected.status)} · {labelOf(COMPLAINT_CHANNEL, selected.channel)} · {selected.partyName}
-                {selected.isOverdue ? <span style={{ color: "#b91c1c", fontWeight: 700 }}> · Fuera de plazo</span> : null}
+                {selected.isOverdue ? <span style={{ color: "var(--lc-danger)", fontWeight: 700 }}> · Fuera de plazo</span> : null}
               </p>
               <p style={{ marginBottom: 12 }}>
                 <Link className="btn btn-outline compact" to={`/calidad/registros/quejas/${selected.id}/pdf`}>
@@ -455,7 +455,7 @@ export function QualityPg03R01Page() {
               )}
 
               {!editable && (
-                <div style={{ fontSize: 13, color: "#64748b" }}>
+                <div style={{ fontSize: 13, color: "var(--lc-ink-3)" }}>
                   <div><strong>Validación:</strong> {selected.validationNotes || "—"}</div>
                   <div style={{ marginTop: 8 }}><strong>Investigación:</strong> {selected.investigation || "—"}</div>
                   <div style={{ marginTop: 8 }}><strong>Acciones:</strong> {selected.actions || "—"}</div>
@@ -470,7 +470,7 @@ export function QualityPg03R01Page() {
                 </p>
               )}
 
-              <div style={{ marginTop: 16, fontSize: 12, color: "#64748b" }}>
+              <div style={{ marginTop: 16, fontSize: 12, color: "var(--lc-ink-3)" }}>
                 SLA: registro {new Date(selected.registerDueAt).toLocaleDateString("es-AR")} ·
                 validación {new Date(selected.validateDueAt).toLocaleDateString("es-AR")} ·
                 investigación {new Date(selected.investigateDueAt).toLocaleDateString("es-AR")} ·

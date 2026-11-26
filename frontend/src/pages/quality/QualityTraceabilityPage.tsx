@@ -5,10 +5,10 @@ import type { QualityCalibrationCertificate } from "../../api/types/quality";
 
 const day = (iso?: string | null) => (iso ? iso.slice(0, 10).split("-").reverse().join("/") : "—");
 const STATUS: Record<QualityCalibrationCertificate["status"], { label: string; bg: string; color: string }> = {
-  Vigente: { label: "Vigente", bg: "#dcfce7", color: "#166534" },
-  PorVencer: { label: "Vence en menos de 60 días", bg: "#fef3c7", color: "#92400e" },
-  Vencido: { label: "Vencido", bg: "#fee2e2", color: "#991b1b" },
-  SinVencimiento: { label: "Sin vencimiento", bg: "#f1f5f9", color: "#475569" }
+  Vigente: { label: "Vigente", bg: "var(--lc-ok-bg)", color: "var(--lc-ok)" },
+  PorVencer: { label: "Vence en menos de 60 días", bg: "var(--lc-warn-bg)", color: "var(--lc-warn)" },
+  Vencido: { label: "Vencido", bg: "var(--lc-danger-bg)", color: "var(--lc-danger)" },
+  SinVencimiento: { label: "Sin vencimiento", bg: "var(--lc-surface-2)", color: "var(--lc-ink-2)" }
 };
 const SOURCE: Record<string, string> = { StandardWeight: "Pesa", Instrument: "Termómetro" };
 const emptyForm = { number: "", laboratory: "", calibrationDate: "", expirationDate: "", notes: "" };

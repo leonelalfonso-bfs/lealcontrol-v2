@@ -68,10 +68,10 @@ export function TechnicalDetailEditor({ value, onChange }: Props) {
         className="tech-detail-editor"
         style={{
           minHeight: 320,
-          border: "1px solid #cbd5e1",
+          border: "1px solid var(--lc-line-2)",
           borderRadius: 8,
           padding: "12px 14px",
-          background: "#fff",
+          background: "var(--lc-surface)",
           lineHeight: 1.45,
           outline: "none"
         }}

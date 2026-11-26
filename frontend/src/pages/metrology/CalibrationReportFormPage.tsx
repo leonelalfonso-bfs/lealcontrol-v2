@@ -797,7 +797,7 @@ export function CalibrationReportFormPage() {
     return (
       <div style={{ background: "rgba(0,0,0,0.015)", border: "1px solid var(--surface-border)", borderRadius: 8, padding: 10, marginBottom: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, borderBottom: "1px solid rgba(0,0,0,0.06)", paddingBottom: 6 }}>
-          <strong style={{ fontSize: "0.86rem", color: "#0f766e" }}>{title}</strong>
+          <strong style={{ fontSize: "0.86rem", color: "var(--lc-accent-strong)" }}>{title}</strong>
           <span className="muted" style={{ fontSize: "0.78rem" }}>
             Carga Base Ref: <strong>{block.refLoad.toFixed(0)} {selectedEquipment?.unit}</strong> · EMT: <strong>±{block.targetEmt} {selectedEquipment?.unit}</strong>
           </span>
@@ -823,7 +823,7 @@ export function CalibrationReportFormPage() {
                 return (
                   <tr key={idx} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
                     <td style={{ padding: "6px 8px", fontWeight: 700 }}>
-                      Pasada #{idx + 1} {idx === 0 && <span style={{ fontSize: "0.68rem", color: "#0284c7" }}>(Ref.)</span>}
+                      Pasada #{idx + 1} {idx === 0 && <span style={{ fontSize: "0.68rem", color: "var(--lc-info)" }}>(Ref.)</span>}
                     </td>
                     <td style={{ padding: "4px 8px", textAlign: "right" }}>
                       <input
@@ -902,7 +902,7 @@ export function CalibrationReportFormPage() {
                             className="badge ok"
                             style={{
                               background: "rgba(16, 185, 129, 0.15)",
-                              color: "#065f46",
+                              color: "var(--lc-ok)",
                               fontWeight: 700,
                               padding: "2px 8px",
                               borderRadius: 10,
@@ -916,7 +916,7 @@ export function CalibrationReportFormPage() {
                             className="badge prio-high"
                             style={{
                               background: "rgba(239, 68, 68, 0.15)",
-                              color: "#b91c1c",
+                              color: "var(--lc-danger)",
                               fontWeight: 700,
                               padding: "2px 8px",
                               borderRadius: 10,
@@ -954,7 +954,7 @@ export function CalibrationReportFormPage() {
         >
           <div>
             <strong>Desviación Estándar (s):</strong>{" "}
-            <span style={{ color: "#0284c7", fontWeight: 700 }}>
+            <span style={{ color: "var(--lc-info)", fontWeight: 700 }}>
               {block.stdDev.toFixed(2)} {selectedEquipment?.unit}
             </span>
           </div>
@@ -975,7 +975,7 @@ export function CalibrationReportFormPage() {
                 padding: "3px 10px",
                 borderRadius: 12,
                 background: block.conform ? "rgba(16, 185, 129, 0.18)" : "rgba(239, 68, 68, 0.18)",
-                color: block.conform ? "#065f46" : "#b91c1c"
+                color: block.conform ? "var(--lc-ok)" : "var(--lc-danger)"
               }}
             >
               {block.conform ? "CUMPLE" : "NO CUMPLE"}
@@ -1007,7 +1007,7 @@ export function CalibrationReportFormPage() {
       {(supersedesReportIdParam || amendmentReasonParam) && (
         <div
           className="card pad"
-          style={{ marginBottom: 16, background: "#fff7ed", border: "1px solid #fdba74", color: "#9a3412" }}
+          style={{ marginBottom: 16, background: "var(--lc-warn-bg)", border: "1px solid #fdba74", color: "#9a3412" }}
         >
           <strong>Enmienda PG09 R2</strong>
           {amendmentReasonParam && <> — Motivo: {amendmentReasonParam}</>}
@@ -1077,7 +1077,7 @@ export function CalibrationReportFormPage() {
                 <span
                   style={{
                     fontSize: "0.72rem",
-                    background: "#10b981",
+                    background: "var(--lc-ok)",
                     color: "#fff",
                     padding: "1px 6px",
                     borderRadius: 10,
@@ -1269,7 +1269,7 @@ export function CalibrationReportFormPage() {
                     Resolución SCyNEI 2307/80: Rango máximo de puesta a cero $\le 4\%$ de la Capacidad Máxima ($\pm 2\%$ Max). Error a cero $\le \pm 0.25e$.
                   </p>
                 </div>
-                <span className="tag" style={{ background: "rgba(13, 148, 136, 0.1)", color: "#0d9488", fontWeight: 700 }}>
+                <span className="tag" style={{ background: "rgba(13, 148, 136, 0.1)", color: "var(--lc-accent-strong)", fontWeight: 700 }}>
                   Límite 4% Max = {zero4PctLimit.toLocaleString("es-AR")} {selectedEquipment?.unit || "kg"}
                 </span>
               </div>
@@ -1277,7 +1277,7 @@ export function CalibrationReportFormPage() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 14, marginBottom: 14 }}>
                 {/* Test 1: Puesta a cero dentro del rango */}
                 <div style={{ background: "rgba(0,0,0,0.02)", padding: 12, borderRadius: 8, border: "1px solid var(--surface-border)" }}>
-                  <strong style={{ fontSize: "0.85rem", color: "#0f766e" }}>A. Puesta a Cero Dentro del Rango</strong>
+                  <strong style={{ fontSize: "0.85rem", color: "var(--lc-accent-strong)" }}>A. Puesta a Cero Dentro del Rango</strong>
                   <p className="muted" style={{ fontSize: "0.74rem", margin: "4px 0 8px" }}>
                     Carga aplicada menor al 4% Max donde el dispositivo debe poner a cero efectivamente.
                   </p>
@@ -1302,7 +1302,7 @@ export function CalibrationReportFormPage() {
 
                 {/* Test 2: Bloqueo fuera del rango del 4% */}
                 <div style={{ background: "rgba(0,0,0,0.02)", padding: 12, borderRadius: 8, border: "1px solid var(--surface-border)" }}>
-                  <strong style={{ fontSize: "0.85rem", color: "#0f766e" }}>B. Bloqueo Fuera del Rango (&gt; 4% Max)</strong>
+                  <strong style={{ fontSize: "0.85rem", color: "var(--lc-accent-strong)" }}>B. Bloqueo Fuera del Rango (&gt; 4% Max)</strong>
                   <p className="muted" style={{ fontSize: "0.74rem", margin: "4px 0 8px" }}>
                     Carga superior a {zero4PctLimit} {selectedEquipment?.unit} donde el indicador DEBE bloquear la puesta a cero.
                   </p>
@@ -1355,7 +1355,7 @@ export function CalibrationReportFormPage() {
                     Al aplicar suavemente una sobrecarga adicional de $1.4 \times d$ ({Math.round(dInterval * 1.4 * 100) / 100} {selectedEquipment?.unit}) sobre el receptor en equilibrio, la indicación debe variar al menos $1 \times d$ ({dInterval} {selectedEquipment?.unit}).
                   </p>
                 </div>
-                <span className="tag" style={{ background: "rgba(13, 148, 136, 0.1)", color: "#0d9488", fontWeight: 700 }}>
+                <span className="tag" style={{ background: "rgba(13, 148, 136, 0.1)", color: "var(--lc-accent-strong)", fontWeight: 700 }}>
                   Sobrecarga = 1.4 × d = {Math.round(dInterval * 1.4 * 100) / 100} {selectedEquipment?.unit || "kg"}
                 </span>
               </div>
@@ -1432,7 +1432,7 @@ export function CalibrationReportFormPage() {
                               style={{ width: 100, textAlign: "right", fontWeight: 700 }}
                             />
                           </td>
-                          <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "monospace", fontWeight: 700, color: comp.ok ? "#047857" : "#b91c1c" }}>
+                          <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "monospace", fontWeight: 700, color: comp.ok ? "var(--lc-ok)" : "var(--lc-danger)" }}>
                             +{comp.delta.toFixed(0)} {selectedEquipment?.unit}
                           </td>
                           <td style={{ padding: "6px 8px", textAlign: "center", fontFamily: "monospace" }}>
@@ -1535,7 +1535,7 @@ export function CalibrationReportFormPage() {
             {/* Low Load Section */}
             {(fidelityTab === "low" || fidelityTab === "both") && (
               <div style={{ marginBottom: 16 }}>
-                <h4 style={{ margin: "0 0 8px", color: "#0f766e", fontSize: "0.95rem" }}>
+                <h4 style={{ margin: "0 0 8px", color: "var(--lc-accent-strong)", fontSize: "0.95rem" }}>
                   🔹 Fidelidad en Baja Carga (~30% / 12.5t)
                 </h4>
                 {truckFidelity ? (
@@ -1569,7 +1569,7 @@ export function CalibrationReportFormPage() {
             {/* High Load Section */}
             {(fidelityTab === "high" || fidelityTab === "both") && (
               <div style={{ marginBottom: 14 }}>
-                <h4 style={{ margin: "0 0 8px", color: "#0f766e", fontSize: "0.95rem" }}>
+                <h4 style={{ margin: "0 0 8px", color: "var(--lc-accent-strong)", fontSize: "0.95rem" }}>
                   🔸 Fidelidad en Alta Carga (~60%-100% / 25t)
                 </h4>
                 {truckFidelity ? (
@@ -1638,7 +1638,7 @@ export function CalibrationReportFormPage() {
                   Carga de ensayo: <strong>{eccTestLoad} {selectedEquipment?.unit}</strong> ({eccentricityConfig?.description})
                 </p>
               </div>
-              <span className="tag" style={{ background: "rgba(13, 148, 136, 0.1)", color: "#0d9488", fontWeight: 700 }}>
+              <span className="tag" style={{ background: "rgba(13, 148, 136, 0.1)", color: "var(--lc-accent-strong)", fontWeight: 700 }}>
                 EMT = ±{eccentricityConfig?.emt || 20} {selectedEquipment?.unit || "kg"}
               </span>
             </div>
@@ -1653,19 +1653,19 @@ export function CalibrationReportFormPage() {
                   onChange={(e) => setEccTestLoad(e.target.value)}
                 />
               </label>
-              <div style={{ border: "1px dashed #94a3b8", borderRadius: 10, padding: 10, background: "rgba(59,130,246,0.03)" }}>
+              <div style={{ border: "1px dashed var(--lc-ink-3)", borderRadius: 10, padding: 10, background: "rgba(59,130,246,0.03)" }}>
                 <strong style={{ fontSize: "0.8rem" }}>Croquis de enumeración de apoyos · frente / acceso ↑</strong>
                 {/* Fila superior (enfrente: 2, 4, 6, 8...) */}
                 <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.ceil(eccPositions.length / 2)}, minmax(36px, 1fr))`, gap: 6, marginTop: 8 }}>
                   {Array.from({ length: Math.ceil(eccPositions.length / 2) }, (_, i) => 2 * (i + 1))
                     .filter((num) => num <= eccPositions.length)
                     .map((num) => (
-                      <span key={`top-${num}`} className="tag" style={{ textAlign: "center", fontWeight: 700, background: "#e0f2fe", color: "#0369a1" }}>
+                      <span key={`top-${num}`} className="tag" style={{ textAlign: "center", fontWeight: 700, background: "var(--lc-info-bg)", color: "var(--lc-info)" }}>
                         {num}
                       </span>
                     ))}
                 </div>
-                <div style={{ height: 18, borderLeft: "2px solid #64748b", borderRight: "2px solid #64748b", margin: "5px 10px", textAlign: "center", fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>
+                <div style={{ height: 18, borderLeft: "2px solid var(--lc-ink-3)", borderRight: "2px solid var(--lc-ink-3)", margin: "5px 10px", textAlign: "center", fontSize: "0.68rem", color: "var(--lc-ink-3)", fontWeight: 600 }}>
                   PLATAFORMA
                 </div>
                 {/* Fila inferior (frente / acceso: 1, 3, 5, 7...) */}
@@ -1673,7 +1673,7 @@ export function CalibrationReportFormPage() {
                   {Array.from({ length: Math.ceil(eccPositions.length / 2) }, (_, i) => 2 * i + 1)
                     .filter((num) => num <= eccPositions.length)
                     .map((num) => (
-                      <span key={`bottom-${num}`} className="tag" style={{ textAlign: "center", fontWeight: 700, background: "#e0f2fe", color: "#0369a1" }}>
+                      <span key={`bottom-${num}`} className="tag" style={{ textAlign: "center", fontWeight: 700, background: "var(--lc-info-bg)", color: "var(--lc-info)" }}>
                         {num}
                       </span>
                     ))}
@@ -1761,7 +1761,7 @@ export function CalibrationReportFormPage() {
                 >
                   + Agregar Renglón
                 </button>
-                <span className="tag" style={{ background: "rgba(13, 148, 136, 0.1)", color: "#0d9488", fontWeight: 700 }}>
+                <span className="tag" style={{ background: "rgba(13, 148, 136, 0.1)", color: "var(--lc-accent-strong)", fontWeight: 700 }}>
                   {linRows.length} Renglones de Carga
                 </span>
               </div>
@@ -1770,7 +1770,7 @@ export function CalibrationReportFormPage() {
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
                 <thead>
-                  <tr style={{ background: "#f8fafc", borderBottom: "2px solid rgba(0,0,0,0.06)", textAlign: "left" }}>
+                  <tr style={{ background: "var(--lc-surface-2)", borderBottom: "2px solid rgba(0,0,0,0.06)", textAlign: "left" }}>
                     <th style={{ padding: "8px 6px", width: 90 }}>Pesas</th>
                     <th style={{ padding: "8px 6px", width: 95 }}>Carga Auxiliar</th>
                     <th style={{ padding: "8px 6px", width: 110 }}>Lectura Ascendente</th>
@@ -1891,7 +1891,7 @@ export function CalibrationReportFormPage() {
                         <td style={{ padding: "4px 6px", textAlign: "right", fontFamily: "monospace", fontWeight: 700, color: comp.descError === null ? "inherit" : descOk ? "#047857" : "#b91c1c" }}>
                           {descErrStr}
                         </td>
-                        <td style={{ padding: "4px 6px", textAlign: "center", fontFamily: "monospace", fontWeight: 700, color: "#0f766e" }}>
+                        <td style={{ padding: "4px 6px", textAlign: "center", fontFamily: "monospace", fontWeight: 700, color: "var(--lc-accent-strong)" }}>
                           {comp.hasAnyData || comp.totalLoad > 0 ? `±${comp.emt}` : "—"}
                         </td>
                         <td style={{ padding: "4px 6px", textAlign: "center" }}>
@@ -2038,7 +2038,7 @@ export function CalibrationReportFormPage() {
                           <button
                             type="button"
                             className="btn ghost compact"
-                            style={{ color: "#dc2626", padding: "4px 6px" }}
+                            style={{ color: "var(--lc-danger)", padding: "4px 6px" }}
                             title="Eliminar precinto"
                             onClick={() => {
                               setSeals(seals.filter((_, i) => i !== idx));
@@ -2112,7 +2112,7 @@ export function CalibrationReportFormPage() {
               <h3 style={{ margin: "0 0 12px 0", fontSize: "1.1rem" }}>7. Dictamen Final y Emisión</h3>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
                 <div>
-                  <div style={{ fontSize: "1.3rem", fontWeight: 800, color: allAssaysPass ? "#047857" : "#b91c1c" }}>
+                  <div style={{ fontSize: "1.3rem", fontWeight: 800, color: allAssaysPass ? "var(--lc-ok)" : "var(--lc-danger)" }}>
                     Dictamen Técnico: {finalResult.toUpperCase()}
                   </div>
                 </div>

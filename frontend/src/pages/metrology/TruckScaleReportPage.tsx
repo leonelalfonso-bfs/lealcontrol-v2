@@ -10,9 +10,9 @@ const today = () => new Date().toISOString().slice(0, 10);
 const nextYear = (iso: string) => { const d = new Date(`${iso}T00:00:00Z`); d.setUTCFullYear(d.getUTCFullYear() + 1); return d.toISOString().slice(0, 10); };
 const VERDICT: Record<TruckScaleVerdict, { text: string; color: string; bg: string }> = {
   Satisface: { text: "Satisface", color: "#2E6B1F", bg: "#E3F1DA" },
-  NoSatisface: { text: "No satisface", color: "#A1271B", bg: "#FCE8E6" },
+  NoSatisface: { text: "No satisface", color: "var(--lc-danger)", bg: "#FCE8E6" },
   NoEnsayado: { text: "No ensayado", color: "#9a5b00", bg: "#FFF1E0" },
-  NoAplica: { text: "No aplica", color: "#64748b", bg: "transparent" }
+  NoAplica: { text: "No aplica", color: "var(--lc-ink-3)", bg: "transparent" }
 };
 const INSPECTION = [
   "Estado general de la plataforma y módulos", "Topes y juego lateral / longitudinal", "Celdas de carga y soportes", "Cajas de suma y cables de señal",
@@ -247,7 +247,7 @@ export function TruckScaleReportPage() {
                       <td style={{ fontWeight: 700 }}>{num(s.load)}</td>
                       <td>{numberInput(s.ascending, (v) => updateStep(i, { ascending: v ?? 0 }))}</td>
                       <td>{numberInput(s.descending, (v) => updateStep(i, { descending: v }))}</td>
-                      <td style={{ color: r ? (r.pass ? "#2E6B1F" : "#A1271B") : undefined, fontWeight: 700 }}>{r ? `± ${num(r.mpe)} ${r.pass ? "✓" : "✗"}` : "—"}</td>
+                      <td style={{ color: r ? (r.pass ? "#2E6B1F" : "var(--lc-danger)") : undefined, fontWeight: 700 }}>{r ? `± ${num(r.mpe)} ${r.pass ? "✓" : "✗"}` : "—"}</td>
                       <td><button type="button" className="btn ghost compact" onClick={() => set({ weighing: input.weighing.filter((_, k) => k !== i) })}>✕</button></td>
                     </tr>
                   );
@@ -329,7 +329,7 @@ export function TruckScaleReportPage() {
       {evaluation && (
         <section className="card pad stack" style={{ gap: 8, position: "sticky", bottom: 0, boxShadow: "0 -4px 12px rgba(0,0,0,0.06)" }}>
           <div className="row" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-            <strong style={{ color: evaluation.conforming ? "#2E6B1F" : "#A1271B" }}>
+            <strong style={{ color: evaluation.conforming ? "#2E6B1F" : "var(--lc-danger)" }}>
               {evaluation.conforming ? "CONFORME" : "NO CONFORME"} · {evaluation.standardShort}
             </strong>
             <div className="row" style={{ gap: 6 }}>
@@ -339,7 +339,7 @@ export function TruckScaleReportPage() {
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
             {evaluation.requirements.map((r) => (
-              <span key={r.key} title={`${r.paragraph} · ${r.name}`} style={{ fontSize: "0.76rem", padding: "2px 8px", borderRadius: 10, color: VERDICT[r.verdict].color, background: VERDICT[r.verdict].bg, border: "1px solid #e2e8f0" }}>
+              <span key={r.key} title={`${r.paragraph} · ${r.name}`} style={{ fontSize: "0.76rem", padding: "2px 8px", borderRadius: 10, color: VERDICT[r.verdict].color, background: VERDICT[r.verdict].bg, border: "1px solid var(--lc-line)" }}>
                 {r.name}: {VERDICT[r.verdict].text}
               </span>
             ))}

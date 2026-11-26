@@ -124,7 +124,7 @@ export function LeadsPage() {
       </form>
 
       {conversionLead && (
-        <form className="card pad" onSubmit={convert} style={{ marginBottom: 16, borderLeft: "5px solid #0d9488" }}>
+        <form className="card pad" onSubmit={convert} style={{ marginBottom: 16, borderLeft: "5px solid var(--lc-accent)" }}>
           <div className="page-head" style={{ marginBottom: 16 }}>
             <div>
               <h3 style={{ margin: 0 }}>🏢 Convertir Prospecto en Cliente Formal</h3>

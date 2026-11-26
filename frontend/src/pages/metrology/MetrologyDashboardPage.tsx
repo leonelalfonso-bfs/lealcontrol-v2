@@ -41,7 +41,7 @@ export function MetrologyDashboardPage() {
     <div className="page-wide">
       <div className="page-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div>
-          <span className="eyebrow" style={{ color: "#0d9488", fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.08em" }}>
+          <span className="eyebrow" style={{ color: "var(--lc-accent-strong)", fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.08em" }}>
             Laboratorio de Ensayos
           </span>
           <h1 style={{ margin: "2px 0 0", fontSize: "1.75rem", fontWeight: 800 }}>
@@ -56,7 +56,7 @@ export function MetrologyDashboardPage() {
           <button type="button" className="btn ghost" onClick={loadData} title="Refrescar">
             🔄 Actualizar
           </button>
-          <Link to="/metrologia/ensayos/nuevo" className="btn" style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)", color: "#fff" }}>
+          <Link to="/metrologia/ensayos/nuevo" className="btn" style={{ background: "linear-gradient(135deg, var(--lc-accent), var(--lc-accent))", color: "#fff" }}>
             ➕ Nuevo Ensayo
           </Link>
         </div>
@@ -64,7 +64,7 @@ export function MetrologyDashboardPage() {
 
       {/* KPI Cards */}
       <div className="kpi kpi-4" style={{ marginBottom: 24 }}>
-        <div className="card pad" style={{ borderLeft: "4px solid #0d9488" }}>
+        <div className="card pad" style={{ borderLeft: "4px solid var(--lc-accent)" }}>
           <div className="muted">Equipos Registrados</div>
           <strong style={{ fontSize: "1.8rem" }}>{totalEquipments}</strong>
           <div style={{ fontSize: "0.78rem", color: "var(--ok)", fontWeight: 700, marginTop: 4 }}>
@@ -72,7 +72,7 @@ export function MetrologyDashboardPage() {
           </div>
         </div>
 
-        <div className="card pad" style={{ borderLeft: "4px solid #f59e0b" }}>
+        <div className="card pad" style={{ borderLeft: "4px solid var(--lc-warn)" }}>
           <div className="muted">Ensayos Vencidos</div>
           <strong style={{ fontSize: "1.8rem", color: expiredEquipments > 0 ? "#dc2626" : "inherit" }}>
             {expiredEquipments}
@@ -82,18 +82,18 @@ export function MetrologyDashboardPage() {
           </div>
         </div>
 
-        <div className="card pad" style={{ borderLeft: "4px solid #3b82f6" }}>
+        <div className="card pad" style={{ borderLeft: "4px solid var(--lc-info)" }}>
           <div className="muted">Pesas Patrón</div>
           <strong style={{ fontSize: "1.8rem" }}>{totalWeights}</strong>
-          <div style={{ fontSize: "0.78rem", color: "#2563eb", fontWeight: 700, marginTop: 4 }}>
+          <div style={{ fontSize: "0.78rem", color: "var(--lc-info)", fontWeight: 700, marginTop: 4 }}>
             🛡️ {validWeights} con trazabilidad vigente
           </div>
         </div>
 
-        <div className="card pad" style={{ borderLeft: "4px solid #8b5cf6" }}>
+        <div className="card pad" style={{ borderLeft: "4px solid var(--lc-violet)" }}>
           <div className="muted">Informes de Ensayo</div>
           <strong style={{ fontSize: "1.8rem" }}>{totalReports}</strong>
-          <div style={{ fontSize: "0.78rem", color: "#7c3aed", fontWeight: 700, marginTop: 4 }}>
+          <div style={{ fontSize: "0.78rem", color: "var(--lc-violet)", fontWeight: 700, marginTop: 4 }}>
             📋 Informes técnicos emitidos
           </div>
         </div>

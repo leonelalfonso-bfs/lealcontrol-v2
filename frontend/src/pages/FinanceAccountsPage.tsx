@@ -818,7 +818,7 @@ export function FinanceAccountsPage() {
         </div>
 
         {error && (
-          <div className="alert" style={{ background: "#fee2e2", color: "#991b1b", borderColor: "#f87171", marginBottom: 16 }}>
+          <div className="alert" style={{ background: "var(--lc-danger-bg)", color: "var(--lc-danger)", borderColor: "var(--lc-danger)", marginBottom: 16 }}>
             ⚠️ {error}
           </div>
         )}
@@ -827,9 +827,9 @@ export function FinanceAccountsPage() {
           <div
             className="alert"
             style={{
-              background: "#dcfce7",
-              color: "#166534",
-              borderColor: "#86efac",
+              background: "var(--lc-ok-bg)",
+              color: "var(--lc-ok)",
+              borderColor: "var(--lc-ok-bg)",
               marginBottom: 16
             }}
           >
@@ -841,29 +841,29 @@ export function FinanceAccountsPage() {
         <div className="kpi kpi-4" style={{ marginBottom: 20 }}>
           <div className="card">
             <span className="muted">Saldo Actual en Sistema</span>
-            <h3 style={{ margin: "4px 0 0 0", color: selectedAccount.balance < 0 ? "#dc2626" : "#0f172a", fontSize: "1.35rem", fontWeight: 800 }}>
+            <h3 style={{ margin: "4px 0 0 0", color: selectedAccount.balance < 0 ? "var(--lc-danger)" : "var(--lc-ink)", fontSize: "1.35rem", fontWeight: 800 }}>
               {money(selectedAccount.balance, selectedAccount.currency)}
             </h3>
           </div>
           <div className="card">
             <span className="muted">Total Ingresos (Filtro)</span>
-            <h3 style={{ margin: "4px 0 0 0", color: "#059669", fontSize: "1.35rem", fontWeight: 800 }}>
+            <h3 style={{ margin: "4px 0 0 0", color: "var(--lc-ok)", fontSize: "1.35rem", fontWeight: 800 }}>
               +{money(filteredCredits, selectedAccount.currency)}
             </h3>
           </div>
           <div className="card">
             <span className="muted">Total Egresos (Filtro)</span>
-            <h3 style={{ margin: "4px 0 0 0", color: "#dc2626", fontSize: "1.35rem", fontWeight: 800 }}>
+            <h3 style={{ margin: "4px 0 0 0", color: "var(--lc-danger)", fontSize: "1.35rem", fontWeight: 800 }}>
               −{money(filteredDebits, selectedAccount.currency)}
             </h3>
           </div>
           <div className="card">
             <span className="muted">Clasificación de Tesorería</span>
             <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-              <span style={{ color: "#059669", fontWeight: 700, fontSize: "0.88rem" }}>
+              <span style={{ color: "var(--lc-ok)", fontWeight: 700, fontSize: "0.88rem" }}>
                 ✓ {totalConfirmed} confirmados
               </span>
-              <span style={{ color: "#b45309", fontWeight: 700, fontSize: "0.88rem" }}>
+              <span style={{ color: "var(--lc-warn)", fontWeight: 700, fontSize: "0.88rem" }}>
                 ⏳ {totalPending + totalSuggested} pendientes
               </span>
             </div>
@@ -1055,11 +1055,11 @@ export function FinanceAccountsPage() {
                         <td>
                           {titular ? (
                             <div>
-                              <strong style={{ color: "#0f172a", fontSize: "0.86rem", display: "block" }}>
+                              <strong style={{ color: "var(--lc-ink)", fontSize: "0.86rem", display: "block" }}>
                                 {titular}
                               </strong>
                               {cuit && (
-                                <small style={{ color: "#0369a1", fontSize: "0.75rem", fontFamily: "monospace", fontWeight: 600 }}>
+                                <small style={{ color: "var(--lc-info)", fontSize: "0.75rem", fontFamily: "monospace", fontWeight: 600 }}>
                                   CUIT: {cuit}
                                 </small>
                               )}
@@ -1070,7 +1070,7 @@ export function FinanceAccountsPage() {
                         </td>
                         <td>
                           {isDone ? (
-                            <span style={{ fontWeight: 600, color: "#065f46" }}>
+                            <span style={{ fontWeight: 600, color: "var(--lc-ok)" }}>
                               🏷️ {x.conceptName || "Identificado"}
                             </span>
                           ) : (
@@ -1105,7 +1105,7 @@ export function FinanceAccountsPage() {
                               className="badge ok"
                               style={{
                                 background: "rgba(14, 165, 233, 0.15)",
-                                color: "#0369a1",
+                                color: "var(--lc-info)",
                                 fontWeight: 700,
                                 padding: "2px 8px",
                                 borderRadius: 12,
@@ -1119,7 +1119,7 @@ export function FinanceAccountsPage() {
                               className="badge ok"
                               style={{
                                 background: "rgba(16, 185, 129, 0.15)",
-                                color: "#065f46",
+                                color: "var(--lc-ok)",
                                 fontWeight: 700,
                                 padding: "2px 8px",
                                 borderRadius: 12,
@@ -1133,7 +1133,7 @@ export function FinanceAccountsPage() {
                               className="badge ok"
                               style={{
                                 background: "rgba(16, 185, 129, 0.15)",
-                                color: "#065f46",
+                                color: "var(--lc-ok)",
                                 fontWeight: 700,
                                 padding: "2px 8px",
                                 borderRadius: 12,
@@ -1147,7 +1147,7 @@ export function FinanceAccountsPage() {
                               className="badge warn"
                               style={{
                                 background: "rgba(245, 158, 11, 0.15)",
-                                color: "#92400e",
+                                color: "var(--lc-warn)",
                                 fontWeight: 600,
                                 padding: "2px 8px",
                                 borderRadius: 12,
@@ -1161,7 +1161,7 @@ export function FinanceAccountsPage() {
                               className="badge off"
                               style={{
                                 background: "rgba(100, 116, 139, 0.12)",
-                                color: "#475569",
+                                color: "var(--lc-ink-2)",
                                 fontWeight: 500,
                                 padding: "2px 8px",
                                 borderRadius: 12,
@@ -1199,7 +1199,7 @@ export function FinanceAccountsPage() {
                             textAlign: "right",
                             fontFamily: "monospace",
                             fontWeight: 600,
-                            color: "#0f172a"
+                            color: "var(--lc-ink)"
                           }}
                         >
                           {money(x.systemBalance, x.currency)}
@@ -1212,7 +1212,7 @@ export function FinanceAccountsPage() {
                           {x.reportedBalance == null ? (
                             <span className="muted">—</span>
                           ) : (
-                            <span style={{ color: Math.abs(x.systemBalance - x.reportedBalance) > 0.01 ? "#b91c1c" : "#047857", fontWeight: 600 }}>
+                            <span style={{ color: Math.abs(x.systemBalance - x.reportedBalance) > 0.01 ? "var(--lc-danger)" : "var(--lc-ok)", fontWeight: 600 }}>
                               {money(x.reportedBalance, x.currency)}
                             </span>
                           )}
@@ -1228,8 +1228,8 @@ export function FinanceAccountsPage() {
                                 style={{
                                   fontSize: "0.75rem",
                                   padding: "3px 8px",
-                                  background: "#10b981",
-                                  borderColor: "#10b981",
+                                  background: "var(--lc-ok)",
+                                  borderColor: "var(--lc-ok)",
                                   color: "white",
                                   fontWeight: 700,
                                   borderRadius: "6px"
@@ -1253,14 +1253,14 @@ export function FinanceAccountsPage() {
                               </button>
                             </div>
                           ) : isReconciled ? (
-                            <span style={{ fontSize: "0.75rem", color: "#059669", fontWeight: 700, background: "rgba(16, 185, 129, 0.1)", padding: "3px 8px", borderRadius: "6px" }}>
+                            <span style={{ fontSize: "0.75rem", color: "var(--lc-ok)", fontWeight: 700, background: "rgba(16, 185, 129, 0.1)", padding: "3px 8px", borderRadius: "6px" }}>
                               ✓ Conciliado
                             </span>
                           ) : isExcluded || usable === "MovementOnly" || usable === "Transfer" ? (
                             <span
                               style={{
                                 fontSize: "0.75rem",
-                                color: "#065f46",
+                                color: "var(--lc-ok)",
                                 fontWeight: 700,
                                 background: "rgba(16, 185, 129, 0.1)",
                                 padding: "3px 8px",
@@ -1279,8 +1279,8 @@ export function FinanceAccountsPage() {
                                   style={{
                                     fontSize: "0.75rem",
                                     padding: "2px 8px",
-                                    background: "#0ea5e9",
-                                    borderColor: "#0ea5e9",
+                                    background: "var(--lc-info)",
+                                    borderColor: "var(--lc-info)",
                                     color: "white",
                                     fontWeight: 700,
                                     borderRadius: "6px",
@@ -1299,8 +1299,8 @@ export function FinanceAccountsPage() {
                                   style={{
                                     fontSize: "0.75rem",
                                     padding: "2px 8px",
-                                    background: "#f59e0b",
-                                    borderColor: "#f59e0b",
+                                    background: "var(--lc-warn)",
+                                    borderColor: "var(--lc-warn)",
                                     color: "white",
                                     fontWeight: 700,
                                     borderRadius: "6px",
@@ -1320,7 +1320,7 @@ export function FinanceAccountsPage() {
                                 style={{
                                   fontSize: "0.75rem",
                                   padding: "2px 6px",
-                                  color: "#64748b"
+                                  color: "var(--lc-ink-3)"
                                 }}
                                 title="Cambiar concepto o crear regla"
                               >
@@ -1418,7 +1418,7 @@ export function FinanceAccountsPage() {
               </div>
 
               {importRequiresMapping && (
-                <div style={{ marginBottom: 16, padding: 12, border: "1px solid #fde68a", background: "#fffbeb", borderRadius: 8 }}>
+                <div style={{ marginBottom: 16, padding: 12, border: "1px solid var(--lc-warn-bg)", background: "var(--lc-warn-bg)", borderRadius: 8 }}>
                   <h4 style={{ margin: "0 0 8px 0" }}>Mapear columnas (se guarda para esta cuenta)</h4>
                   <p className="muted" style={{ marginTop: 0, fontSize: "0.82rem" }}>
                     Encabezados detectados: {(importHeaders || []).join(" · ") || "—"}
@@ -1471,10 +1471,10 @@ export function FinanceAccountsPage() {
                   <span>Duplicadas: <strong>{importSummary.duplicates || 0}</strong></span>
                   <span>Match sistema: <strong>{importSummary.systemMatches || 0}</strong></span>
                   {(importSummary.ambiguousMatches || 0) > 0 && (
-                    <span style={{ color: "#b45309" }}>Ambiguas: <strong>{importSummary.ambiguousMatches}</strong></span>
+                    <span style={{ color: "var(--lc-warn)" }}>Ambiguas: <strong>{importSummary.ambiguousMatches}</strong></span>
                   )}
                   {(importSummary.rejected || 0) > 0 && (
-                    <span style={{ color: "#dc2626" }}>Rechazadas: <strong>{importSummary.rejected}</strong></span>
+                    <span style={{ color: "var(--lc-danger)" }}>Rechazadas: <strong>{importSummary.rejected}</strong></span>
                   )}
                 </div>
               )}
@@ -1505,14 +1505,14 @@ export function FinanceAccountsPage() {
                                 </small>
                               )}
                               {row.status === "match" && row.matchedSystemDateUtc && (
-                                <small style={{ display: "block", fontSize: "0.72rem", color: "#0369a1", marginTop: 2 }}>
+                                <small style={{ display: "block", fontSize: "0.72rem", color: "var(--lc-info)", marginTop: 2 }}>
                                   Matchea con movimiento del sistema del{" "}
                                   {businessDate(row.matchedSystemDateUtc)}
                                   {row.matchedSystemDescription ? ` · ${row.matchedSystemDescription}` : ""}
                                 </small>
                               )}
                               {row.error && (
-                                <small style={{ display: "block", color: "#dc2626" }}>{row.error}</small>
+                                <small style={{ display: "block", color: "var(--lc-danger)" }}>{row.error}</small>
                               )}
                             </td>
                             <td>
@@ -1576,7 +1576,7 @@ export function FinanceAccountsPage() {
         >
               {modalMovement ? (
               <>
-              <div style={{ background: "#f8fafc", padding: "10px 12px", borderRadius: "6px", marginBottom: "16px", fontSize: "0.85rem" }}>
+              <div style={{ background: "var(--lc-surface-2)", padding: "10px 12px", borderRadius: "6px", marginBottom: "16px", fontSize: "0.85rem" }}>
                 <div><strong>Fecha:</strong> {businessDate(modalMovement.operationDateUtc)}</div>
                 <div><strong>Leyenda extracto:</strong> {modalMovement.description}</div>
                 <div>
@@ -1614,14 +1614,14 @@ export function FinanceAccountsPage() {
                 </label>
 
                 {modalCreateRule && (
-                  <div style={{ padding: "10px", background: "#fffbeb", borderRadius: "6px", border: "1px solid #fde68a", fontSize: "0.82rem" }}>
+                  <div style={{ padding: "10px", background: "var(--lc-warn-bg)", borderRadius: "6px", border: "1px solid var(--lc-warn-bg)", fontSize: "0.82rem" }}>
                     <label style={{ display: "block" }}>
                       <strong>Texto a reconocer en futuros extractos:</strong>
                       <input
                         type="text"
                         value={modalPattern}
                         onChange={(e) => setModalPattern(e.target.value.toUpperCase())}
-                        style={{ width: "100%", marginTop: "4px", padding: "6px 8px", borderRadius: "4px", border: "1px solid #cbd5e1" }}
+                        style={{ width: "100%", marginTop: "4px", padding: "6px 8px", borderRadius: "4px", border: "1px solid var(--lc-line-2)" }}
                       />
                     </label>
                     <small className="muted" style={{ display: "block", marginTop: "4px" }}>
@@ -1741,7 +1741,7 @@ export function FinanceAccountsPage() {
         onDone={() => { setSuccessMsg("Compras y Finanzas reiniciadas: corregí el saldo inicial de cada cuenta e importá los extractos."); void reloadAccounts(); }}
       />
       {error && <div className="alert">{error}</div>}
-      {successMsg && <div className="alert" style={{ background: "rgba(16,185,129,0.12)", color: "#065f46" }}>{successMsg}</div>}
+      {successMsg && <div className="alert" style={{ background: "rgba(16,185,129,0.12)", color: "var(--lc-ok)" }}>{successMsg}</div>}
       {showAccountForm && (
         <section className="card pad" style={{ marginBottom: 22 }}>
           <h2 style={{ marginTop: 0 }}>Nueva cuenta financiera</h2>

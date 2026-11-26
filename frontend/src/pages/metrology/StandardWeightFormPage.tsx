@@ -141,17 +141,17 @@ export function StandardWeightFormPage() {
     <div className="page-wide" style={{ paddingBottom: 60 }}>
       {/* Breadcrumb & Header */}
       <div style={{ marginBottom: 20 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "#64748b", marginBottom: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "var(--lc-ink-3)", marginBottom: 6 }}>
           <Link to="/metrologia" style={{ color: "inherit", textDecoration: "none" }}>Metrología Legal</Link>
           <span>›</span>
           <Link to="/metrologia/patrones" style={{ color: "inherit", textDecoration: "none" }}>Gestión de Pesas Patrón</Link>
           <span>›</span>
-          <span style={{ color: "#0d9488", fontWeight: 700 }}>{isEditing ? `Editar [${code}]` : "Alta de Pesa"}</span>
+          <span style={{ color: "var(--lc-accent-strong)", fontWeight: 700 }}>{isEditing ? `Editar [${code}]` : "Alta de Pesa"}</span>
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
-            <h1 style={{ margin: "0 0 4px", fontSize: "1.75rem", fontWeight: 800, color: "#0f172a" }}>
+            <h1 style={{ margin: "0 0 4px", fontSize: "1.75rem", fontWeight: 800, color: "var(--lc-ink)" }}>
               {isEditing ? `⚖️ Pesa Patrón: ${code}` : "➕ Registrar Pesa Patrón / Masa de Referencia"}
             </h1>
             <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
@@ -168,7 +168,7 @@ export function StandardWeightFormPage() {
               onClick={handleSubmit}
               disabled={saving}
               className="btn"
-              style={{ background: "#0d9488", color: "#fff", fontWeight: 800, padding: "8px 24px", fontSize: "0.92rem", minWidth: 160 }}
+              style={{ background: "var(--lc-accent)", color: "#fff", fontWeight: 800, padding: "8px 24px", fontSize: "0.92rem", minWidth: 160 }}
             >
               {saving ? "Guardando..." : "💾 Guardar Patrón"}
             </button>
@@ -177,15 +177,15 @@ export function StandardWeightFormPage() {
       </div>
 
       {error && (
-        <div className="alert" style={{ marginBottom: 20, background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", padding: "14px 18px", borderRadius: 8, fontSize: "0.92rem" }}>
+        <div className="alert" style={{ marginBottom: 20, background: "var(--lc-danger-bg)", color: "var(--lc-danger)", border: "1px solid var(--lc-danger-bg)", padding: "14px 18px", borderRadius: 8, fontSize: "0.92rem" }}>
           ⚠️ {error}
         </div>
       )}
 
       <form onSubmit={handleSubmit}>
         {/* SECCIÓN 1: IDENTIFICACIÓN TÉCNICA */}
-        <div className="card pad" style={{ marginBottom: 20, borderLeft: "5px solid #0d9488" }}>
-          <div style={{ fontWeight: 800, fontSize: "1rem", color: "#0f766e", marginBottom: 14 }}>
+        <div className="card pad" style={{ marginBottom: 20, borderLeft: "5px solid var(--lc-accent)" }}>
+          <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--lc-accent-strong)", marginBottom: 14 }}>
             1. IDENTIFICACIÓN TÉCNICA DE LA PESA
           </div>
 
@@ -198,7 +198,7 @@ export function StandardWeightFormPage() {
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 placeholder="ej. 04, 1051, 1676, P-001"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem", fontWeight: 700 }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem", fontWeight: 700 }}
               />
               <small className="muted" style={{ fontSize: "0.75rem" }}>Número de serie o código grabado en la masa</small>
             </div>
@@ -210,7 +210,7 @@ export function StandardWeightFormPage() {
                 value={serialNumber}
                 onChange={(e) => setSerialNumber(e.target.value)}
                 placeholder="ej. 1676, SN-8849102"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               />
             </div>
 
@@ -221,7 +221,7 @@ export function StandardWeightFormPage() {
                 value={manufacturer}
                 onChange={(e) => setManufacturer(e.target.value)}
                 placeholder="ej. Sipel S.R.L., BITAR HNOS., Dolz"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               />
             </div>
 
@@ -232,7 +232,7 @@ export function StandardWeightFormPage() {
                 value={lotName}
                 onChange={(e) => setLotName(e.target.value)}
                 placeholder="ej. Camión 1, Lote 22x1t Sipel"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               />
               <small className="muted" style={{ fontSize: "0.75rem" }}>Permite seleccionarlas juntas en los ensayos de campo</small>
             </div>
@@ -247,12 +247,12 @@ export function StandardWeightFormPage() {
                   value={nominalValue}
                   onChange={(e) => setNominalValue(e.target.value)}
                   placeholder="ej. 1000, 500, 20"
-                  style={{ flex: 1, padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem", fontWeight: 700 }}
+                  style={{ flex: 1, padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem", fontWeight: 700 }}
                 />
                 <select
                   value={unit}
                   onChange={(e) => setUnit(e.target.value)}
-                  style={{ width: 85, padding: "9px 8px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                  style={{ width: 85, padding: "9px 8px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
                 >
                   <option value="kg">kg</option>
                   <option value="g">g</option>
@@ -267,7 +267,7 @@ export function StandardWeightFormPage() {
               <select
                 value={accuracyClass}
                 onChange={(e) => setAccuracyClass(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               >
                 <option value="E1">Clase E1 (Patrón Primario)</option>
                 <option value="E2">Clase E2 (Laboratorio de Alta Precisión)</option>
@@ -284,7 +284,7 @@ export function StandardWeightFormPage() {
               <select
                 value={material}
                 onChange={(e) => setMaterial(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               >
                 <option value="Hierro Fundido">Hierro Fundido Pintado</option>
                 <option value="Acero Inoxidable">Acero Inoxidable Pulido</option>
@@ -296,8 +296,8 @@ export function StandardWeightFormPage() {
         </div>
 
         {/* SECCIÓN 2: CERTIFICADO & RESULTADOS METROLÓGICOS */}
-        <div className="card pad" style={{ marginBottom: 20, borderLeft: "5px solid #16a34a" }}>
-          <div style={{ fontWeight: 800, fontSize: "1rem", color: "#15803d", marginBottom: 14 }}>
+        <div className="card pad" style={{ marginBottom: 20, borderLeft: "5px solid var(--lc-ok)" }}>
+          <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--lc-ok)", marginBottom: 14 }}>
             2. RESULTADOS METROLÓGICOS DEL CERTIFICADO DE CALIBRACIÓN
           </div>
 
@@ -309,7 +309,7 @@ export function StandardWeightFormPage() {
                 value={internalCode}
                 onChange={(e) => setInternalCode(e.target.value)}
                 placeholder="Se asigna solo: EQ-0001"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem", fontWeight: 700 }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem", fontWeight: 700 }}
               />
             </div>
             <div>
@@ -319,7 +319,7 @@ export function StandardWeightFormPage() {
                 value={certificateNumber}
                 onChange={(e) => setCertificateNumber(e.target.value)}
                 placeholder="ej. 00705-S-0925, OAA15536"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem", fontWeight: 700 }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem", fontWeight: 700 }}
               />
             </div>
 
@@ -330,7 +330,7 @@ export function StandardWeightFormPage() {
                 value={traceabilityLab}
                 onChange={(e) => setTraceabilityLab(e.target.value)}
                 placeholder="ej. Laboratorio Acreditado (Lab N°20)"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               />
             </div>
 
@@ -342,7 +342,7 @@ export function StandardWeightFormPage() {
                 value={errorAsFound}
                 onChange={(e) => setErrorAsFound(e.target.value)}
                 placeholder="ej. -2.100, +76"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               />
               <small className="muted" style={{ fontSize: "0.75rem" }}>Error medido al recibir (antes del ajuste)</small>
             </div>
@@ -356,7 +356,7 @@ export function StandardWeightFormPage() {
                 value={conventionalMassCorrection}
                 onChange={(e) => setConventionalMassCorrection(e.target.value)}
                 placeholder="ej. +0.600, +2, -0.500"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem", fontWeight: 700 }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem", fontWeight: 700 }}
               />
               <small className="muted" style={{ fontSize: "0.75rem" }}>Corrección convencional final del certificado</small>
             </div>
@@ -370,7 +370,7 @@ export function StandardWeightFormPage() {
                 value={uncertainty}
                 onChange={(e) => setUncertainty(e.target.value)}
                 placeholder="ej. 0.300, 16"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               />
               <small className="muted" style={{ fontSize: "0.75rem" }}>Valor sin signo ±</small>
             </div>
@@ -380,7 +380,7 @@ export function StandardWeightFormPage() {
               <select
                 value={unitEc}
                 onChange={(e) => setUnitEc(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               >
                 <option value="g">g — gramos</option>
                 <option value="kg">kg — kilogramos</option>
@@ -395,7 +395,7 @@ export function StandardWeightFormPage() {
                 step="0.1"
                 value={factorK}
                 onChange={(e) => setFactorK(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               />
               <small className="muted" style={{ fontSize: "0.75rem" }}>Usualmente k=2.00 (95.45% confianza)</small>
             </div>
@@ -406,7 +406,7 @@ export function StandardWeightFormPage() {
                 type="date"
                 value={calibrationDate}
                 onChange={(e) => setCalibrationDate(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               />
             </div>
 
@@ -416,7 +416,7 @@ export function StandardWeightFormPage() {
                 type="date"
                 value={expirationDate}
                 onChange={(e) => setExpirationDate(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               />
             </div>
           </div>
@@ -424,8 +424,8 @@ export function StandardWeightFormPage() {
           {/* Live Calculation Preview Box */}
           <div
             style={{
-              background: "#f0fdf4",
-              border: "1px solid #86efac",
+              background: "var(--lc-ok-bg)",
+              border: "1px solid var(--lc-ok-bg)",
               borderRadius: 8,
               padding: "12px 18px",
               display: "flex",
@@ -438,7 +438,7 @@ export function StandardWeightFormPage() {
             <div>🧮 <strong>Masa Real Calculada:</strong></div>
             <div>
               Nominal <strong>{numNominal} {unit}</strong> + Ec <strong>{(numEc >= 0 ? "+" : "") + numEc} {unitEc}</strong> ={" "}
-              <strong style={{ color: "#16a34a", fontSize: "1.1rem" }}>
+              <strong style={{ color: "var(--lc-ok)", fontSize: "1.1rem" }}>
                 {realMassKg.toLocaleString("es-AR", { minimumFractionDigits: 3, maximumFractionDigits: 6 })} {unit}
               </strong>
             </div>
@@ -455,10 +455,10 @@ export function StandardWeightFormPage() {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            background: "#f8fafc",
+            background: "var(--lc-surface-2)",
             padding: "16px 24px",
             borderRadius: 10,
-            border: "1px solid #e2e8f0"
+            border: "1px solid var(--lc-line)"
           }}
         >
           <Link to="/metrologia/patrones" className="btn ghost" style={{ padding: "9px 20px" }}>
@@ -468,7 +468,7 @@ export function StandardWeightFormPage() {
             type="submit"
             disabled={saving}
             className="btn"
-            style={{ background: "#0d9488", color: "#fff", fontWeight: 800, padding: "10px 28px", fontSize: "0.95rem", minWidth: 200 }}
+            style={{ background: "var(--lc-accent)", color: "#fff", fontWeight: 800, padding: "10px 28px", fontSize: "0.95rem", minWidth: 200 }}
           >
             {saving ? "Guardando..." : "💾 Guardar Pesa Patrón"}
           </button>

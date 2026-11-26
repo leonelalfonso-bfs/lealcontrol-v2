@@ -79,17 +79,17 @@ function TreeNode({
           borderRadius: 8,
           cursor: "pointer",
           background: selected ? "rgba(15, 118, 110, 0.12)" : "transparent",
-          color: "#0f172a",
+          color: "var(--lc-ink)",
           fontWeight: selected ? 700 : 500
         }}
       >
-        <span style={{ width: 14, color: "#64748b", fontSize: 12 }}>{hasChildren ? (open ? "▾" : "▸") : "·"}</span>
+        <span style={{ width: 14, color: "var(--lc-ink-3)", fontSize: 12 }}>{hasChildren ? (open ? "▾" : "▸") : "·"}</span>
         <span
           style={{
             fontSize: 10,
             fontWeight: 800,
             letterSpacing: "0.04em",
-            color: "#0f766e",
+            color: "var(--lc-accent-strong)",
             minWidth: 28
           }}
         >
@@ -266,7 +266,7 @@ export function QualityDocumentsPage() {
   if (error) {
     return (
       <div className="workspace-page pad">
-        <p style={{ color: "#b91c1c" }}>Error: {error}</p>
+        <p style={{ color: "var(--lc-danger)" }}>Error: {error}</p>
       </div>
     );
   }
@@ -275,11 +275,11 @@ export function QualityDocumentsPage() {
     <div className="workspace-page pad">
       <div className="page-head" style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "flex-start" }}>
         <div>
-          <span className="eyebrow" style={{ color: "#0f766e", fontWeight: 800, letterSpacing: "0.08em" }}>
+          <span className="eyebrow" style={{ color: "var(--lc-accent-strong)", fontWeight: 800, letterSpacing: "0.08em" }}>
             ISO/IEC 17025 · SGC
           </span>
           <h1 style={{ margin: "4px 0 0" }}>Documentación del sistema de calidad</h1>
-          <p style={{ margin: "6px 0 0", color: "#64748b", maxWidth: 720 }}>
+          <p style={{ margin: "6px 0 0", color: "var(--lc-ink-3)", maxWidth: 720 }}>
             Árbol documental con la nomenclatura oficial (MC / PG / IT / R). Los registros generados
             PG01-R01 y PG01-R02 se calculan desde este catálogo.
           </p>
@@ -291,10 +291,10 @@ export function QualityDocumentsPage() {
 
       {dashboard && (
         <div className="grid-4" style={{ marginBottom: 16, display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 12 }}>
-          <div className="card pad"><div style={{ fontSize: 12, color: "#64748b" }}>Documentos</div><div style={{ fontSize: 28, fontWeight: 800 }}>{dashboard.totalDocuments}</div></div>
-          <div className="card pad"><div style={{ fontSize: 12, color: "#64748b" }}>Vigentes</div><div style={{ fontSize: 28, fontWeight: 800, color: "#0f766e" }}>{dashboard.current}</div></div>
-          <div className="card pad"><div style={{ fontSize: 12, color: "#64748b" }}>Borradores</div><div style={{ fontSize: 28, fontWeight: 800, color: "#a16207" }}>{dashboard.draft}</div></div>
-          <div className="card pad"><div style={{ fontSize: 12, color: "#64748b" }}>Revisión vencida</div><div style={{ fontSize: 28, fontWeight: 800, color: dashboard.overdueReview ? "#b91c1c" : "#0f766e" }}>{dashboard.overdueReview}</div></div>
+          <div className="card pad"><div style={{ fontSize: 12, color: "var(--lc-ink-3)" }}>Documentos</div><div style={{ fontSize: 28, fontWeight: 800 }}>{dashboard.totalDocuments}</div></div>
+          <div className="card pad"><div style={{ fontSize: 12, color: "var(--lc-ink-3)" }}>Vigentes</div><div style={{ fontSize: 28, fontWeight: 800, color: "var(--lc-accent-strong)" }}>{dashboard.current}</div></div>
+          <div className="card pad"><div style={{ fontSize: 12, color: "var(--lc-ink-3)" }}>Borradores</div><div style={{ fontSize: 28, fontWeight: 800, color: "var(--lc-warn)" }}>{dashboard.draft}</div></div>
+          <div className="card pad"><div style={{ fontSize: 12, color: "var(--lc-ink-3)" }}>Revisión vencida</div><div style={{ fontSize: 28, fontWeight: 800, color: dashboard.overdueReview ? "var(--lc-danger)" : "var(--lc-accent-strong)" }}>{dashboard.overdueReview}</div></div>
         </div>
       )}
 
@@ -305,7 +305,7 @@ export function QualityDocumentsPage() {
             <Link to="/calidad/registros" style={{ fontSize: 12 }}>Registros</Link>
           </div>
           {tree.length === 0 ? (
-            <div style={{ color: "#64748b", fontSize: 13, lineHeight: 1.5 }}>
+            <div style={{ color: "var(--lc-ink-3)", fontSize: 13, lineHeight: 1.5 }}>
               <p style={{ marginTop: 0 }}>
                 El SGC arranca vacío. Usá <strong>Nuevo documento</strong> para cargar tu Manual (MC),
                 Procedimientos (PG) e Instrucciones (IT) desde sus archivos Word/PDF.
@@ -329,7 +329,7 @@ export function QualityDocumentsPage() {
 
         <div className="card pad">
           {!selected ? (
-            <p style={{ color: "#64748b" }}>
+            <p style={{ color: "var(--lc-ink-3)" }}>
               {tree.length === 0
                 ? "Todavía no hay documentos. Creá el primero con «Nuevo documento»."
                 : "Seleccioná un documento del árbol."}
@@ -338,7 +338,7 @@ export function QualityDocumentsPage() {
             <>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "start" }}>
                 <div>
-                  <div style={{ fontSize: 12, color: "#0f766e", fontWeight: 800 }}>{selected.displayCode}</div>
+                  <div style={{ fontSize: 12, color: "var(--lc-accent-strong)", fontWeight: 800 }}>{selected.displayCode}</div>
                   <h2 style={{ margin: "4px 0 0" }}>{selected.title}</h2>
                   <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap", fontSize: 12 }}>
                     <span className="pill">{selected.type}</span>
@@ -365,26 +365,26 @@ export function QualityDocumentsPage() {
 
               <div style={{ marginTop: 20, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
-                  <div style={{ fontSize: 12, color: "#64748b" }}>Versión vigente</div>
+                  <div style={{ fontSize: 12, color: "var(--lc-ink-3)" }}>Versión vigente</div>
                   <div style={{ fontWeight: 700 }}>
                     {selected.currentVersion ? `v${selected.currentVersion.version}` : "—"}
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 12, color: "#64748b" }}>Próxima revisión</div>
+                  <div style={{ fontSize: 12, color: "var(--lc-ink-3)" }}>Próxima revisión</div>
                   <div style={{ fontWeight: 700 }}>
                     {selected.nextReviewDate ? new Date(selected.nextReviewDate).toLocaleDateString("es-AR") : "—"}
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 12, color: "#64748b" }}>Elaboró / Revisó / Aprobó</div>
+                  <div style={{ fontSize: 12, color: "var(--lc-ink-3)" }}>Elaboró / Revisó / Aprobó</div>
                   <div style={{ fontSize: 13 }}>
                     {selected.currentVersion?.elaboratedBy || "—"} / {selected.currentVersion?.reviewedBy || "—"} /{" "}
                     {selected.currentVersion?.approvedBy || "—"}
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 12, color: "#64748b" }}>Cláusulas ISO 17025</div>
+                  <div style={{ fontSize: 12, color: "var(--lc-ink-3)" }}>Cláusulas ISO 17025</div>
                   <div style={{ fontWeight: 600 }}>{selected.iso17025Clauses || "—"}</div>
                 </div>
               </div>
@@ -398,7 +398,7 @@ export function QualityDocumentsPage() {
                         <button
                           type="button"
                           className="btn-link"
-                          style={{ background: "none", border: "none", color: "#0f766e", cursor: "pointer", padding: 0 }}
+                          style={{ background: "none", border: "none", color: "var(--lc-accent-strong)", cursor: "pointer", padding: 0 }}
                           onClick={() => setSelectedCode(c.code)}
                         >
                           {c.displayCode} — {c.title}
@@ -442,7 +442,7 @@ export function QualityDocumentsPage() {
             </div>
 
             {wizardError && (
-              <div className="card pad" style={{ marginTop: 12, background: "#fef2f2", color: "#991b1b" }}>
+              <div className="card pad" style={{ marginTop: 12, background: "var(--lc-danger-bg)", color: "var(--lc-danger)" }}>
                 {wizardError}
               </div>
             )}

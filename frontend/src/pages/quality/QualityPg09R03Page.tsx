@@ -299,7 +299,7 @@ export function QualityPg09R03Page() {
             ← Plantilla PG09-R03
           </Link>
           <h1 style={{ margin: "4px 0 0" }}>PG09-R03 · Encuesta de satisfacción</h1>
-          <p style={{ marginTop: 6, color: "#64748b", maxWidth: 640 }}>
+          <p style={{ marginTop: 6, color: "var(--lc-ink-3)", maxWidth: 640 }}>
             Cada encuesta se <strong>genera en el sistema</strong> (ENC-AAAA-NNNN). Puntajes 1–5 y vínculo
             opcional al informe de ensayo.
           </p>
@@ -314,9 +314,9 @@ export function QualityPg09R03Page() {
         </div>
       </div>
 
-      {error && <p style={{ color: "#b91c1c" }}>{error}</p>}
-      {msg && <p style={{ color: "#15803d" }}>{msg}</p>}
-      <p style={{ fontSize: 13, color: "#64748b" }}>
+      {error && <p style={{ color: "var(--lc-danger)" }}>{error}</p>}
+      {msg && <p style={{ color: "var(--lc-ok)" }}>{msg}</p>}
+      <p style={{ fontSize: 13, color: "var(--lc-ink-3)" }}>
         Borradores: <strong>{draftCount}</strong> · Recibidas: <strong>{receivedCount}</strong>
         {averageOverall != null ? (
           <>
@@ -421,7 +421,7 @@ export function QualityPg09R03Page() {
           <div className="card pad" style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <thead>
-                <tr style={{ textAlign: "left", borderBottom: "1px solid #e2e8f0" }}>
+                <tr style={{ textAlign: "left", borderBottom: "1px solid var(--lc-line)" }}>
                   <th style={{ padding: "6px 4px" }}>Número</th>
                   <th style={{ padding: "6px 4px" }}>Cliente</th>
                   <th style={{ padding: "6px 4px" }}>Prom.</th>
@@ -436,7 +436,7 @@ export function QualityPg09R03Page() {
                     style={{
                       cursor: "pointer",
                       background: selectedId === r.id ? "#f1f5f9" : undefined,
-                      borderBottom: "1px solid #f1f5f9"
+                      borderBottom: "1px solid var(--lc-surface-2)"
                     }}
                   >
                     <td style={{ padding: "8px 4px" }}>{r.number}</td>
@@ -447,7 +447,7 @@ export function QualityPg09R03Page() {
                 ))}
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={4} style={{ padding: 12, color: "#64748b" }}>
+                    <td colSpan={4} style={{ padding: 12, color: "var(--lc-ink-3)" }}>
                       Sin encuestas.
                     </td>
                   </tr>
@@ -458,13 +458,13 @@ export function QualityPg09R03Page() {
 
           <div className="card pad">
             {!selected ? (
-              <p style={{ color: "#64748b", margin: 0 }}>Seleccioná una encuesta para ver el detalle.</p>
+              <p style={{ color: "var(--lc-ink-3)", margin: 0 }}>Seleccioná una encuesta para ver el detalle.</p>
             ) : (
               <>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
                   <div>
                     <h3 style={{ margin: 0 }}>{selected.number}</h3>
-                    <p style={{ margin: "4px 0 0", fontSize: 13, color: "#64748b" }}>
+                    <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--lc-ink-3)" }}>
                       {statusLabel(selected.status)}
                       {selected.averageScore != null ? ` · promedio ${selected.averageScore.toFixed(2)}` : ""}
                     </p>

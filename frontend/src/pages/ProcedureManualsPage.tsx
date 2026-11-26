@@ -57,7 +57,7 @@ export function ProcedureManualsPage() {
       {/* Header */}
       <div className="page-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <span className="eyebrow" style={{ color: "#8b5cf6", fontWeight: 700 }}>GESTIÓN DE CALIDAD & OPERACIONES</span>
+          <span className="eyebrow" style={{ color: "var(--lc-violet)", fontWeight: 700 }}>GESTIÓN DE CALIDAD & OPERACIONES</span>
           <h1>📖 Manuales de Procedimientos e Instructivos</h1>
           <p className="muted">Repositorio documental de procesos estandarizados, instructivos de trabajo (IT) y normas operativas por área</p>
         </div>
@@ -65,7 +65,7 @@ export function ProcedureManualsPage() {
           <Link
             to="/rrhh/manuales/nuevo"
             className="btn"
-            style={{ background: "linear-gradient(135deg, #8b5cf6, #7c3aed)", color: "#fff", fontWeight: 700 }}
+            style={{ background: "linear-gradient(135deg, var(--lc-violet), var(--lc-violet))", color: "#fff", fontWeight: 700 }}
           >
             ➕ Nuevo Procedimiento / Instructivo
           </Link>
@@ -84,7 +84,7 @@ export function ProcedureManualsPage() {
             placeholder="🔍 Buscar por código, título o alcance del procedimiento..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid #cbd5e1" }}
+            style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)" }}
           />
         </div>
 
@@ -116,7 +116,7 @@ export function ProcedureManualsPage() {
           <div className="table-wrap">
             <table className="table" style={{ width: "100%", fontSize: "0.88rem", borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ background: "var(--surface-sunken)", borderBottom: "2px solid #cbd5e1" }}>
+                <tr style={{ background: "var(--surface-sunken)", borderBottom: "2px solid var(--lc-line-2)" }}>
                   <th style={{ width: 120 }}>Código</th>
                   <th>Título del Procedimiento / Instructivo</th>
                   <th style={{ width: 130 }}>Área</th>
@@ -128,8 +128,8 @@ export function ProcedureManualsPage() {
               </thead>
               <tbody>
                 {filteredManuals.map((m) => (
-                  <tr key={m.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
-                    <td style={{ fontFamily: "monospace", fontWeight: 700, color: "#8b5cf6" }}>
+                  <tr key={m.id} style={{ borderBottom: "1px solid var(--lc-line)" }}>
+                    <td style={{ fontFamily: "monospace", fontWeight: 700, color: "var(--lc-violet)" }}>
                       {m.code}
                     </td>
                     <td>
@@ -169,7 +169,7 @@ export function ProcedureManualsPage() {
                             rel="noreferrer"
                             className="btn ghost compact"
                             title="Abrir el enlace externo"
-                            style={{ padding: "3px 8px", fontSize: "0.75rem", color: "#8b5cf6" }}
+                            style={{ padding: "3px 8px", fontSize: "0.75rem", color: "var(--lc-violet)" }}
                           >
                             🔗 Enlace
                           </a>
@@ -187,7 +187,7 @@ export function ProcedureManualsPage() {
                           className="btn ghost compact"
                           title="Eliminar manual"
                           onClick={() => handleDelete(m)}
-                          style={{ padding: "3px 8px", fontSize: "0.75rem", color: "#ef4444" }}
+                          style={{ padding: "3px 8px", fontSize: "0.75rem", color: "var(--lc-danger)" }}
                         >
                           🗑️
                         </button>

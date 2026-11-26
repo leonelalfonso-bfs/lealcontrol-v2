@@ -47,9 +47,9 @@ const SOURCE_LABEL: Record<string, string> = {
 };
 
 const SOURCE_BADGE: Record<string, { bg: string; color: string }> = {
-  StandardWeight: { bg: "#dbeafe", color: "#1e40af" },
-  Instrument: { bg: "#ccfbf1", color: "#0f766e" },
-  QualityEquipment: { bg: "#f1f5f9", color: "#475569" }
+  StandardWeight: { bg: "var(--lc-info-bg)", color: "var(--lc-info)" },
+  Instrument: { bg: "var(--lc-accent-soft)", color: "var(--lc-accent-strong)" },
+  QualityEquipment: { bg: "var(--lc-surface-2)", color: "var(--lc-ink-2)" }
 };
 
 const EQ_STATUS = EQUIPMENT_STATUS;
@@ -658,11 +658,11 @@ export function QualityPg14Page() {
       </select></label>
       <label>Patrón maestro (A) *<select value={cMaster} onChange={(e) => setCMaster(e.target.value)} disabled={disabled} required>
         <option value="">Seleccionar</option>{weights.filter((w) => w.id !== cTarget).map((w) => <option key={w.id} value={w.id}>{assetLabel(w)} · {w.extra || w.description}{w.extra && Math.abs(Number.parseFloat(w.extra) - 1000) <= 1 && w.extra.includes("kg") ? " ★" : ""}</option>)}
-      </select>{cMaster && !checkSchedule?.find((row) => row.weightId === cMaster)?.isReferenceMass && <small style={{ color: "#b45309" }}>PG14 recomienda patrón maestro de 1000 kg.</small>}</label>
+      </select>{cMaster && !checkSchedule?.find((row) => row.weightId === cMaster)?.isReferenceMass && <small style={{ color: "var(--lc-warn)" }}>PG14 recomienda patrón maestro de 1000 kg.</small>}</label>
       <label>Resolución comparador (g) *<input type="number" step="0.000001" min="0.000001" value={cResolution} onChange={(e) => setCResolution(e.target.value)} disabled={disabled} required /></label>
       {([['A1', cA1, setCA1], ['B1', cB1, setCB1], ['B2', cB2, setCB2], ['A2', cA2, setCA2]] as const).map(([name, value, setter]) =>
         <label key={name}>Lectura {name} (g) *<input type="number" step="0.000001" value={value} onChange={(e) => setter(e.target.value)} disabled={disabled} required /></label>)}
-      <div style={{ alignSelf: "end", padding: 9, background: "#eff6ff", borderRadius: 6 }}><strong>Δm media:</strong> {abbaMean == null ? "—" : `${abbaMean.toFixed(6)} g`}</div>
+      <div style={{ alignSelf: "end", padding: 9, background: "var(--lc-info-bg)", borderRadius: 6 }}><strong>Δm media:</strong> {abbaMean == null ? "—" : `${abbaMean.toFixed(6)} g`}</div>
     </div>
   );
 
@@ -795,7 +795,7 @@ export function QualityPg14Page() {
         <div>
           <Link to="/calidad/registros">← Registros</Link>
           <h1 style={{ margin: "8px 0 4px" }}>PG14 · Equipamiento y calibraciones</h1>
-          <p style={{ margin: 0, color: "#64748b" }}>
+          <p style={{ margin: 0, color: "var(--lc-ink-3)" }}>
             Listado (R04) · programa (R03) · hoja de vida (R01) · auxiliares · R05 · R06
           </p>
         </div>
@@ -845,7 +845,7 @@ export function QualityPg14Page() {
             </button>
             <Link className="btn btn-outline" to={`/calidad/registros/equipos/r04/pdf${sourceFilter === "all" ? "" : `?source=${sourceFilter}`}`}>PDF</Link>
             {inventoryCounts && (
-              <span style={{ fontSize: 13, color: "#64748b" }}>
+              <span style={{ fontSize: 13, color: "var(--lc-ink-3)" }}>
                 Pesas {inventoryCounts.weights} · Instrumentos {inventoryCounts.instruments} · Auxiliares {inventoryCounts.auxiliaries} · Total {inventoryCounts.total}
               </span>
             )}
@@ -871,7 +871,7 @@ export function QualityPg14Page() {
                 {filteredInventory.map((r) => {
                   const badge = SOURCE_BADGE[r.source] || SOURCE_BADGE.QualityEquipment;
                   return (
-                    <tr key={`${r.source}-${r.id}`} style={r.isExpired ? { background: "#fef2f2" } : undefined}>
+                    <tr key={`${r.source}-${r.id}`} style={r.isExpired ? { background: "var(--lc-danger-bg)" } : undefined}>
                       <td>
                         <span style={{
                           display: "inline-block",
@@ -888,11 +888,11 @@ export function QualityPg14Page() {
                       <td><strong>{r.internalCode || "—"}</strong></td>
                       <td>{r.source === "QualityEquipment" ? (r.serialNumber || r.extra || "—") : r.code}</td>
                       <td>{KIND_LABEL[r.kind] || r.kind}</td>
-                      <td>{r.description || "—"}{r.extra ? <div style={{ color: "#64748b", fontSize: 12 }}>{r.extra}</div> : null}</td>
+                      <td>{r.description || "—"}{r.extra ? <div style={{ color: "var(--lc-ink-3)", fontSize: 12 }}>{r.extra}</div> : null}</td>
                       <td>{r.brandOrManufacturer || "—"}</td>
                       <td>{r.serialNumber || "—"}</td>
                       <td>{r.certificateNumber ? <Link to={`/calidad/trazabilidad?cert=${encodeURIComponent(r.certificateNumber)}`}>{r.certificateNumber}</Link> : "—"}</td>
-                      <td style={r.isExpired ? { color: "#b91c1c", fontWeight: 600 } : undefined}>
+                      <td style={r.isExpired ? { color: "var(--lc-danger)", fontWeight: 600 } : undefined}>
                         {fmtDate(r.expirationDate)}
                       </td>
                       <td>{labelOf(EQ_STATUS, r.status)}</td>
@@ -906,7 +906,7 @@ export function QualityPg14Page() {
                   );
                 })}
                 {filteredInventory.length === 0 && (
-                  <tr><td colSpan={12} style={{ textAlign: "center", color: "#64748b" }}>Sin equipos en el listado.</td></tr>
+                  <tr><td colSpan={12} style={{ textAlign: "center", color: "var(--lc-ink-3)" }}>Sin equipos en el listado.</td></tr>
                 )}
               </tbody>
             </table>
@@ -916,7 +916,7 @@ export function QualityPg14Page() {
 
       {tab === "r02" && (
         <>
-          <p style={{ margin: "0 0 12px", color: "#64748b", fontSize: 13 }}>
+          <p style={{ margin: "0 0 12px", color: "var(--lc-ink-3)", fontSize: 13 }}>
             PG14-R02 · Imprimí la etiqueta de equipo calibrado para pesas e instrumentos con datos de calibración.
           </p>
           <div className="card" style={{ overflowX: "auto" }}>
@@ -937,14 +937,14 @@ export function QualityPg14Page() {
                 {inventory
                   .filter((r) => r.source === "StandardWeight" || r.source === "Instrument")
                   .map((r) => (
-                    <tr key={`label-${r.source}-${r.id}`} style={r.isExpired ? { background: "#fef2f2" } : undefined}>
+                    <tr key={`label-${r.source}-${r.id}`} style={r.isExpired ? { background: "var(--lc-danger-bg)" } : undefined}>
                       <td>{SOURCE_LABEL[r.source] || r.source}</td>
                       <td><strong>{r.internalCode || "—"}</strong></td>
                       <td>{r.source === "QualityEquipment" ? (r.serialNumber || r.extra || "—") : r.code}</td>
                       <td>{r.description || "—"}</td>
                       <td>{r.certificateNumber || "—"}</td>
                       <td>{fmtDate(r.calibrationDate)}</td>
-                      <td style={r.isExpired ? { color: "#b91c1c", fontWeight: 600 } : undefined}>{fmtDate(r.expirationDate)}</td>
+                      <td style={r.isExpired ? { color: "var(--lc-danger)", fontWeight: 600 } : undefined}>{fmtDate(r.expirationDate)}</td>
                       <td>
                         <button type="button" className="btn btn-primary compact" onClick={() => printCalibrationLabel(r)}>
                           Imprimir etiqueta
@@ -953,7 +953,7 @@ export function QualityPg14Page() {
                     </tr>
                   ))}
                 {inventory.filter((r) => r.source === "StandardWeight" || r.source === "Instrument").length === 0 && (
-                  <tr><td colSpan={7} style={{ textAlign: "center", color: "#64748b" }}>No hay pesas ni instrumentos para etiquetar. Cargalos en Metrología.</td></tr>
+                  <tr><td colSpan={7} style={{ textAlign: "center", color: "var(--lc-ink-3)" }}>No hay pesas ni instrumentos para etiquetar. Cargalos en Metrología.</td></tr>
                 )}
               </tbody>
             </table>
@@ -969,7 +969,7 @@ export function QualityPg14Page() {
             </button>
             <Link className="btn btn-outline" to="/calidad/registros/equipos/r03/pdf">PDF</Link>
             {calSummary && (
-              <span style={{ fontSize: 13, color: "#64748b" }}>
+              <span style={{ fontSize: 13, color: "var(--lc-ink-3)" }}>
                 Vencidos <strong style={{ color: calSummary.expired ? "#b91c1c" : undefined }}>{calSummary.expired}</strong>
                 {" · "}Próximos ≤60d <strong style={{ color: calSummary.dueSoon ? "#b45309" : undefined }}>{calSummary.dueSoon}</strong>
                 {" · "}OK <strong>{calSummary.ok}</strong>
@@ -1017,7 +1017,7 @@ export function QualityPg14Page() {
                       <td>{r.description || "—"}</td>
                       <td>{r.certificateNumber || "—"}</td>
                       <td>{fmtDate(r.calibrationDate)}</td>
-                      <td style={r.isExpired ? { color: "#b91c1c", fontWeight: 600 } : r.isDueSoon ? { color: "#b45309", fontWeight: 600 } : undefined}>
+                      <td style={r.isExpired ? { color: "var(--lc-danger)", fontWeight: 600 } : r.isDueSoon ? { color: "var(--lc-warn)", fontWeight: 600 } : undefined}>
                         {fmtDate(r.expirationDate)}
                       </td>
                       <td>
@@ -1039,7 +1039,7 @@ export function QualityPg14Page() {
                   );
                 })}
                 {calProgram.length === 0 && (
-                  <tr><td colSpan={9} style={{ textAlign: "center", color: "#64748b" }}>Sin activos con fechas de calibración.</td></tr>
+                  <tr><td colSpan={9} style={{ textAlign: "center", color: "var(--lc-ink-3)" }}>Sin activos con fechas de calibración.</td></tr>
                 )}
               </tbody>
             </table>
@@ -1095,7 +1095,7 @@ export function QualityPg14Page() {
               );
             })()}
             {logCounts && (
-              <span style={{ fontSize: 13, color: "#64748b" }}>
+              <span style={{ fontSize: 13, color: "var(--lc-ink-3)" }}>
                 C {logCounts.C} · V {logCounts.V} · MP {logCounts.MP} · MC {logCounts.MC} · Baja {logCounts.Baja}
               </span>
             )}
@@ -1209,7 +1209,7 @@ export function QualityPg14Page() {
                     </tr>
                   ))}
                   {filteredLogs.length === 0 && (
-                    <tr><td colSpan={5} style={{ textAlign: "center", color: "#64748b" }}>Sin eventos.</td></tr>
+                    <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--lc-ink-3)" }}>Sin eventos.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -1218,7 +1218,7 @@ export function QualityPg14Page() {
             {selectedLog && (
               <div className="card" style={{ padding: 16 }}>
                 <h3 style={{ marginTop: 0 }}>{selectedLog.number}</h3>
-                <p style={{ marginTop: 0, color: "#64748b", fontSize: 13 }}>
+                <p style={{ marginTop: 0, color: "var(--lc-ink-3)", fontSize: 13 }}>
                   {SOURCE_LABEL[selectedLog.assetSource] || selectedLog.assetSource} · {selectedLog.assetCode} · {selectedLog.assetDescription || "—"}
                 </p>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -1361,7 +1361,7 @@ export function QualityPg14Page() {
                 <button type="submit" className="btn btn-primary" disabled={busy}>Guardar</button>
                 <button type="button" className="btn btn-outline" onClick={() => setShowForm(false)}>Cancelar</button>
               </div>
-              <p style={{ fontSize: 12, color: "#64748b" }}>El código se asigna automáticamente (EQ 001, EQ 002…).</p>
+              <p style={{ fontSize: 12, color: "var(--lc-ink-3)" }}>El código se asigna automáticamente (EQ 001, EQ 002…).</p>
             </form>
           )}
 
@@ -1390,7 +1390,7 @@ export function QualityPg14Page() {
                     </tr>
                   ))}
                   {equipment.length === 0 && (
-                    <tr><td colSpan={4} style={{ padding: 16, color: "#64748b" }}>Sin equipos.</td></tr>
+                    <tr><td colSpan={4} style={{ padding: 16, color: "var(--lc-ink-3)" }}>Sin equipos.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -1555,7 +1555,7 @@ export function QualityPg14Page() {
                     </tr>
                   ))}
                   {checks.length === 0 && (
-                    <tr><td colSpan={6} style={{ padding: 16, color: "#64748b" }}>Sin verificaciones.</td></tr>
+                    <tr><td colSpan={6} style={{ padding: 16, color: "var(--lc-ink-3)" }}>Sin verificaciones.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -1715,7 +1715,7 @@ export function QualityPg14Page() {
                       onClick={() => { setSelectedId(r.id); setShowForm(false); }}
                       style={{
                         cursor: "pointer",
-                        background: selectedId === r.id ? "#e0f2fe" : r.isOverdue ? "#fef2f2" : undefined
+                        background: selectedId === r.id ? "var(--lc-info-bg)" : r.isOverdue ? "var(--lc-danger-bg)" : undefined
                       }}
                     >
                       <td>{r.number}</td>
@@ -1727,7 +1727,7 @@ export function QualityPg14Page() {
                     </tr>
                   ))}
                   {plans.filter((r) => r.programYear === programYearFilter).length === 0 && (
-                    <tr><td colSpan={17} style={{ padding: 16, color: "#64748b" }}>Sin ítems para {programYearFilter}.</td></tr>
+                    <tr><td colSpan={17} style={{ padding: 16, color: "var(--lc-ink-3)" }}>Sin ítems para {programYearFilter}.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -1736,7 +1736,7 @@ export function QualityPg14Page() {
             {selectedPlan && (
               <div className="card" style={{ padding: 16 }}>
                 <h3 style={{ marginTop: 0 }}>{selectedPlan.number}</h3>
-                <p style={{ marginTop: 0, color: "#64748b" }}>
+                <p style={{ marginTop: 0, color: "var(--lc-ink-3)" }}>
                   {SOURCE_LABEL[selectedPlan.assetSource] || selectedPlan.assetSource} · {selectedPlan.equipmentCode} · {selectedPlan.equipmentDescription}
                   {selectedPlan.isOverdue ? " · Vencido" : ""}
                 </p>

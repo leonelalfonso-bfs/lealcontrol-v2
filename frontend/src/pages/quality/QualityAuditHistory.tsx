@@ -49,7 +49,7 @@ export function QualityAuditHistory({ entityType, entityId, title = "Historial d
       {open && (
         <div style={{ marginTop: 10 }}>
           {loading && <p className="muted">Cargando historial…</p>}
-          {error && <p style={{ color: "#b91c1c" }}>{error}</p>}
+          {error && <p style={{ color: "var(--lc-danger)" }}>{error}</p>}
           {!loading && !error && rows.length === 0 && (
             <p className="muted">Sin eventos registrados todavía.</p>
           )}

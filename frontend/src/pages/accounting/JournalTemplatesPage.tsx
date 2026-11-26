@@ -48,7 +48,7 @@ export function JournalTemplatesPage() {
       {/* Top Header */}
       <div className="page-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div>
-          <span className="eyebrow" style={{ color: "#0d9488", fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.08em" }}>
+          <span className="eyebrow" style={{ color: "var(--lc-accent-strong)", fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.08em" }}>
             Configuración Contable & Automatización
           </span>
           <h1 style={{ margin: "2px 0 0", fontSize: "1.75rem", fontWeight: 800 }}>
@@ -63,7 +63,7 @@ export function JournalTemplatesPage() {
           <button
             type="button"
             className="btn"
-            style={{ background: "#dc2626", color: "#fff", fontWeight: 700 }}
+            style={{ background: "var(--lc-danger)", color: "#fff", fontWeight: 700 }}
             onClick={() => setShowBatchModal(true)}
           >
             🔴 ► CONTABILIZAR
@@ -73,7 +73,7 @@ export function JournalTemplatesPage() {
           <Link
             to="/contabilidad/modelos/nuevo"
             className="btn"
-            style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)", color: "#fff", fontWeight: 700 }}
+            style={{ background: "linear-gradient(135deg, var(--lc-accent), var(--lc-accent))", color: "#fff", fontWeight: 700 }}
           >
             ➕ Nuevo Asiento Modelo
           </Link>
@@ -82,7 +82,7 @@ export function JournalTemplatesPage() {
 
       {/* KPI Stats */}
       <div className="kpi kpi-4" style={{ marginBottom: 24 }}>
-        <div className="card pad" style={{ borderLeft: "4px solid #0d9488" }}>
+        <div className="card pad" style={{ borderLeft: "4px solid var(--lc-accent)" }}>
           <div className="muted">Total Modelos Configurados</div>
           <strong style={{ fontSize: "1.8rem" }}>{templates.length}</strong>
           <div style={{ fontSize: "0.78rem", color: "var(--ok)", fontWeight: 700, marginTop: 4 }}>
@@ -90,26 +90,26 @@ export function JournalTemplatesPage() {
           </div>
         </div>
 
-        <div className="card pad" style={{ borderLeft: "4px solid #3b82f6" }}>
+        <div className="card pad" style={{ borderLeft: "4px solid var(--lc-info)" }}>
           <div className="muted">Módulo Ventas</div>
           <strong style={{ fontSize: "1.8rem" }}>{templates.filter((t) => t.sourceModule === "Sales").length}</strong>
-          <div style={{ fontSize: "0.78rem", color: "#2563eb", fontWeight: 600, marginTop: 4 }}>
+          <div style={{ fontSize: "0.78rem", color: "var(--lc-info)", fontWeight: 600, marginTop: 4 }}>
             Facturas A/B/C, NC, ND
           </div>
         </div>
 
-        <div className="card pad" style={{ borderLeft: "4px solid #f59e0b" }}>
+        <div className="card pad" style={{ borderLeft: "4px solid var(--lc-warn)" }}>
           <div className="muted">Módulo Compras</div>
           <strong style={{ fontSize: "1.8rem" }}>{templates.filter((t) => t.sourceModule === "Purchases").length}</strong>
-          <div style={{ fontSize: "0.78rem", color: "#d97706", fontWeight: 600, marginTop: 4 }}>
+          <div style={{ fontSize: "0.78rem", color: "var(--lc-warn)", fontWeight: 600, marginTop: 4 }}>
             Facturas proveedor & gastos
           </div>
         </div>
 
-        <div className="card pad" style={{ borderLeft: "4px solid #8b5cf6" }}>
+        <div className="card pad" style={{ borderLeft: "4px solid var(--lc-violet)" }}>
           <div className="muted">Finanzas & Tesorería</div>
           <strong style={{ fontSize: "1.8rem" }}>{templates.filter((t) => t.sourceModule === "Finance").length}</strong>
-          <div style={{ fontSize: "0.78rem", color: "#7c3aed", fontWeight: 600, marginTop: 4 }}>
+          <div style={{ fontSize: "0.78rem", color: "var(--lc-violet)", fontWeight: 600, marginTop: 4 }}>
             Recibos, pagos y transferencias
           </div>
         </div>
@@ -130,7 +130,7 @@ export function JournalTemplatesPage() {
                 key={tab.id}
                 type="button"
                 className={`btn compact ${filterModule === tab.id ? "" : "ghost"}`}
-                style={filterModule === tab.id ? { background: "#0d9488", color: "#fff" } : {}}
+                style={filterModule === tab.id ? { background: "var(--lc-accent)", color: "#fff" } : {}}
                 onClick={() => setFilterModule(tab.id)}
               >
                 {tab.label}
@@ -177,7 +177,7 @@ export function JournalTemplatesPage() {
                 {filteredTemplates.map((t) => (
                   <tr key={t.id}>
                     <td>
-                      <span className="badge" style={{ background: "#e6fffa", color: "#0f766e", fontWeight: 700 }}>
+                      <span className="badge" style={{ background: "var(--lc-accent-soft)", color: "var(--lc-accent-strong)", fontWeight: 700 }}>
                         {t.code}
                       </span>
                     </td>
@@ -194,10 +194,10 @@ export function JournalTemplatesPage() {
                       <span style={{ fontSize: "0.82rem", fontWeight: 600 }}>{t.documentType}</span>
                     </td>
                     <td>
-                      <span style={{ fontSize: "0.8rem", color: "#555" }}>{t.entrySeries || "General"}</span>
+                      <span style={{ fontSize: "0.8rem", color: "var(--lc-ink-2)" }}>{t.entrySeries || "General"}</span>
                     </td>
                     <td style={{ textAlign: "center" }}>
-                      <span className="badge" style={{ background: "#f1f5f9", fontWeight: 700 }}>
+                      <span className="badge" style={{ background: "var(--lc-surface-2)", fontWeight: 700 }}>
                         {t.lines?.length || 0} cuentas
                       </span>
                     </td>
@@ -218,7 +218,7 @@ export function JournalTemplatesPage() {
                         <button
                           type="button"
                           className="btn ghost compact"
-                          style={{ color: "#dc2626" }}
+                          style={{ color: "var(--lc-danger)" }}
                           onClick={() => handleDelete(t.id, `${t.code} - ${t.name}`)}
                           title="Eliminar Asiento Modelo"
                         >

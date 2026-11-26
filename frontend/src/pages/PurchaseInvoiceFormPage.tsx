@@ -416,7 +416,7 @@ export function PurchaseInvoiceFormPage() {
       </div>
 
       {error && (
-        <div style={{ padding: "12px 16px", background: "#fef2f2", color: "#b91c1c", borderRadius: "8px", marginBottom: "16px", border: "1px solid #f87171" }}>
+        <div style={{ padding: "12px 16px", background: "var(--lc-danger-bg)", color: "var(--lc-danger)", borderRadius: "8px", marginBottom: "16px", border: "1px solid var(--lc-danger)" }}>
           {error}
         </div>
       )}
@@ -730,7 +730,7 @@ export function PurchaseInvoiceFormPage() {
                         <button
                           type="button"
                           onClick={() => removeItemRow(idx)}
-                          style={{ background: "transparent", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "1.1rem" }}
+                          style={{ background: "transparent", border: "none", color: "var(--lc-danger)", cursor: "pointer", fontSize: "1.1rem" }}
                           title="Eliminar este concepto"
                         >
                           ✕
@@ -762,7 +762,7 @@ export function PurchaseInvoiceFormPage() {
               {iva21 > 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "0.88rem" }}>
                   <span className="muted">IVA 21%:</span>
-                  <span style={{ fontFamily: "monospace", color: "#047857" }}>
+                  <span style={{ fontFamily: "monospace", color: "var(--lc-ok)" }}>
                     $ {iva21.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
@@ -771,7 +771,7 @@ export function PurchaseInvoiceFormPage() {
               {iva105 > 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "0.88rem" }}>
                   <span className="muted">IVA 10.5%:</span>
-                  <span style={{ fontFamily: "monospace", color: "#047857" }}>
+                  <span style={{ fontFamily: "monospace", color: "var(--lc-ok)" }}>
                     $ {iva105.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
@@ -780,7 +780,7 @@ export function PurchaseInvoiceFormPage() {
               {iva27 > 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "0.88rem" }}>
                   <span className="muted">IVA 27%:</span>
-                  <span style={{ fontFamily: "monospace", color: "#047857" }}>
+                  <span style={{ fontFamily: "monospace", color: "var(--lc-ok)" }}>
                     $ {iva27.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
@@ -797,7 +797,7 @@ export function PurchaseInvoiceFormPage() {
 
               <div style={{ borderTop: "2px solid var(--surface-border)", paddingTop: "10px", display: "flex", justifyContent: "space-between", marginBottom: "16px" }}>
                 <span style={{ fontWeight: "bold", fontSize: "1.1rem" }}>Total Factura:</span>
-                <span style={{ fontWeight: "bold", fontSize: "1.2rem", color: "#047857", fontFamily: "monospace" }}>
+                <span style={{ fontWeight: "bold", fontSize: "1.2rem", color: "var(--lc-ok)", fontFamily: "monospace" }}>
                   $ {grandTotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                 </span>
               </div>
@@ -810,7 +810,7 @@ export function PurchaseInvoiceFormPage() {
                     borderRadius: "8px",
                     background: "rgba(16, 185, 129, 0.12)",
                     border: "1px solid #6ee7b7",
-                    color: "#065f46",
+                    color: "var(--lc-ok)",
                     fontSize: "0.85rem",
                     fontWeight: 600
                   }}
@@ -820,7 +820,7 @@ export function PurchaseInvoiceFormPage() {
               )}
 
               {/* CAE Field */}
-              {!isX && <div style={{ marginBottom: "12px", background: "#f8fafc", padding: "10px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+              {!isX && <div style={{ marginBottom: "12px", background: "var(--lc-surface-2)", padding: "10px", borderRadius: "8px", border: "1px solid var(--lc-line)" }}>
                 <label style={{ display: "block", fontSize: "0.82rem", fontWeight: "bold", marginBottom: "2px" }}>
                   CAE / CAI Autorización ARCA
                 </label>

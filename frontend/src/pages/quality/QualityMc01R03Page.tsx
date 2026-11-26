@@ -13,9 +13,9 @@ function defaultPeriod(): string {
 }
 
 function complianceLabel(c?: string | null) {
-  if (c === "Met") return { text: "Cumple", color: "#166534" };
-  if (c === "Below") return { text: "No cumple", color: "#991b1b" };
-  return { text: "Sin meta", color: "#64748b" };
+  if (c === "Met") return { text: "Cumple", color: "var(--lc-ok)" };
+  if (c === "Below") return { text: "No cumple", color: "var(--lc-danger)" };
+  return { text: "Sin meta", color: "var(--lc-ink-3)" };
 }
 
 function isYearMonth(period: string): boolean {
@@ -198,7 +198,7 @@ export function QualityMc01R03Page() {
         <div>
           <Link to="/calidad/documentos/MC01-R03" style={{ fontSize: 13 }}>← Plantilla MC01-R03</Link>
           <h1 style={{ margin: "8px 0 0" }}>MC01-R03 · Seguimiento de objetivos e indicadores</h1>
-          <p style={{ color: "#64748b", marginTop: 6 }}>
+          <p style={{ color: "var(--lc-ink-3)", marginTop: 6 }}>
             Definí indicadores del SGC y cargá el valor real por período (cláusula ISO 8.2).
           </p>
         </div>
@@ -214,7 +214,7 @@ export function QualityMc01R03Page() {
       {(error || msg) && (
         <div
           className="card pad"
-          style={{ marginTop: 12, background: error ? "#fef2f2" : "#f0fdf4", color: error ? "#991b1b" : "#166534" }}
+          style={{ marginTop: 12, background: error ? "var(--lc-danger-bg)" : "var(--lc-ok-bg)", color: error ? "var(--lc-danger)" : "var(--lc-ok)" }}
         >
           {error || msg}
         </div>
@@ -372,11 +372,11 @@ export function QualityMc01R03Page() {
           ) : (
             <>
               <h3 style={{ marginTop: 0 }}>{selected.name}</h3>
-              <p style={{ color: "#64748b", fontSize: 13, marginTop: 0 }}>
+              <p style={{ color: "var(--lc-ink-3)", fontSize: 13, marginTop: 0 }}>
                 {selected.objective || "Sin objetivo descripto."}
                 {selected.formula ? ` · Fórmula: ${selected.formula}` : ""}
               </p>
-              <div style={{ fontSize: 13, color: "#64748b", marginBottom: 12 }}>
+              <div style={{ fontSize: 13, color: "var(--lc-ink-3)", marginBottom: 12 }}>
                 <div>
                   <strong>Acciones:</strong> {selected.actions || "—"}
                 </div>

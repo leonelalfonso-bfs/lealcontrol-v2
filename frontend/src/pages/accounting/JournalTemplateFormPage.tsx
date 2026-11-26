@@ -185,17 +185,17 @@ export function JournalTemplateFormPage() {
     <div className="page-wide" style={{ paddingBottom: 60 }}>
       {/* Top Header & Breadcrumb */}
       <div style={{ marginBottom: 20 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "#64748b", marginBottom: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "var(--lc-ink-3)", marginBottom: 6 }}>
           <Link to="/contabilidad" style={{ color: "inherit", textDecoration: "none" }}>Contabilidad</Link>
           <span>›</span>
           <Link to="/contabilidad/modelos" style={{ color: "inherit", textDecoration: "none" }}>Asientos Modelos</Link>
           <span>›</span>
-          <span style={{ color: "#0f766e", fontWeight: 700 }}>{isEditing ? `Editar [${code}]` : "Nuevo Modelo"}</span>
+          <span style={{ color: "var(--lc-accent-strong)", fontWeight: 700 }}>{isEditing ? `Editar [${code}]` : "Nuevo Modelo"}</span>
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
-            <h1 style={{ margin: "0 0 4px", fontSize: "1.75rem", fontWeight: 800, color: "#0f172a" }}>
+            <h1 style={{ margin: "0 0 4px", fontSize: "1.75rem", fontWeight: 800, color: "var(--lc-ink)" }}>
               {isEditing ? `✏️ Asiento Modelo: ${name || code}` : "➕ Nuevo Asiento Modelo"}
             </h1>
             <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
@@ -212,7 +212,7 @@ export function JournalTemplateFormPage() {
               onClick={handleSubmit}
               disabled={saving}
               className="btn"
-              style={{ background: "#0d9488", color: "#fff", fontWeight: 800, padding: "8px 22px", fontSize: "0.92rem", minWidth: 160 }}
+              style={{ background: "var(--lc-accent)", color: "#fff", fontWeight: 800, padding: "8px 22px", fontSize: "0.92rem", minWidth: 160 }}
             >
               {saving ? "Guardando..." : "💾 Guardar Asiento Modelo"}
             </button>
@@ -221,15 +221,15 @@ export function JournalTemplateFormPage() {
       </div>
 
       {error && (
-        <div className="alert" style={{ marginBottom: 20, background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", padding: "14px 18px", borderRadius: 8, fontSize: "0.92rem" }}>
+        <div className="alert" style={{ marginBottom: 20, background: "var(--lc-danger-bg)", color: "var(--lc-danger)", border: "1px solid var(--lc-danger-bg)", padding: "14px 18px", borderRadius: 8, fontSize: "0.92rem" }}>
           ⚠️ {error}
         </div>
       )}
 
       <form onSubmit={handleSubmit}>
         {/* SECCIÓN 1: CABECERA & DISPARADOR */}
-        <div className="card pad" style={{ marginBottom: 24, borderLeft: "5px solid #0d9488" }}>
-          <div style={{ fontWeight: 800, fontSize: "1rem", color: "#0f766e", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+        <div className="card pad" style={{ marginBottom: 24, borderLeft: "5px solid var(--lc-accent)" }}>
+          <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--lc-accent-strong)", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
             <span>1. DATOS DE CABECERA & DISPARADOR DEL COMPROBANTE</span>
           </div>
 
@@ -242,7 +242,7 @@ export function JournalTemplateFormPage() {
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 placeholder="ej. AM-VTA-FAC"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontWeight: 800, fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontWeight: 800, fontSize: "0.92rem" }}
               />
             </div>
 
@@ -254,7 +254,7 @@ export function JournalTemplateFormPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="ej. Factura A de Venta - Cuenta Corriente"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               />
             </div>
 
@@ -268,7 +268,7 @@ export function JournalTemplateFormPage() {
                   else if (e.target.value === "Purchases") setEntrySeries("Compras");
                   else if (e.target.value === "Finance") setEntrySeries("Finanzas");
                 }}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               >
                 <option value="Sales">🛒 Ventas</option>
                 <option value="Purchases">📦 Compras</option>
@@ -283,7 +283,7 @@ export function JournalTemplateFormPage() {
               <select
                 value={documentType}
                 onChange={(e) => setDocumentType(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               >
                 <option value="InvoiceA">Factura A</option>
                 <option value="InvoiceB">Factura B / C</option>
@@ -305,7 +305,7 @@ export function JournalTemplateFormPage() {
                 value={entrySeries}
                 onChange={(e) => setEntrySeries(e.target.value)}
                 placeholder="Ventas / Compras / Finanzas / General"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               />
             </div>
 
@@ -314,7 +314,7 @@ export function JournalTemplateFormPage() {
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as any)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               >
                 <option value="Active">✓ Activo (Se usa al Contabilizar)</option>
                 <option value="Inactive">Inactivo (Pausado)</option>
@@ -329,16 +329,16 @@ export function JournalTemplateFormPage() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Detalle o aclaraciones de imputación para el estudio contable..."
-              style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.9rem" }}
+              style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.9rem" }}
             />
           </div>
         </div>
 
         {/* SECCIÓN 2: LÍNEAS CONTABLES (TABLA COMPLETA) */}
-        <div className="card pad" style={{ marginBottom: 30, borderLeft: "5px solid #3b82f6" }}>
+        <div className="card pad" style={{ marginBottom: 30, borderLeft: "5px solid var(--lc-info)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
             <div>
-              <div style={{ fontWeight: 800, fontSize: "1rem", color: "#1e40af" }}>
+              <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--lc-info)" }}>
                 2. LÍNEAS CONTABLES (DEBE / HABER & VARIABLES DE IMPORTE)
               </div>
               <span className="muted" style={{ fontSize: "0.85rem" }}>
@@ -350,16 +350,16 @@ export function JournalTemplateFormPage() {
               type="button"
               onClick={handleAddLine}
               className="btn"
-              style={{ background: "#0d9488", color: "#fff", fontSize: "0.88rem", fontWeight: 800, padding: "8px 18px" }}
+              style={{ background: "var(--lc-accent)", color: "#fff", fontSize: "0.88rem", fontWeight: 800, padding: "8px 18px" }}
             >
               ➕ Agregar Renglón al Asiento
             </button>
           </div>
 
-          <div className="table-wrap" style={{ border: "1px solid #cbd5e1", borderRadius: 10, overflow: "hidden", boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.05)" }}>
+          <div className="table-wrap" style={{ border: "1px solid var(--lc-line-2)", borderRadius: 10, overflow: "hidden", boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.05)" }}>
             <table style={{ margin: 0, width: "100%", borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ background: "#f8fafc", borderBottom: "2px solid #cbd5e1" }}>
+                <tr style={{ background: "var(--lc-surface-2)", borderBottom: "2px solid var(--lc-line-2)" }}>
                   <th style={{ width: 50, textAlign: "center", padding: "12px 8px" }}>#</th>
                   <th style={{ width: "32%", minWidth: 280, padding: "12px 14px" }}>Cuenta Contable (Plan de Cuentas)</th>
                   <th style={{ width: 140, minWidth: 130, padding: "12px 10px" }}>Columna</th>
@@ -371,14 +371,14 @@ export function JournalTemplateFormPage() {
               </thead>
               <tbody>
                 {lines.map((l, index) => (
-                  <tr key={index} style={{ borderBottom: "1px solid #e2e8f0", background: index % 2 === 0 ? "#ffffff" : "#f8fafc" }}>
-                    <td style={{ textAlign: "center", fontWeight: 800, color: "#64748b", padding: "10px 8px" }}>{index + 1}</td>
+                  <tr key={index} style={{ borderBottom: "1px solid var(--lc-line)", background: index % 2 === 0 ? "var(--lc-surface)" : "var(--lc-surface-2)" }}>
+                    <td style={{ textAlign: "center", fontWeight: 800, color: "var(--lc-ink-3)", padding: "10px 8px" }}>{index + 1}</td>
                     
                     <td style={{ padding: "10px 14px" }}>
                       <select
                         value={l.accountCode}
                         onChange={(e) => handleLineChange(index, "accountCode", e.target.value)}
-                        style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.88rem", background: "#fff", fontWeight: 600 }}
+                        style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.88rem", background: "var(--lc-surface)", fontWeight: 600 }}
                       >
                         {accounts.map((acc) => (
                           <option key={acc.id} value={acc.code}>
@@ -396,7 +396,7 @@ export function JournalTemplateFormPage() {
                           width: "100%",
                           padding: "8px 12px",
                           borderRadius: 6,
-                          border: "1px solid #cbd5e1",
+                          border: "1px solid var(--lc-line-2)",
                           fontWeight: 800,
                           fontSize: "0.88rem",
                           background: l.debitCredit === "Debit" ? "#eff6ff" : "#f0fdf4",
@@ -412,7 +412,7 @@ export function JournalTemplateFormPage() {
                       <select
                         value={l.amountSource}
                         onChange={(e) => handleLineChange(index, "amountSource", e.target.value)}
-                        style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.88rem", background: "#fff" }}
+                        style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.88rem", background: "var(--lc-surface)" }}
                       >
                         {variables.map((v) => (
                           <option key={v.key} value={v.key}>
@@ -426,7 +426,7 @@ export function JournalTemplateFormPage() {
                       <select
                         value={l.condition}
                         onChange={(e) => handleLineChange(index, "condition", e.target.value)}
-                        style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.88rem", background: "#fff" }}
+                        style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.88rem", background: "var(--lc-surface)" }}
                       >
                         <option value="Always">Siempre</option>
                         <option value="IfHasVat21">Si tiene IVA 21% &gt; 0</option>
@@ -439,7 +439,7 @@ export function JournalTemplateFormPage() {
                     </td>
 
                     <td style={{ textAlign: "center", padding: "10px 8px" }}>
-                      <label style={{ fontSize: "0.82rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5, fontWeight: 700, color: "#475569" }}>
+                      <label style={{ fontSize: "0.82rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5, fontWeight: 700, color: "var(--lc-ink-2)" }}>
                         <input
                           type="checkbox"
                           checked={l.isInvertedSign}
@@ -455,7 +455,7 @@ export function JournalTemplateFormPage() {
                         type="button"
                         onClick={() => handleRemoveLine(index)}
                         className="btn ghost compact"
-                        style={{ color: "#dc2626", padding: "6px 10px", borderRadius: 6, fontSize: "0.95rem" }}
+                        style={{ color: "var(--lc-danger)", padding: "6px 10px", borderRadius: 6, fontSize: "0.95rem" }}
                         title="Quitar renglón"
                       >
                         🗑️
@@ -474,10 +474,10 @@ export function JournalTemplateFormPage() {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            background: "#f8fafc",
+            background: "var(--lc-surface-2)",
             padding: "16px 24px",
             borderRadius: 10,
-            border: "1px solid #e2e8f0"
+            border: "1px solid var(--lc-line)"
           }}
         >
           <Link to="/contabilidad/modelos" className="btn ghost" style={{ padding: "9px 20px" }}>
@@ -487,7 +487,7 @@ export function JournalTemplateFormPage() {
             type="submit"
             disabled={saving}
             className="btn"
-            style={{ background: "#0d9488", color: "#fff", fontWeight: 800, padding: "10px 28px", fontSize: "0.95rem", minWidth: 200 }}
+            style={{ background: "var(--lc-accent)", color: "#fff", fontWeight: 800, padding: "10px 28px", fontSize: "0.95rem", minWidth: 200 }}
           >
             {saving ? "Guardando..." : "💾 Guardar Asiento Modelo"}
           </button>

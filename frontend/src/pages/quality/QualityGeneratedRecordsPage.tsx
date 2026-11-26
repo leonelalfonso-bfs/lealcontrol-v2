@@ -37,7 +37,7 @@ export function QualityPg01R01Page() {
         <div>
           <Link to="/calidad/documentos">← Documentos</Link>
           <h1 style={{ marginTop: 8 }}>{title}</h1>
-          <p style={{ color: "#64748b" }}>Registro generado automáticamente desde el árbol documental (PG01).</p>
+          <p style={{ color: "var(--lc-ink-3)" }}>Registro generado automáticamente desde el árbol documental (PG01).</p>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Link className="btn btn-outline" to="/calidad/registros/pg01-r01/pdf">Exportar PDF</Link>
@@ -46,7 +46,7 @@ export function QualityPg01R01Page() {
           </button>
         </div>
       </div>
-      {error && <p style={{ color: "#b91c1c" }}>{error}</p>}
+      {error && <p style={{ color: "var(--lc-danger)" }}>{error}</p>}
       <div className="table-wrap card pad" style={{ marginTop: 12 }}>
         <table className="table">
           <thead>

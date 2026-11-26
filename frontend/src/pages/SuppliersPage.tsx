@@ -183,8 +183,8 @@ export function SuppliersPage() {
           style={{
             marginBottom: 16,
             background: "rgba(16, 185, 129, 0.12)",
-            borderColor: "#10b981",
-            color: "#065f46",
+            borderColor: "var(--lc-ok)",
+            color: "var(--lc-ok)",
             fontWeight: 600
           }}
         >
@@ -199,7 +199,7 @@ export function SuppliersPage() {
         </div>
         <div className="card">
           <span className="muted">Clientes y Proveedores</span>
-          <strong style={{ color: "#2563eb" }}>{totalBoth} (Cuenta Corriente)</strong>
+          <strong style={{ color: "var(--lc-info)" }}>{totalBoth} (Cuenta Corriente)</strong>
         </div>
         <div className="card">
           <span className="muted">Resp. Inscriptos</span>
@@ -260,13 +260,13 @@ export function SuppliersPage() {
                       {s.isCustomer && s.isSupplier ? (
                         <span
                           className="badge ok"
-                          style={{ background: "#dbeafe", color: "#1e40af" }}
+                          style={{ background: "var(--lc-info-bg)", color: "var(--lc-info)" }}
                           title="Comparte cuenta corriente unificada de cliente y proveedor"
                         >
                           🤝 Cliente y Proveedor
                         </span>
                       ) : (
-                        <span className="badge ok" style={{ background: "#fef3c7", color: "#92400e" }}>
+                        <span className="badge ok" style={{ background: "var(--lc-warn-bg)", color: "var(--lc-warn)" }}>
                           🏢 Proveedor Exclusivo
                         </span>
                       )}

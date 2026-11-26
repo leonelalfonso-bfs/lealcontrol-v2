@@ -67,7 +67,7 @@ export function MetrologyEquipmentPage() {
       {/* Top Header */}
       <div className="page-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div>
-          <span className="eyebrow" style={{ color: "#0d9488", fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.08em" }}>
+          <span className="eyebrow" style={{ color: "var(--lc-accent-strong)", fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.08em" }}>
             Metrología Legal
           </span>
           <h1 style={{ margin: "2px 0 0", fontSize: "1.75rem", fontWeight: 800 }}>
@@ -81,7 +81,7 @@ export function MetrologyEquipmentPage() {
         <Link
           to="/metrologia/equipos/nuevo"
           className="btn"
-          style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)", color: "#fff", fontWeight: 700 }}
+          style={{ background: "linear-gradient(135deg, var(--lc-accent), var(--lc-accent))", color: "#fff", fontWeight: 700 }}
         >
           ➕ Registrar Nuevo Equipo
         </Link>
@@ -89,7 +89,7 @@ export function MetrologyEquipmentPage() {
 
       {/* KPI Stats */}
       <div className="kpi kpi-4" style={{ marginBottom: 24 }}>
-        <div className="card pad" style={{ borderLeft: "4px solid #0d9488" }}>
+        <div className="card pad" style={{ borderLeft: "4px solid var(--lc-accent)" }}>
           <div className="muted">Total Instrumentos</div>
           <strong style={{ fontSize: "1.8rem" }}>{equipments.length}</strong>
           <div style={{ fontSize: "0.78rem", color: "var(--ok)", fontWeight: 700, marginTop: 4 }}>
@@ -97,32 +97,32 @@ export function MetrologyEquipmentPage() {
           </div>
         </div>
 
-        <div className="card pad" style={{ borderLeft: "4px solid #3b82f6" }}>
+        <div className="card pad" style={{ borderLeft: "4px solid var(--lc-info)" }}>
           <div className="muted">Básculas Camioneras</div>
           <strong style={{ fontSize: "1.8rem" }}>
             {equipments.filter((e) => e.platformType === "TruckScale" || !e.platformType).length}
           </strong>
-          <div style={{ fontSize: "0.78rem", color: "#2563eb", fontWeight: 600, marginTop: 4 }}>
+          <div style={{ fontSize: "0.78rem", color: "var(--lc-info)", fontWeight: 600, marginTop: 4 }}>
             Pesaje pesado / transporte
           </div>
         </div>
 
-        <div className="card pad" style={{ borderLeft: "4px solid #f59e0b" }}>
+        <div className="card pad" style={{ borderLeft: "4px solid var(--lc-warn)" }}>
           <div className="muted">Plataformas & Tolvas</div>
           <strong style={{ fontSize: "1.8rem" }}>
             {equipments.filter((e) => e.platformType && e.platformType !== "TruckScale").length}
           </strong>
-          <div style={{ fontSize: "0.78rem", color: "#d97706", fontWeight: 600, marginTop: 4 }}>
+          <div style={{ fontSize: "0.78rem", color: "var(--lc-warn)", fontWeight: 600, marginTop: 4 }}>
             Industria y laboratorio
           </div>
         </div>
 
-        <div className="card pad" style={{ borderLeft: "4px solid #dc2626" }}>
+        <div className="card pad" style={{ borderLeft: "4px solid var(--lc-danger)" }}>
           <div className="muted">Calibración Vencida</div>
-          <strong style={{ fontSize: "1.8rem", color: "#dc2626" }}>
+          <strong style={{ fontSize: "1.8rem", color: "var(--lc-danger)" }}>
             {equipments.filter((e) => e.nextCalibrationDate && new Date(e.nextCalibrationDate) < new Date()).length}
           </strong>
-          <div style={{ fontSize: "0.78rem", color: "#dc2626", fontWeight: 600, marginTop: 4 }}>
+          <div style={{ fontSize: "0.78rem", color: "var(--lc-danger)", fontWeight: 600, marginTop: 4 }}>
             Requieren ensayo urgente
           </div>
         </div>
@@ -136,13 +136,13 @@ export function MetrologyEquipmentPage() {
             placeholder="🔍 Buscar por código, descripción, serie, cliente..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ width: "100%", padding: "7px 12px", borderRadius: 6, border: "1px solid #cbd5e1" }}
+            style={{ width: "100%", padding: "7px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)" }}
           />
 
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            style={{ width: "100%", padding: "7px 10px", borderRadius: 6, border: "1px solid #cbd5e1" }}
+            style={{ width: "100%", padding: "7px 10px", borderRadius: 6, border: "1px solid var(--lc-line-2)" }}
           >
             <option value="">Todos los Estados</option>
             <option value="Active">✓ Activo / Operativo</option>
@@ -161,7 +161,7 @@ export function MetrologyEquipmentPage() {
           <select
             value={standardFilter}
             onChange={(e) => setStandardFilter(e.target.value)}
-            style={{ width: "100%", padding: "7px 10px", borderRadius: 6, border: "1px solid #cbd5e1" }}
+            style={{ width: "100%", padding: "7px 10px", borderRadius: 6, border: "1px solid var(--lc-line-2)" }}
           >
             <option value="">Todas las Normas</option>
             <option value="Res25_2025">Res. 25/2025</option>
@@ -200,7 +200,7 @@ export function MetrologyEquipmentPage() {
                   return (
                     <tr key={eq.id}>
                       <td>
-                        <span className="badge" style={{ background: "#e6fffa", color: "#0f766e", fontWeight: 800 }}>
+                        <span className="badge" style={{ background: "var(--lc-accent-soft)", color: "var(--lc-accent-strong)", fontWeight: 800 }}>
                           {eq.code}
                         </span>
                       </td>
@@ -245,7 +245,7 @@ export function MetrologyEquipmentPage() {
                           <Link
                             to={`/metrologia/ensayos/nuevo?equipmentId=${eq.id}`}
                             className="btn ghost compact"
-                            style={{ color: "#0d9488", fontWeight: 700 }}
+                            style={{ color: "var(--lc-accent-strong)", fontWeight: 700 }}
                             title="Calibrar / Ensayar Balanza"
                           >
                             ⚖️ Ensayar
@@ -261,7 +261,7 @@ export function MetrologyEquipmentPage() {
                             type="button"
                             className="btn ghost compact"
                             onClick={() => handleDelete(eq.id, eq.code)}
-                            style={{ color: "#dc2626" }}
+                            style={{ color: "var(--lc-danger)" }}
                             title="Eliminar"
                           >
                             🗑️

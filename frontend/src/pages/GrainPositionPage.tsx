@@ -65,7 +65,7 @@ export function GrainPositionPage() {
                   fontWeight: 800,
                   fontSize: "0.8rem",
                   background: pos.netPositionTons >= 0 ? "rgba(16, 185, 129, 0.12)" : "rgba(239, 68, 68, 0.12)",
-                  color: pos.netPositionTons >= 0 ? "#10b981" : "#ef4444"
+                  color: pos.netPositionTons >= 0 ? "var(--lc-ok)" : "var(--lc-danger)"
                 }}>
                   {pos.netPositionTons >= 0 ? "Posición Long (+)" : "Posición Short (-)"}
                 </span>
@@ -82,11 +82,11 @@ export function GrainPositionPage() {
                 </div>
                 <div className="card" style={{ padding: "12px" }}>
                   <div style={{ color: "var(--ink-soft)" }}>Entregado Físico</div>
-                  <strong style={{ fontSize: "1.1rem", color: "#0d9488" }}>{pos.deliveredTons.toLocaleString("es-AR")} Tn</strong>
+                  <strong style={{ fontSize: "1.1rem", color: "var(--lc-accent-strong)" }}>{pos.deliveredTons.toLocaleString("es-AR")} Tn</strong>
                 </div>
                 <div className="card" style={{ padding: "12px" }}>
                   <div style={{ color: "var(--ink-soft)" }}>Pendiente de Fijar</div>
-                  <strong style={{ fontSize: "1.1rem", color: "#d97706" }}>{pos.openFixationTons.toLocaleString("es-AR")} Tn</strong>
+                  <strong style={{ fontSize: "1.1rem", color: "var(--lc-warn)" }}>{pos.openFixationTons.toLocaleString("es-AR")} Tn</strong>
                 </div>
               </div>
             </div>

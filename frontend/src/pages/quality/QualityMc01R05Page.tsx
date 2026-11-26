@@ -93,7 +93,7 @@ export function QualityMc01R05Page() {
         <div>
           <Link to="/calidad/documentos/MC01-R05" style={{ fontSize: 13 }}>← Plantilla MC01-R05</Link>
           <h1 style={{ margin: "8px 0 0" }}>MC01-R05 · Nota institucional</h1>
-          <p style={{ color: "#64748b", marginTop: 6 }}>
+          <p style={{ color: "var(--lc-ink-3)", marginTop: 6 }}>
             Comunicaciones formales de la dirección al personal / partes interesadas.
           </p>
         </div>
@@ -108,7 +108,7 @@ export function QualityMc01R05Page() {
       {(error || msg) && (
         <div
           className="card pad"
-          style={{ marginTop: 12, background: error ? "#fef2f2" : "#f0fdf4", color: error ? "#991b1b" : "#166534" }}
+          style={{ marginTop: 12, background: error ? "var(--lc-danger-bg)" : "var(--lc-ok-bg)", color: error ? "var(--lc-danger)" : "var(--lc-ok)" }}
         >
           {error || msg}
         </div>

@@ -608,7 +608,7 @@ export function InboxPage() {
           <p className="muted">Correo, Instagram y Facebook en una sola bandeja, unificados con el CRM.</p>
         </div>
         <div className="toolbar" style={{ display: "flex", gap: 8 }}>
-          <button className="btn btn-outline" onClick={() => void handleForceSyncOmni()} disabled={busy} style={{ color: "#0d9488", borderColor: "#0d9488", fontWeight: 700 }}>
+          <button className="btn btn-outline" onClick={() => void handleForceSyncOmni()} disabled={busy} style={{ color: "var(--lc-accent-strong)", borderColor: "var(--lc-accent)", fontWeight: 700 }}>
             💬 📸 🔄 Sincronizar Redes
           </button>
           <button className="btn btn-outline" onClick={() => void syncAll()} disabled={busy}>
@@ -624,7 +624,7 @@ export function InboxPage() {
       </div>
 
       {syncNotification && (
-        <div className="alert" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#065f46", borderColor: "#10b981", marginBottom: 12 }}>
+        <div className="alert" style={{ background: "rgba(16, 185, 129, 0.15)", color: "var(--lc-ok)", borderColor: "var(--lc-ok)", marginBottom: 12 }}>
           ✓ {syncNotification}
         </div>
       )}
@@ -692,7 +692,7 @@ export function InboxPage() {
             <strong>{conversations.filter((c) => !c.assignedToUserId).length}</strong>
           </button>
           <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
-            <Link to="/configuracion/comunicaciones" style={{ fontSize: "0.8rem", color: "#0d9488", fontWeight: 700 }}>
+            <Link to="/configuracion/comunicaciones" style={{ fontSize: "0.8rem", color: "var(--lc-accent-strong)", fontWeight: 700 }}>
               ⚙ Cuentas y canales
             </Link>
             <Link to="/comunicaciones/plantillas" style={{ fontSize: "0.8rem", color: "var(--ink-soft)" }}>
@@ -788,7 +788,7 @@ export function InboxPage() {
                       {formatThreadDate(c.lastMessageAtUtc)}
                     </span>
                     {c.unreadCount > 0 && (
-                      <span style={{ background: "#0d9488", color: "white", borderRadius: 10, padding: "1px 6px", fontSize: "0.7rem", fontWeight: 700 }}>
+                      <span style={{ background: "var(--lc-accent)", color: "white", borderRadius: 10, padding: "1px 6px", fontSize: "0.7rem", fontWeight: 700 }}>
                         {c.unreadCount}
                       </span>
                     )}
@@ -798,22 +798,22 @@ export function InboxPage() {
                     {c.lastMessagePreview || `[Mensaje de ${ch}]`}
                   </div>
                   {c.assignedToUserId && (
-                    <div style={{ fontSize: "0.72rem", color: "#0d9488", fontWeight: 600, marginTop: 2 }}>
+                    <div style={{ fontSize: "0.72rem", color: "var(--lc-accent-strong)", fontWeight: 600, marginTop: 2 }}>
                       👤 {tenantUsers.find((u) => u.id === c.assignedToUserId)?.fullName || "Asignado"}
                     </div>
                   )}
                   {c.relatedLeadId && (
-                    <div style={{ fontSize: "0.72rem", color: "#0d9488", fontWeight: 600, marginTop: 2 }}>✓ Lead vinculado</div>
+                    <div style={{ fontSize: "0.72rem", color: "var(--lc-accent-strong)", fontWeight: 600, marginTop: 2 }}>✓ Lead vinculado</div>
                   )}
                   {c.relatedCustomerId && (
-                    <div style={{ fontSize: "0.72rem", color: "#2563eb", fontWeight: 600, marginTop: 2 }}>✓ Cliente vinculado</div>
+                    <div style={{ fontSize: "0.72rem", color: "var(--lc-info)", fontWeight: 600, marginTop: 2 }}>✓ Cliente vinculado</div>
                   )}
                   {c.needsResponse && (
-                    <div style={{ fontSize: "0.72rem", color: "#dc2626", fontWeight: 600, marginTop: 2 }}>⏰ Requiere respuesta</div>
+                    <div style={{ fontSize: "0.72rem", color: "var(--lc-danger)", fontWeight: 600, marginTop: 2 }}>⏰ Requiere respuesta</div>
                   )}
                   {!!c.tags?.length && (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
-                      {c.tags.map((tag) => <span key={tag} style={{ background: "#e0f2fe", color: "#075985", borderRadius: 10, padding: "2px 6px", fontSize: "0.7rem" }}>{tag}</span>)}
+                      {c.tags.map((tag) => <span key={tag} style={{ background: "var(--lc-info-bg)", color: "#075985", borderRadius: 10, padding: "2px 6px", fontSize: "0.7rem" }}>{tag}</span>)}
                     </div>
                   )}
                 </div>
@@ -1127,11 +1127,11 @@ export function InboxPage() {
                 <div className="inbox-context-field">
                   <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Estado CRM</div>
                   {activeConversation.relatedCustomerId ? (
-                    <Link to={`/clientes/${activeConversation.relatedCustomerId}`} style={{ color: "#2563eb", fontWeight: 600 }}>
+                    <Link to={`/clientes/${activeConversation.relatedCustomerId}`} style={{ color: "var(--lc-info)", fontWeight: 600 }}>
                       Cliente: {linkedCustomerName || "vinculado"}
                     </Link>
                   ) : activeConversation.relatedLeadId ? (
-                    <Link to="/prospectos" style={{ color: "#0d9488", fontWeight: 600 }}>
+                    <Link to="/prospectos" style={{ color: "var(--lc-accent-strong)", fontWeight: 600 }}>
                       Lead vinculado
                     </Link>
                   ) : (
@@ -1142,17 +1142,17 @@ export function InboxPage() {
                   <div className="inbox-context-field">
                     <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Documento</div>
                     {activeConversation.relatedQuoteId && (
-                      <Link to={`/presupuestos/${activeConversation.relatedQuoteId}/imprimir`} style={{ color: "#2563eb", fontWeight: 600 }}>
+                      <Link to={`/presupuestos/${activeConversation.relatedQuoteId}/imprimir`} style={{ color: "var(--lc-info)", fontWeight: 600 }}>
                         Presupuesto
                       </Link>
                     )}
                     {activeConversation.relatedOrderId && (
-                      <Link to={`/pedidos/${activeConversation.relatedOrderId}`} style={{ color: "#2563eb", fontWeight: 600, marginLeft: 8 }}>
+                      <Link to={`/pedidos/${activeConversation.relatedOrderId}`} style={{ color: "var(--lc-info)", fontWeight: 600, marginLeft: 8 }}>
                         Pedido
                       </Link>
                     )}
                     {activeConversation.relatedInvoiceId && (
-                      <Link to={`/facturas/${activeConversation.relatedInvoiceId}/imprimir`} style={{ color: "#2563eb", fontWeight: 600, marginLeft: 8 }}>
+                      <Link to={`/facturas/${activeConversation.relatedInvoiceId}/imprimir`} style={{ color: "var(--lc-info)", fontWeight: 600, marginLeft: 8 }}>
                         Factura
                       </Link>
                     )}
@@ -1189,7 +1189,7 @@ export function InboxPage() {
               <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--surface-border)", background: "var(--surface)", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
                 <strong style={{ fontSize: "0.78rem", color: "var(--ink-soft)" }}>Etiquetas</strong>
                 {activeTags.map((tag) => (
-                  <span key={tag.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 8px", borderRadius: 12, background: "#e0f2fe", color: "#075985", fontSize: "0.78rem", fontWeight: 600 }}>
+                  <span key={tag.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 8px", borderRadius: 12, background: "var(--lc-info-bg)", color: "#075985", fontSize: "0.78rem", fontWeight: 600 }}>
                     {tag.name}
                     <button type="button" aria-label={`Quitar etiqueta ${tag.name}`} title="Quitar etiqueta" disabled={tagBusy} onClick={() => void removeTag(tag.id)} style={{ border: 0, background: "transparent", color: "inherit", cursor: "pointer", fontWeight: 700 }}>×</button>
                   </span>
@@ -1207,7 +1207,7 @@ export function InboxPage() {
                     margin: "12px 14px",
                     padding: "12px",
                     borderRadius: 8,
-                    background: "#fffbeb",
+                    background: "var(--lc-warn-bg)",
                     border: "1px solid #fcd34d",
                     display: "flex",
                     flexDirection: "column",

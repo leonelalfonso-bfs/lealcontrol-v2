@@ -172,17 +172,17 @@ export function JournalEntryFormPage() {
     <div className="page-wide" style={{ paddingBottom: 60 }}>
       {/* Breadcrumb & Header */}
       <div style={{ marginBottom: 20 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "#64748b", marginBottom: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "var(--lc-ink-3)", marginBottom: 6 }}>
           <Link to="/contabilidad" style={{ color: "inherit", textDecoration: "none" }}>Contabilidad</Link>
           <span>›</span>
           <Link to="/contabilidad/asientos" style={{ color: "inherit", textDecoration: "none" }}>Libro Diario</Link>
           <span>›</span>
-          <span style={{ color: "#0d9488", fontWeight: 700 }}>Nuevo Asiento Manual</span>
+          <span style={{ color: "var(--lc-accent-strong)", fontWeight: 700 }}>Nuevo Asiento Manual</span>
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
-            <h1 style={{ margin: "0 0 4px", fontSize: "1.75rem", fontWeight: 800, color: "#0f172a" }}>
+            <h1 style={{ margin: "0 0 4px", fontSize: "1.75rem", fontWeight: 800, color: "var(--lc-ink)" }}>
               📝 Registrar Asiento Manual en Libro Diario
             </h1>
             <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
@@ -200,7 +200,7 @@ export function JournalEntryFormPage() {
               disabled={saving || !isBalanced}
               className="btn"
               style={{
-                background: isBalanced ? "#0d9488" : "#94a3b8",
+                background: isBalanced ? "var(--lc-accent)" : "var(--lc-ink-3)",
                 color: "#fff",
                 fontWeight: 800,
                 padding: "8px 24px",
@@ -215,15 +215,15 @@ export function JournalEntryFormPage() {
       </div>
 
       {error && (
-        <div className="alert" style={{ marginBottom: 20, background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", padding: "14px 18px", borderRadius: 8, fontSize: "0.92rem" }}>
+        <div className="alert" style={{ marginBottom: 20, background: "var(--lc-danger-bg)", color: "var(--lc-danger)", border: "1px solid var(--lc-danger-bg)", padding: "14px 18px", borderRadius: 8, fontSize: "0.92rem" }}>
           ⚠️ {error}
         </div>
       )}
 
       <form onSubmit={handleSubmit}>
         {/* SECCIÓN 1: CABECERA DEL ASIENTO */}
-        <div className="card pad" style={{ marginBottom: 20, borderLeft: "5px solid #0d9488" }}>
-          <div style={{ fontWeight: 800, fontSize: "1rem", color: "#0f766e", marginBottom: 14 }}>
+        <div className="card pad" style={{ marginBottom: 20, borderLeft: "5px solid var(--lc-accent)" }}>
+          <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--lc-accent-strong)", marginBottom: 14 }}>
             1. CABECERA & IDENTIFICACIÓN DEL ASIENTO
           </div>
 
@@ -235,7 +235,7 @@ export function JournalEntryFormPage() {
                 required
                 value={entryDate}
                 onChange={(e) => setEntryDate(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontWeight: 700, fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontWeight: 700, fontSize: "0.92rem" }}
               />
             </div>
 
@@ -244,7 +244,7 @@ export function JournalEntryFormPage() {
               <select
                 value={entryType}
                 onChange={(e) => setEntryType(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               >
                 <option value="Standard">Operativo / Estándar</option>
                 <option value="Opening">Asiento de Apertura</option>
@@ -259,7 +259,7 @@ export function JournalEntryFormPage() {
                 value={series}
                 onChange={(e) => setSeries(e.target.value)}
                 placeholder="General, Ajustes, Bancos..."
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               />
             </div>
 
@@ -271,17 +271,17 @@ export function JournalEntryFormPage() {
                 value={concept}
                 onChange={(e) => setConcept(e.target.value)}
                 placeholder="ej. Devengamiento de alquileres e impuestos mensuales período corriente"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               />
             </div>
           </div>
         </div>
 
         {/* SECCIÓN 2: LÍNEAS CONTABLES & PARTIDA DOBLE */}
-        <div className="card pad" style={{ marginBottom: 24, borderLeft: "5px solid #3b82f6" }}>
+        <div className="card pad" style={{ marginBottom: 24, borderLeft: "5px solid var(--lc-info)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
             <div>
-              <div style={{ fontWeight: 800, fontSize: "1rem", color: "#1d4ed8" }}>
+              <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--lc-info)" }}>
                 2. RENGLONES DEL ASIENTO (DEBE / HABER)
               </div>
               <span className="muted" style={{ fontSize: "0.85rem" }}>
@@ -293,16 +293,16 @@ export function JournalEntryFormPage() {
               type="button"
               onClick={addLine}
               className="btn"
-              style={{ background: "#0d9488", color: "#fff", fontSize: "0.88rem", fontWeight: 800, padding: "8px 18px" }}
+              style={{ background: "var(--lc-accent)", color: "#fff", fontSize: "0.88rem", fontWeight: 800, padding: "8px 18px" }}
             >
               ➕ Agregar Renglón
             </button>
           </div>
 
-          <div className="table-wrap" style={{ border: "1px solid #cbd5e1", borderRadius: 10, overflow: "hidden", boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.05)" }}>
+          <div className="table-wrap" style={{ border: "1px solid var(--lc-line-2)", borderRadius: 10, overflow: "hidden", boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.05)" }}>
             <table style={{ margin: 0, width: "100%", borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ background: "#f8fafc", borderBottom: "2px solid #cbd5e1" }}>
+                <tr style={{ background: "var(--lc-surface-2)", borderBottom: "2px solid var(--lc-line-2)" }}>
                   <th style={{ width: 45, textAlign: "center", padding: "12px 6px" }}>#</th>
                   <th style={{ width: "35%", minWidth: 280, padding: "12px 14px" }}>Cuenta Contable (Plan de Cuentas)</th>
                   <th style={{ width: "20%", minWidth: 160, padding: "12px 10px" }}>Centro de Costo (Opcional)</th>
@@ -314,14 +314,14 @@ export function JournalEntryFormPage() {
               </thead>
               <tbody>
                 {lines.map((l, index) => (
-                  <tr key={index} style={{ borderBottom: "1px solid #e2e8f0", background: index % 2 === 0 ? "#ffffff" : "#f8fafc" }}>
-                    <td style={{ textAlign: "center", fontWeight: 800, color: "#64748b", padding: "10px 6px" }}>{index + 1}</td>
+                  <tr key={index} style={{ borderBottom: "1px solid var(--lc-line)", background: index % 2 === 0 ? "var(--lc-surface)" : "var(--lc-surface-2)" }}>
+                    <td style={{ textAlign: "center", fontWeight: 800, color: "var(--lc-ink-3)", padding: "10px 6px" }}>{index + 1}</td>
                     
                     <td style={{ padding: "10px 14px" }}>
                       <select
                         value={l.accountCode}
                         onChange={(e) => handleAccountSelect(index, e.target.value)}
-                        style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.88rem", background: "#fff", fontWeight: 600 }}
+                        style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.88rem", background: "var(--lc-surface)", fontWeight: 600 }}
                       >
                         <option value="">-- Seleccionar Cuenta Imputable --</option>
                         {accounts.map((acc) => (
@@ -342,7 +342,7 @@ export function JournalEntryFormPage() {
                           updated[index].costCenterCode = cc ? cc.code : undefined;
                           setLines(updated);
                         }}
-                        style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.85rem", background: "#fff" }}
+                        style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.85rem", background: "var(--lc-surface)" }}
                       >
                         <option value="">-- Ninguno / Central --</option>
                         {costCenters.map((cc) => (
@@ -359,7 +359,7 @@ export function JournalEntryFormPage() {
                         value={l.memo || ""}
                         onChange={(e) => handleLineChange(index, "memo", e.target.value)}
                         placeholder="Glosa del renglón..."
-                        style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                        style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.85rem" }}
                       />
                     </td>
 
@@ -379,12 +379,12 @@ export function JournalEntryFormPage() {
                           width: "100%",
                           padding: "8px 12px",
                           borderRadius: 6,
-                          border: "1px solid #cbd5e1",
+                          border: "1px solid var(--lc-line-2)",
                           textAlign: "right",
                           fontWeight: 800,
                           fontSize: "0.95rem",
                           color: l.debit > 0 ? "#1d4ed8" : "inherit",
-                          background: l.debit > 0 ? "#eff6ff" : "#fff"
+                          background: l.debit > 0 ? "var(--lc-info-bg)" : "var(--lc-surface)"
                         }}
                       />
                     </td>
@@ -405,12 +405,12 @@ export function JournalEntryFormPage() {
                           width: "100%",
                           padding: "8px 12px",
                           borderRadius: 6,
-                          border: "1px solid #cbd5e1",
+                          border: "1px solid var(--lc-line-2)",
                           textAlign: "right",
                           fontWeight: 800,
                           fontSize: "0.95rem",
                           color: l.credit > 0 ? "#15803d" : "inherit",
-                          background: l.credit > 0 ? "#f0fdf4" : "#fff"
+                          background: l.credit > 0 ? "var(--lc-ok-bg)" : "var(--lc-surface)"
                         }}
                       />
                     </td>
@@ -421,7 +421,7 @@ export function JournalEntryFormPage() {
                         disabled={lines.length <= 2}
                         onClick={() => removeLine(index)}
                         className="btn ghost compact"
-                        style={{ color: lines.length <= 2 ? "#cbd5e1" : "#dc2626", padding: "6px 10px", borderRadius: 6, fontSize: "0.95rem" }}
+                        style={{ color: lines.length <= 2 ? "var(--lc-line-2)" : "var(--lc-danger)", padding: "6px 10px", borderRadius: 6, fontSize: "0.95rem" }}
                         title="Quitar renglón"
                       >
                         🗑️
@@ -439,7 +439,7 @@ export function JournalEntryFormPage() {
           className="card pad"
           style={{
             marginBottom: 30,
-            background: isBalanced ? "#f0fdf4" : "#fef2f2",
+            background: isBalanced ? "var(--lc-ok-bg)" : "var(--lc-danger-bg)",
             border: `1.5px solid ${isBalanced ? "#86efac" : "#fca5a5"}`,
             display: "flex",
             justifyContent: "space-between",
@@ -451,10 +451,10 @@ export function JournalEntryFormPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ fontSize: "1.8rem" }}>{isBalanced ? "⚖️" : "⚠️"}</span>
             <div>
-              <strong style={{ fontSize: "1.05rem", color: isBalanced ? "#166534" : "#991b1b" }}>
+              <strong style={{ fontSize: "1.05rem", color: isBalanced ? "var(--lc-ok)" : "var(--lc-danger)" }}>
                 {isBalanced ? "Asiento Balanceado Correctamente (Partida Doble)" : "Asiento Desbalanceado"}
               </strong>
-              <div style={{ fontSize: "0.85rem", color: isBalanced ? "#15803d" : "#b91c1c" }}>
+              <div style={{ fontSize: "0.85rem", color: isBalanced ? "var(--lc-ok)" : "var(--lc-danger)" }}>
                 {isBalanced
                   ? "El total del Debe coincide exactamente con el total del Haber."
                   : `Diferencia a balancear: $ ${diff.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
@@ -465,13 +465,13 @@ export function JournalEntryFormPage() {
           <div style={{ display: "flex", gap: 24, textAlign: "right" }}>
             <div>
               <div className="muted" style={{ fontSize: "0.8rem", textTransform: "uppercase", fontWeight: 700 }}>Total DEBE</div>
-              <strong style={{ fontSize: "1.3rem", color: "#1d4ed8" }}>
+              <strong style={{ fontSize: "1.3rem", color: "var(--lc-info)" }}>
                 $ {totalDebit.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </strong>
             </div>
             <div>
               <div className="muted" style={{ fontSize: "0.8rem", textTransform: "uppercase", fontWeight: 700 }}>Total HABER</div>
-              <strong style={{ fontSize: "1.3rem", color: "#15803d" }}>
+              <strong style={{ fontSize: "1.3rem", color: "var(--lc-ok)" }}>
                 $ {totalCredit.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </strong>
             </div>
@@ -484,10 +484,10 @@ export function JournalEntryFormPage() {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            background: "#f8fafc",
+            background: "var(--lc-surface-2)",
             padding: "16px 24px",
             borderRadius: 10,
-            border: "1px solid #e2e8f0"
+            border: "1px solid var(--lc-line)"
           }}
         >
           <Link to="/contabilidad/asientos" className="btn ghost" style={{ padding: "9px 20px" }}>
@@ -498,7 +498,7 @@ export function JournalEntryFormPage() {
             disabled={saving || !isBalanced}
             className="btn"
             style={{
-              background: isBalanced ? "#0d9488" : "#94a3b8",
+              background: isBalanced ? "var(--lc-accent)" : "var(--lc-ink-3)",
               color: "#fff",
               fontWeight: 800,
               padding: "10px 28px",

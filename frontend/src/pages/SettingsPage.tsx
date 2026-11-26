@@ -566,7 +566,7 @@ export function SettingsPage({ section = "general" }: { section?: SettingsSectio
             </div>
 
             <div style={{ marginTop: 24, padding: "12px 16px", background: "rgba(245, 158, 11, 0.1)", borderRadius: "var(--radius-sm)", border: "1px solid rgba(245, 158, 11, 0.2)" }}>
-              <div style={{ fontWeight: 600, color: "#d97706", fontSize: "0.88rem" }}>🔒 Almacenamiento Seguro</div>
+              <div style={{ fontWeight: 600, color: "var(--lc-warn)", fontSize: "0.88rem" }}>🔒 Almacenamiento Seguro</div>
               <div style={{ fontSize: "0.8rem", color: "var(--ink-soft)", marginTop: 4 }}>
                 Los certificados y claves privadas se resguardan de forma segura e independiente en la base de datos de tu empresa.
                 Si regenerás el archivo de consulta, la clave anterior deja de valer y deberás tramitar un certificado nuevo en ARCA.

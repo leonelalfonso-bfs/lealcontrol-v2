@@ -76,7 +76,7 @@ export function RemitosPage() {
         </div>
         <div className="card">
           <span className="muted">Entregados / Despachados</span>
-          <strong style={{ color: "#065f46" }}>{totalDelivered}</strong>
+          <strong style={{ color: "var(--lc-ok)" }}>{totalDelivered}</strong>
         </div>
         <div
           className="card"
@@ -88,7 +88,7 @@ export function RemitosPage() {
           onClick={() => setInvoiceFilter(invoiceFilter === "Pending" ? "All" : "Pending")}
         >
           <span className="muted">⏳ Pendientes de Facturar</span>
-          <strong style={{ color: "#d97706" }}>{totalPendingInvoice}</strong>
+          <strong style={{ color: "var(--lc-warn)" }}>{totalPendingInvoice}</strong>
         </div>
         <div
           className="card"
@@ -100,7 +100,7 @@ export function RemitosPage() {
           onClick={() => setInvoiceFilter(invoiceFilter === "Invoiced" ? "All" : "Invoiced")}
         >
           <span className="muted">✓ Facturados</span>
-          <strong style={{ color: "#0d9488" }}>{totalInvoiced}</strong>
+          <strong style={{ color: "var(--lc-accent-strong)" }}>{totalInvoiced}</strong>
         </div>
       </div>
 
@@ -206,7 +206,7 @@ export function RemitosPage() {
                             className="badge ok"
                             style={{
                               background: "rgba(13, 148, 136, 0.12)",
-                              color: "#0f766e",
+                              color: "var(--lc-accent-strong)",
                               fontWeight: 700,
                               fontSize: "0.78rem"
                             }}
@@ -218,7 +218,7 @@ export function RemitosPage() {
                             className="badge warn"
                             style={{
                               background: "rgba(245, 158, 11, 0.15)",
-                              color: "#b45309",
+                              color: "var(--lc-warn)",
                               fontWeight: 700,
                               fontSize: "0.78rem"
                             }}

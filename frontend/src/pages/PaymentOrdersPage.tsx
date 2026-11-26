@@ -73,27 +73,27 @@ export function PaymentOrdersPage() {
 
       {/* Summary KPI Cards */}
       <div className="grid-3" style={{ marginBottom: 20 }}>
-        <div className="card pad" style={{ borderLeft: "4px solid #10b981" }}>
+        <div className="card pad" style={{ borderLeft: "4px solid var(--lc-ok)" }}>
           <span className="muted" style={{ fontSize: "0.82rem", textTransform: "uppercase", fontWeight: 700 }}>
             Total Pagos Emitidos
           </span>
-          <h2 style={{ margin: "6px 0 0 0", color: "#059669", fontSize: "1.6rem" }}>
+          <h2 style={{ margin: "6px 0 0 0", color: "var(--lc-ok)", fontSize: "1.6rem" }}>
             {money(totalPaid)}
           </h2>
           <small className="muted">{orders.length} órdenes registradas</small>
         </div>
 
-        <div className="card pad" style={{ borderLeft: "4px solid #3b82f6" }}>
+        <div className="card pad" style={{ borderLeft: "4px solid var(--lc-info)" }}>
           <span className="muted" style={{ fontSize: "0.82rem", textTransform: "uppercase", fontWeight: 700 }}>
             Proveedores Abonados
           </span>
-          <h2 style={{ margin: "6px 0 0 0", color: "#2563eb", fontSize: "1.6rem" }}>
+          <h2 style={{ margin: "6px 0 0 0", color: "var(--lc-info)", fontSize: "1.6rem" }}>
             {new Set(orders.map((o) => o.supplierName)).size}
           </h2>
           <small className="muted">Destinatarios únicos de pagos</small>
         </div>
 
-        <div className="card pad" style={{ borderLeft: "4px solid #f59e0b" }}>
+        <div className="card pad" style={{ borderLeft: "4px solid var(--lc-warn)" }}>
           <span className="muted" style={{ fontSize: "0.82rem", textTransform: "uppercase", fontWeight: 700 }}>
             Acceso Rápido
           </span>
@@ -145,7 +145,7 @@ export function PaymentOrdersPage() {
                 filteredOrders.map((o) => (
                   <tr key={o.id}>
                     <td>
-                      <strong style={{ color: "#2563eb" }}>{o.orderNumber}</strong>
+                      <strong style={{ color: "var(--lc-info)" }}>{o.orderNumber}</strong>
                     </td>
                     <td>{businessDate(o.paymentDateUtc)}</td>
                     <td>
@@ -170,7 +170,7 @@ export function PaymentOrdersPage() {
                         </span>
                       )}
                     </td>
-                    <td style={{ textAlign: "right", fontWeight: 700, color: "#059669" }}>
+                    <td style={{ textAlign: "right", fontWeight: 700, color: "var(--lc-ok)" }}>
                       {money(o.amount, o.currency)}
                     </td>
                     <td>
@@ -178,7 +178,7 @@ export function PaymentOrdersPage() {
                         className="badge ok"
                         style={{
                           background: "rgba(16, 185, 129, 0.15)",
-                          color: "#065f46",
+                          color: "var(--lc-ok)",
                           fontWeight: 700,
                           padding: "3px 8px",
                           borderRadius: 12,
@@ -200,7 +200,7 @@ export function PaymentOrdersPage() {
                         {canVoid && o.status !== "Voided" && (
                           <button
                             className="btn btn-sm btn-outline"
-                            style={{ color: "#dc2626" }}
+                            style={{ color: "var(--lc-danger)" }}
                             onClick={async () => {
                               const reason = window.prompt("Motivo de anulación de la OP:");
                               if (!reason?.trim()) return;

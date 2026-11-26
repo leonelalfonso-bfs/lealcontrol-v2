@@ -40,7 +40,7 @@ export async function buildPdfAttachment(elementId: string, fileName: string): P
   const worker = html2pdf().set({
     margin: [8, 10, 8, 10],
     image: { type: "jpeg", quality: 0.92 },
-    html2canvas: { scale: 2, useCORS: true, logging: false, backgroundColor: "#ffffff", windowWidth: 794 },
+    html2canvas: { scale: 2, useCORS: true, logging: false, backgroundColor: "var(--lc-surface)", windowWidth: 794 },
     jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
     pagebreak: { mode: ["css", "legacy"] }
   }).from(element);

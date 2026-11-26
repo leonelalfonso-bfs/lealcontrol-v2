@@ -47,7 +47,7 @@ export function FleetAgendaPage() {
       <strong style={{ fontSize: "0.85rem" }}>{o.customerName}</strong>
       <div style={{ fontSize: "0.75rem" }}>{[...o.people.map((p) => p.label), ...o.vehicles.map((v) => v.label)].join(" · ")}</div>
       {o.status !== "Scheduled" && <span className={`badge ${serviceOrderStatusBadge[o.status]}`} style={{ fontSize: "0.7rem" }}>{serviceOrderStatusLabel(o.status)}</span>}
-      {o.problems.length > 0 && <div style={{ color: "#b91c1c", fontSize: "0.72rem" }} title={o.problems.join("\n")}>⚠ {o.problems[0]}</div>}
+      {o.problems.length > 0 && <div style={{ color: "var(--lc-danger)", fontSize: "0.72rem" }} title={o.problems.join("\n")}>⚠ {o.problems[0]}</div>}
     </button>
   );
 

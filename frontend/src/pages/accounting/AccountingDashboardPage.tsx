@@ -40,7 +40,7 @@ export function AccountingDashboardPage() {
       {/* Page Header with Action Buttons */}
       <div className="page-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <div>
-          <span className="eyebrow" style={{ color: "#0d9488", fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.08em" }}>
+          <span className="eyebrow" style={{ color: "var(--lc-accent-strong)", fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.08em" }}>
             Sistema Contable & Panel de Control
           </span>
           <h1 style={{ margin: "2px 0 0", fontSize: "1.75rem", fontWeight: 800 }}>
@@ -57,7 +57,7 @@ export function AccountingDashboardPage() {
             type="button"
             className="btn"
             style={{
-              background: "#dc2626",
+              background: "var(--lc-danger)",
               color: "#fff",
               fontWeight: 800,
               display: "flex",
@@ -71,8 +71,8 @@ export function AccountingDashboardPage() {
             {(pendingSummary?.totalPendingCount ?? 0) > 0 && (
               <span
                 style={{
-                  background: "#fff",
-                  color: "#dc2626",
+                  background: "var(--lc-surface)",
+                  color: "var(--lc-danger)",
                   padding: "2px 7px",
                   borderRadius: 10,
                   fontSize: "0.76rem",
@@ -107,8 +107,8 @@ export function AccountingDashboardPage() {
             <div
               className="card pad"
               style={{
-                background: "linear-gradient(135deg, #fffbeb, #fef3c7)",
-                border: "1px solid #fde68a",
+                background: "linear-gradient(135deg, var(--lc-warn-bg), var(--lc-warn-bg))",
+                border: "1px solid var(--lc-warn-bg)",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
@@ -119,10 +119,10 @@ export function AccountingDashboardPage() {
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <span style={{ fontSize: "1.6rem" }}>⚡</span>
                 <div>
-                  <strong style={{ color: "#92400e", fontSize: "0.95rem" }}>
+                  <strong style={{ color: "var(--lc-warn)", fontSize: "0.95rem" }}>
                     Hay {pendingSummary?.totalPendingCount} documentos operativos pendientes de contabilizar
                   </strong>
-                  <div style={{ fontSize: "0.82rem", color: "#b45309" }}>
+                  <div style={{ fontSize: "0.82rem", color: "var(--lc-warn)" }}>
                     Ventas: {pendingSummary?.salesPendingCount || 0} | Compras: {pendingSummary?.purchasesPendingCount || 0} | Finanzas: {pendingSummary?.financePendingCount || 0}
                   </div>
                 </div>
@@ -131,7 +131,7 @@ export function AccountingDashboardPage() {
               <button
                 type="button"
                 className="btn compact"
-                style={{ background: "#dc2626", color: "#fff", fontWeight: 700 }}
+                style={{ background: "var(--lc-danger)", color: "#fff", fontWeight: 700 }}
                 onClick={() => setShowBatchModal(true)}
               >
                 🔴 Contabilizar Lote Ahora →
@@ -143,7 +143,7 @@ export function AccountingDashboardPage() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 16 }}>
             <div className="card pad" style={{ display: "flex", flexDirection: "column", gap: 6, padding: "18px 20px" }}>
               <span className="muted" style={{ fontSize: "13px", fontWeight: 600 }}>Ingresos Operativos Totales</span>
-              <span style={{ fontSize: "24px", fontWeight: 800, color: "#22c55e", margin: "2px 0" }}>
+              <span style={{ fontSize: "24px", fontWeight: 800, color: "var(--lc-ok)", margin: "2px 0" }}>
                 $ {(pnl?.revenues || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
               </span>
               <span className="muted" style={{ fontSize: "12px" }}>Ventas, servicios y corretaje</span>
@@ -151,7 +151,7 @@ export function AccountingDashboardPage() {
 
             <div className="card pad" style={{ display: "flex", flexDirection: "column", gap: 6, padding: "18px 20px" }}>
               <span className="muted" style={{ fontSize: "13px", fontWeight: 600 }}>Costo de Ventas (CMV)</span>
-              <span style={{ fontSize: "24px", fontWeight: 800, color: "#f87171", margin: "2px 0" }}>
+              <span style={{ fontSize: "24px", fontWeight: 800, color: "var(--lc-danger)", margin: "2px 0" }}>
                 $ {(pnl?.cogs || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
               </span>
               <span className="muted" style={{ fontSize: "12px" }}>Costo directo de mercaderías e insumos</span>
@@ -159,7 +159,7 @@ export function AccountingDashboardPage() {
 
             <div className="card pad" style={{ display: "flex", flexDirection: "column", gap: 6, padding: "18px 20px" }}>
               <span className="muted" style={{ fontSize: "13px", fontWeight: 600 }}>Margen Bruto Operativo</span>
-              <span style={{ fontSize: "24px", fontWeight: 800, color: "#38bdf8", margin: "2px 0" }}>
+              <span style={{ fontSize: "24px", fontWeight: 800, color: "var(--lc-info)", margin: "2px 0" }}>
                 $ {(pnl?.grossMargin || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
               </span>
               <span className="muted" style={{ fontSize: "12px" }}>Margen: <strong>{pnl?.grossMarginPct || 0}%</strong> sobre ventas</span>
@@ -167,7 +167,7 @@ export function AccountingDashboardPage() {
 
             <div className="card pad" style={{ display: "flex", flexDirection: "column", gap: 6, padding: "18px 20px" }}>
               <span className="muted" style={{ fontSize: "13px", fontWeight: 600 }}>EBITDA / Resultado Operativo</span>
-              <span style={{ fontSize: "24px", fontWeight: 800, color: (pnl?.ebitda || 0) >= 0 ? "#22c55e" : "#f87171", margin: "2px 0" }}>
+              <span style={{ fontSize: "24px", fontWeight: 800, color: (pnl?.ebitda || 0) >= 0 ? "var(--lc-ok)" : "var(--lc-danger)", margin: "2px 0" }}>
                 $ {(pnl?.ebitda || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
               </span>
               <span className="muted" style={{ fontSize: "12px" }}>Rendimiento antes de intereses e impuestos</span>
@@ -179,10 +179,10 @@ export function AccountingDashboardPage() {
             <Link
               to="/contabilidad/modelos"
               className="card pad"
-              style={{ textDecoration: "none", color: "inherit", transition: "transform 0.15s", border: "1px solid #0d9488" }}
+              style={{ textDecoration: "none", color: "inherit", transition: "transform 0.15s", border: "1px solid var(--lc-accent)" }}
             >
               <div style={{ fontSize: "28px", marginBottom: "8px" }}>⚙️</div>
-              <h3 style={{ margin: "0 0 6px", fontSize: "16px", color: "#0f766e" }}>Asientos Modelos</h3>
+              <h3 style={{ margin: "0 0 6px", fontSize: "16px", color: "var(--lc-accent-strong)" }}>Asientos Modelos</h3>
               <p className="muted" style={{ margin: 0, fontSize: "13px" }}>
                 Configuración de plantillas por comprobante con variables de IVA, retenciones, cuentas y condiciones.
               </p>

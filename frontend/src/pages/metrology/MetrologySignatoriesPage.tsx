@@ -57,7 +57,7 @@ export function MetrologySignatoriesPage() {
               }} />
             </label>
           </div>
-          {preview && <img src={preview} alt="Firma" style={{ maxHeight: 90, maxWidth: 260, objectFit: "contain", border: "1px dashed #cbd5e1", padding: 6, background: "#fff" }} />}
+          {preview && <img src={preview} alt="Firma" style={{ maxHeight: 90, maxWidth: 260, objectFit: "contain", border: "1px dashed var(--lc-line-2)", padding: 6, background: "var(--lc-surface)" }} />}
           <div><button type="submit" className="btn">Guardar</button></div>
         </form>
       ) : (

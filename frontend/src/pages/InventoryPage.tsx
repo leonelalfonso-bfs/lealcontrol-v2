@@ -534,7 +534,7 @@ export function InventoryPage() {
 
       {error && <div className="alert">{error}</div>}
       {successMsg && (
-        <div className="alert ok" style={{ background: "#ecfdf5", border: "1px solid #10b981", color: "#065f46" }}>
+        <div className="alert ok" style={{ background: "var(--lc-ok-bg)", border: "1px solid var(--lc-ok)", color: "var(--lc-ok)" }}>
           {successMsg}
         </div>
       )}
@@ -589,19 +589,19 @@ export function InventoryPage() {
             </div>
             <div className="card">
               <span className="muted">Disponible para Venta</span>
-              <strong style={{ fontSize: "1.5rem", color: totalAvailable > 0 ? "#059669" : "#dc2626" }}>
+              <strong style={{ fontSize: "1.5rem", color: totalAvailable > 0 ? "var(--lc-ok)" : "var(--lc-danger)" }}>
                 {totalAvailable.toLocaleString("es-AR")} u.
               </strong>
               <div className="muted" style={{ fontSize: "0.75rem", marginTop: 4 }}>Físico Neto - Reservas</div>
             </div>
             <div className="card">
               <span className="muted">Stock Entrante (Compras)</span>
-              <strong style={{ fontSize: "1.5rem", color: "#2563eb" }}>{totalIncoming.toLocaleString("es-AR")} u.</strong>
+              <strong style={{ fontSize: "1.5rem", color: "var(--lc-info)" }}>{totalIncoming.toLocaleString("es-AR")} u.</strong>
               <div className="muted" style={{ fontSize: "0.75rem", marginTop: 4 }}>En Recepción de Proveedores</div>
             </div>
             <div className="card">
               <span className="muted">Unidades en tránsito</span>
-              <strong style={{ fontSize: "1.5rem", color: "#7c3aed" }}>{totalInTransit.toLocaleString("es-AR")} u.</strong>
+              <strong style={{ fontSize: "1.5rem", color: "var(--lc-violet)" }}>{totalInTransit.toLocaleString("es-AR")} u.</strong>
               <div className="muted" style={{ fontSize: "0.75rem", marginTop: 4 }}>Despachadas, aún sin recepción</div>
             </div>
             <div className="card">
@@ -616,7 +616,7 @@ export function InventoryPage() {
             </div>
             <div className="card" style={{ borderColor: criticalCount > 0 ? "#fca5a5" : undefined }}>
               <span className="muted">Alertas de Reposición</span>
-              <strong style={{ fontSize: "1.5rem", color: criticalCount > 0 ? "#dc2626" : "#059669" }}>
+              <strong style={{ fontSize: "1.5rem", color: criticalCount > 0 ? "var(--lc-danger)" : "var(--lc-ok)" }}>
                 {criticalCount} artículos
               </strong>
               <div className="muted" style={{ fontSize: "0.75rem", marginTop: 4 }}>Bajo el stock de seguridad</div>
@@ -774,7 +774,7 @@ export function InventoryPage() {
                                     <div>
                                       <strong style={{ fontSize: "0.95rem" }}>{qty.toLocaleString("es-AR")} u.</strong>
                                       {st && st.reservedStock > 0 && (
-                                        <div className="muted" style={{ fontSize: "0.72rem", color: "#d97706" }}>
+                                        <div className="muted" style={{ fontSize: "0.72rem", color: "var(--lc-warn)" }}>
                                           🔒 {st.reservedStock} res.
                                         </div>
                                       )}
@@ -792,7 +792,7 @@ export function InventoryPage() {
 
                           <td style={{ textAlign: "right" }}>
                             {p.inTransitStock > 0 ? (
-                              <strong style={{ color: "#7c3aed" }}>🚚 {p.inTransitStock.toLocaleString("es-AR")}</strong>
+                              <strong style={{ color: "var(--lc-violet)" }}>🚚 {p.inTransitStock.toLocaleString("es-AR")}</strong>
                             ) : (
                               <span className="muted">—</span>
                             )}
@@ -811,7 +811,7 @@ export function InventoryPage() {
                           <td style={{ textAlign: "right" }}>
                             <strong
                               style={{
-                                color: p.totalAvailable > 0 ? "#059669" : "#dc2626",
+                                color: p.totalAvailable > 0 ? "var(--lc-ok)" : "var(--lc-danger)",
                                 fontSize: "0.98rem"
                               }}
                             >
@@ -920,7 +920,7 @@ export function InventoryPage() {
                           <td style={{ textAlign: "right" }}>
                             <strong
                               style={{
-                                color: item.availableStock > 0 ? "#059669" : "#dc2626",
+                                color: item.availableStock > 0 ? "var(--lc-ok)" : "var(--lc-danger)",
                                 fontSize: "0.95rem"
                               }}
                             >
@@ -929,7 +929,7 @@ export function InventoryPage() {
                           </td>
                           <td style={{ textAlign: "right" }}>
                             {item.incomingStock > 0 ? (
-                              <span style={{ color: "#2563eb", fontWeight: 600 }}>
+                              <span style={{ color: "var(--lc-info)", fontWeight: 600 }}>
                                 📥 +{item.incomingStock.toLocaleString("es-AR")}
                               </span>
                             ) : (
@@ -1045,7 +1045,7 @@ export function InventoryPage() {
                         <td>
                           <div style={{ fontSize: "0.8rem" }}>
                             {t.dispatchedAtUtc && <div>Desp: {new Date(t.dispatchedAtUtc).toLocaleString("es-AR")}</div>}
-                            {t.receivedAtUtc && <div style={{ color: "#059669" }}>Recib: {new Date(t.receivedAtUtc).toLocaleString("es-AR")}</div>}
+                            {t.receivedAtUtc && <div style={{ color: "var(--lc-ok)" }}>Recib: {new Date(t.receivedAtUtc).toLocaleString("es-AR")}</div>}
                           </div>
                         </td>
                         <td>
@@ -1177,7 +1177,7 @@ export function InventoryPage() {
                           </td>
                           <td>👤 {m.operatorName || "Sistema"}</td>
                           <td style={{ textAlign: "right" }}>
-                            <strong style={{ color: isPositive ? "#059669" : "#dc2626" }}>
+                            <strong style={{ color: isPositive ? "var(--lc-ok)" : "var(--lc-danger)" }}>
                               {isPositive ? `+${m.quantity}` : m.quantity} u.
                             </strong>
                           </td>
@@ -1481,7 +1481,7 @@ export function InventoryPage() {
                       <button
                         type="button"
                         className="btn ghost"
-                        style={{ color: "#dc2626", padding: "6px 8px" }}
+                        style={{ color: "var(--lc-danger)", padding: "6px 8px" }}
                         onClick={() => handleRemoveTransferLine(idx)}
                       >
                         🗑️

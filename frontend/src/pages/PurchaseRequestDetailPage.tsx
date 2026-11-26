@@ -163,7 +163,7 @@ export function PurchaseRequestDetailPage() {
 
   if (error || !request) {
     return (
-      <div style={{ padding: "30px", textAlign: "center", color: "#b91c1c" }}>
+      <div style={{ padding: "30px", textAlign: "center", color: "var(--lc-danger)" }}>
         <p>{error || "Solicitud de compra no encontrada"}</p>
         <Link to="/compras/solicitudes" className="btn btn-outline">
           ← Volver al Listado
@@ -226,7 +226,7 @@ export function PurchaseRequestDetailPage() {
 
         <div style={{ display: "flex", gap: "8px" }}>
           {request.status === "Pending" && (
-            <button type="button" onClick={handleApprove} className="btn" style={{ background: "#059669", color: "white", fontWeight: "bold" }}>
+            <button type="button" onClick={handleApprove} className="btn" style={{ background: "var(--lc-ok)", color: "white", fontWeight: "bold" }}>
               ✓ Aprobar Solicitud
             </button>
           )}
@@ -247,7 +247,7 @@ export function PurchaseRequestDetailPage() {
                 : `/compras/ordenes/nueva?request_id=${request.id}`
             }
             className="btn"
-            style={{ background: "#2563eb", color: "white", textDecoration: "none", fontWeight: "bold" }}
+            style={{ background: "var(--lc-info)", color: "white", textDecoration: "none", fontWeight: "bold" }}
           >
             📝 {selectedQuote ? `Generar OC con ${selectedQuote.supplierName}` : "Generar Orden de Compra"}
           </Link>
@@ -276,7 +276,7 @@ export function PurchaseRequestDetailPage() {
             </div>
             <div>
               <span className="muted">Motivo / Justificación: </span>
-              <p style={{ margin: "4px 0 0 0", background: "#f8fafc", padding: "8px", borderRadius: "6px", border: "1px solid var(--surface-border)" }}>
+              <p style={{ margin: "4px 0 0 0", background: "var(--lc-surface-2)", padding: "8px", borderRadius: "6px", border: "1px solid var(--surface-border)" }}>
                 {request.reason}
               </p>
             </div>
@@ -323,7 +323,7 @@ export function PurchaseRequestDetailPage() {
           <div>
             <h2 style={{ margin: 0, fontSize: "1.2rem", display: "flex", alignItems: "center", gap: "8px" }}>
               <span>⚖️ Comparativa de Presupuestos de Proveedores</span>
-              <span style={{ fontSize: "0.85rem", padding: "2px 8px", borderRadius: "10px", background: "#f1f5f9", color: "var(--ink-soft)" }}>
+              <span style={{ fontSize: "0.85rem", padding: "2px 8px", borderRadius: "10px", background: "var(--lc-surface-2)", color: "var(--ink-soft)" }}>
                 {request.quotations?.length || 0} presupuestos cargados
               </span>
             </h2>
@@ -343,7 +343,7 @@ export function PurchaseRequestDetailPage() {
         </div>
 
         {(!request.quotations || request.quotations.length === 0) ? (
-          <div style={{ padding: "40px", textAlign: "center", background: "#f8fafc", borderRadius: "8px", border: "1px dashed var(--surface-border)" }}>
+          <div style={{ padding: "40px", textAlign: "center", background: "var(--lc-surface-2)", borderRadius: "8px", border: "1px dashed var(--surface-border)" }}>
             <div style={{ fontSize: "2rem", marginBottom: "8px" }}>📑</div>
             <h4 style={{ margin: "0 0 6px 0" }}>Aún no se han cargado presupuestos de proveedores</h4>
             <p className="muted" style={{ fontSize: "0.88rem", maxWidth: "500px", margin: "0 auto 16px auto" }}>
@@ -385,7 +385,7 @@ export function PurchaseRequestDetailPage() {
                           position: "absolute",
                           top: "-12px",
                           right: "16px",
-                          background: "#059669",
+                          background: "var(--lc-ok)",
                           color: "white",
                           padding: "2px 10px",
                           borderRadius: "12px",
@@ -402,7 +402,7 @@ export function PurchaseRequestDetailPage() {
                       {/* Supplier & Ref Header */}
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
                         <div>
-                          <h4 style={{ margin: 0, fontSize: "1.05rem", color: "#1e293b" }}>{q.supplierName}</h4>
+                          <h4 style={{ margin: 0, fontSize: "1.05rem", color: "var(--lc-ink)" }}>{q.supplierName}</h4>
                           <span style={{ fontSize: "0.8rem", color: "var(--ink-soft)" }}>
                             {q.supplierQuoteRef ? `Presupuesto N° ${q.supplierQuoteRef}` : "Sin N° ref."} • {new Date(q.issueDate).toLocaleDateString("es-AR")}
                           </span>
@@ -411,7 +411,7 @@ export function PurchaseRequestDetailPage() {
                         <button
                           type="button"
                           onClick={() => handleDeleteQuotation(q.id)}
-                          style={{ background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "1rem" }}
+                          style={{ background: "transparent", border: "none", color: "var(--lc-ink-3)", cursor: "pointer", fontSize: "1rem" }}
                           title="Eliminar presupuesto"
                         >
                           ✕
@@ -423,7 +423,7 @@ export function PurchaseRequestDetailPage() {
                         <div style={{ fontSize: "0.78rem", color: "var(--ink-soft)", textTransform: "uppercase", fontWeight: "bold" }}>
                           Importe Total Presupuestado ({q.currency})
                         </div>
-                        <div style={{ fontSize: "1.4rem", fontWeight: "bold", color: isWinner ? "#047857" : "#0f172a", fontFamily: "monospace" }}>
+                        <div style={{ fontSize: "1.4rem", fontWeight: "bold", color: isWinner ? "var(--lc-ok)" : "var(--lc-ink)", fontFamily: "monospace" }}>
                           {q.currency} {q.totalAmount.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                         </div>
                         <div style={{ fontSize: "0.78rem", color: "var(--ink-soft)", marginTop: "2px" }}>
@@ -444,7 +444,7 @@ export function PurchaseRequestDetailPage() {
                         {q.notes && (
                           <div>
                             <span className="muted">📝 Notas / Validez: </span>
-                            <span style={{ fontStyle: "italic", color: "#475569" }}>{q.notes}</span>
+                            <span style={{ fontStyle: "italic", color: "var(--lc-ink-2)" }}>{q.notes}</span>
                           </div>
                         )}
                       </div>
@@ -457,7 +457,7 @@ export function PurchaseRequestDetailPage() {
                           href={q.attachmentBase64}
                           download={q.attachmentFileName || `Presupuesto_${q.supplierName}.pdf`}
                           className="btn btn-outline"
-                          style={{ padding: "4px 8px", fontSize: "0.8rem", color: "#0284c7" }}
+                          style={{ padding: "4px 8px", fontSize: "0.8rem", color: "var(--lc-info)" }}
                           target="_blank"
                           rel="noreferrer"
                         >
@@ -469,7 +469,7 @@ export function PurchaseRequestDetailPage() {
 
                       <div>
                         {isWinner ? (
-                          <span style={{ color: "#059669", fontWeight: "bold", fontSize: "0.85rem" }}>
+                          <span style={{ color: "var(--lc-ok)", fontWeight: "bold", fontSize: "0.85rem" }}>
                             ✓ Seleccionado
                           </span>
                         ) : (
@@ -477,7 +477,7 @@ export function PurchaseRequestDetailPage() {
                             type="button"
                             onClick={() => handleSelectQuotation(q.id)}
                             className="btn btn-outline"
-                            style={{ padding: "4px 10px", fontSize: "0.82rem", borderColor: "#059669", color: "#059669", fontWeight: "bold" }}
+                            style={{ padding: "4px 10px", fontSize: "0.82rem", borderColor: "var(--lc-ok)", color: "var(--lc-ok)", fontWeight: "bold" }}
                           >
                             ⭐ Elegir este Presupuesto
                           </button>
@@ -490,7 +490,7 @@ export function PurchaseRequestDetailPage() {
             </div>
 
             {/* Quick Summary Table */}
-            <div style={{ marginTop: "16px", background: "#f8fafc", padding: "16px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}>
+            <div style={{ marginTop: "16px", background: "var(--lc-surface-2)", padding: "16px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}>
               <h4 style={{ margin: "0 0 10px 0", fontSize: "0.95rem" }}>📊 Cuadro Comparativo Rápido</h4>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
                 <thead>
@@ -523,7 +523,7 @@ export function PurchaseRequestDetailPage() {
                       <td style={{ padding: "6px" }}>{q.paymentTerms || "-"}</td>
                       <td style={{ padding: "6px", textAlign: "center" }}>
                         {q.isSelected ? (
-                          <span style={{ padding: "2px 6px", borderRadius: "8px", background: "#ecfdf5", color: "#047857", fontSize: "0.75rem" }}>
+                          <span style={{ padding: "2px 6px", borderRadius: "8px", background: "var(--lc-ok-bg)", color: "var(--lc-ok)", fontSize: "0.75rem" }}>
                             🏆 Elegido
                           </span>
                         ) : (
@@ -628,7 +628,7 @@ export function PurchaseRequestDetailPage() {
               </div>
 
               {/* Amount Breakdown */}
-              <div style={{ background: "#f8fafc", padding: "12px", borderRadius: "8px", border: "1px solid var(--surface-border)", marginBottom: "12px" }}>
+              <div style={{ background: "var(--lc-surface-2)", padding: "12px", borderRadius: "8px", border: "1px solid var(--surface-border)", marginBottom: "12px" }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1.2fr", gap: "12px" }}>
                   <div>
                     <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
@@ -665,7 +665,7 @@ export function PurchaseRequestDetailPage() {
                     <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
                       Total ({currency})
                     </label>
-                    <div style={{ padding: "8px", background: "white", borderRadius: "6px", border: "1px solid var(--surface-border)", fontFamily: "monospace", fontWeight: "bold", fontSize: "1.1rem", color: "#047857" }}>
+                    <div style={{ padding: "8px", background: "white", borderRadius: "6px", border: "1px solid var(--surface-border)", fontFamily: "monospace", fontWeight: "bold", fontSize: "1.1rem", color: "var(--lc-ok)" }}>
                       $ {calculatedTotalAmount.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                     </div>
                   </div>

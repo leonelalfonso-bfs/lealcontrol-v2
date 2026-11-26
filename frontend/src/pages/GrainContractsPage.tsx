@@ -57,8 +57,8 @@ export function GrainContractsPage() {
           to="/cereales/contratos/nuevo"
           className="btn primary"
           style={{
-            background: "linear-gradient(135deg, #d97706 0%, #b45309 100%)",
-            color: "#ffffff",
+            background: "linear-gradient(135deg, var(--lc-warn) 0%, var(--lc-warn) 100%)",
+            color: "#fff",
             fontWeight: 700,
             border: "none",
             boxShadow: "0 4px 12px rgba(217, 119, 6, 0.3)"
@@ -156,7 +156,7 @@ export function GrainContractsPage() {
                   return (
                     <tr key={c.id}>
                       <td>
-                        <Link to={`/cereales/contratos/${c.id}`} style={{ fontWeight: 800, color: "#d97706", textDecoration: "none" }}>
+                        <Link to={`/cereales/contratos/${c.id}`} style={{ fontWeight: 800, color: "var(--lc-warn)", textDecoration: "none" }}>
                           {c.contractNumber}
                         </Link>
                         <div><small style={{ color: "var(--ink-soft)" }}>{new Date(c.createdAtUtc).toLocaleDateString("es-AR")}</small></div>
@@ -191,7 +191,7 @@ export function GrainContractsPage() {
                       <td>
                         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                           <div style={{ width: "60px", background: "rgba(0,0,0,0.1)", height: "6px", borderRadius: "3px", overflow: "hidden" }}>
-                            <div style={{ width: `${prog}%`, background: "#0d9488", height: "100%" }} />
+                            <div style={{ width: `${prog}%`, background: "var(--lc-accent)", height: "100%" }} />
                           </div>
                           <span style={{ fontSize: "0.78rem", fontWeight: 700 }}>{prog}%</span>
                         </div>
@@ -200,14 +200,14 @@ export function GrainContractsPage() {
                       <td>
                         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                           <div style={{ width: "60px", background: "rgba(0,0,0,0.1)", height: "6px", borderRadius: "3px", overflow: "hidden" }}>
-                            <div style={{ width: `${fixProg}%`, background: "#2563eb", height: "100%" }} />
+                            <div style={{ width: `${fixProg}%`, background: "var(--lc-info)", height: "100%" }} />
                           </div>
                           <span style={{ fontSize: "0.78rem", fontWeight: 700 }}>{fixProg}%</span>
                         </div>
                         <small style={{ color: "var(--ink-soft)" }}>{c.fixedTons.toLocaleString("es-AR")} Tn</small>
                       </td>
                       <td>
-                        <strong style={{ color: "#10b981" }}>USD {c.brokerCommissionAmount.toLocaleString("es-AR")}</strong>
+                        <strong style={{ color: "var(--lc-ok)" }}>USD {c.brokerCommissionAmount.toLocaleString("es-AR")}</strong>
                         <div><small style={{ color: "var(--ink-soft)" }}>({c.brokerCommissionPercentage}%)</small></div>
                       </td>
                       <td>
