@@ -7,18 +7,7 @@ import { PermissionsProvider } from "./context/PermissionsContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { DocumentTemplateProvider } from "./context/DocumentTemplateContext";
 import { PresentationModeProvider } from "./context/PresentationModeContext";
-import "./glass-tokens.css";
-import "./styles.css";
-import "./design-tokens.css";
-import "./v1-theme.css";
-import "./excel-tools.css";
-import "./themes.css";
-import "./brand-layout.css";
-import "./sober-shell.css";
-import "./leal-workspace-theme.css";
-import "./tabler-light.css";
-import "./styles/instrumento.css";
-import "./styles/bridge.css";
+import "./styles/index.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

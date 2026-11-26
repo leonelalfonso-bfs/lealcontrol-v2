@@ -8,8 +8,6 @@ import { CommunicationsNotificationBell } from "../CommunicationsNotificationBel
 import { NoticesBell } from "../notices/NoticesBell";
 import { Icon } from "../ui/Icon";
 import { CommandPalette, type RecentPage } from "./CommandPalette";
-import "../../styles/instrumento.css";
-import "../../styles/shell.css";
 
 type TenantOption = { id: string; legalName: string; tradeName?: string | null; documentNumber?: string | null };
 

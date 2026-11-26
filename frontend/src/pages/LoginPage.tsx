@@ -92,6 +92,7 @@ export function LoginPage() {
 
   return (
     <main className="login-page">
+      <div className="login-stripes" aria-hidden="true" />
       <section className="login-intro" aria-label="LEAL Control">
         <div className="login-brand">
           <img src="/logo.png" alt="LEAL Control ERP" />
@@ -99,7 +100,7 @@ export function LoginPage() {
         </div>
         <div className="login-intro-content">
           <span className="login-eyebrow">Tu espacio de trabajo</span>
-          <h1>Todo tu negocio,<br /><span>más claro.</span></h1>
+          <h1>Todo tu negocio,<br /><span>pesado al gramo.</span></h1>
           <p>Un solo lugar para trabajar con tus equipos, procesos e información.</p>
           <div className="login-intro-points">
             <span>Gestión integrada</span>
@@ -107,7 +108,10 @@ export function LoginPage() {
             <span>Acceso a tus empresas</span>
           </div>
         </div>
-        <p className="login-intro-footer">LEAL Control ERP</p>
+        <div className="login-scale" aria-hidden="true">
+          <div className="login-scale__head"><span>INDICADOR</span><b>● ESTABLE</b></div>
+          <div className="login-scale__display">0.000<small> kg</small></div>
+        </div>
       </section>
 
       <section className="login-panel" aria-label="Acceso al sistema">

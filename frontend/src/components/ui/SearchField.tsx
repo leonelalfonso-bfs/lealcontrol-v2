@@ -1,5 +1,4 @@
 import { useEffect, useId, useRef, type CSSProperties, type KeyboardEvent } from "react";
-import "../../styles/instrumento.css";
 
 type SearchFieldProps = {
   value: string;
