@@ -85,29 +85,29 @@ export function PurchaseRequestsPage() {
 
       {/* KPI Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", marginBottom: "20px" }}>
-        <div className="card pad" style={{ background: "linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(217, 119, 6, 0.05))" }}>
-          <div style={{ fontSize: "0.82rem", fontWeight: "bold", color: "var(--lc-warn)", textTransform: "uppercase" }}>
+        <div className="card pad">
+          <div className="t-small t-strong t-warn t-caps">
             Pendientes de Aprobación
           </div>
-          <div style={{ fontSize: "1.6rem", fontWeight: "bold", marginTop: "4px", color: "var(--lc-warn)" }}>
+          <div className="t-strong t-warn t-xl" style={{ marginTop: "4px" }}>
             {pendingCount}
           </div>
         </div>
 
-        <div className="card pad" style={{ background: "linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(5, 150, 105, 0.05))" }}>
-          <div style={{ fontSize: "0.82rem", fontWeight: "bold", color: "var(--lc-ok)", textTransform: "uppercase" }}>
+        <div className="card pad">
+          <div className="t-small t-strong t-ok t-caps">
             Aprobadas (Listas para Cotizar / OC)
           </div>
-          <div style={{ fontSize: "1.6rem", fontWeight: "bold", marginTop: "4px", color: "var(--lc-ok)" }}>
+          <div className="t-strong t-ok t-xl" style={{ marginTop: "4px" }}>
             {approvedCount}
           </div>
         </div>
 
-        <div className="card pad" style={{ background: "linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(2, 132, 199, 0.05))" }}>
-          <div style={{ fontSize: "0.82rem", fontWeight: "bold", color: "var(--lc-info)", textTransform: "uppercase" }}>
+        <div className="card pad">
+          <div className="t-small t-strong t-info t-caps">
             Total Solicitudes Históricas
           </div>
-          <div style={{ fontSize: "1.6rem", fontWeight: "bold", marginTop: "4px" }}>
+          <div className="t-strong t-xl" style={{ marginTop: "4px" }}>
             {requests.length}
           </div>
         </div>
@@ -125,7 +125,6 @@ export function PurchaseRequestsPage() {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
         >
           <option value="">Todos los Estados</option>
           <option value="Pending">Pendiente de Aprobación</option>
@@ -138,24 +137,24 @@ export function PurchaseRequestsPage() {
       {/* Requests Table */}
       <div className="card pad" style={{ marginTop: "16px" }}>
         {loading ? (
-          <div style={{ padding: "20px", textAlign: "center", color: "var(--ink-soft)" }}>Cargando solicitudes de compra...</div>
+          <div className="t-center muted" style={{ padding: "20px" }}>Cargando solicitudes de compra...</div>
         ) : requests.length === 0 ? (
-          <div style={{ padding: "30px", textAlign: "center", color: "var(--ink-soft)" }}>
+          <div className="t-center muted" style={{ padding: "30px" }}>
             No se encontraron solicitudes de compra registradas.
           </div>
         ) : (
-          <table className="table" style={{ width: "100%", borderCollapse: "collapse" }}>
+          <table className="table">
             <thead>
-              <tr style={{ borderBottom: "2px solid rgba(0,0,0,0.06)", textAlign: "left", fontSize: "0.85rem", color: "var(--ink-soft)" }}>
-                <th style={{ padding: "10px 8px" }}>N° Solicitud</th>
-                <th style={{ padding: "10px 8px" }}>Fecha</th>
-                <th style={{ padding: "10px 8px" }}>Solicitante</th>
-                <th style={{ padding: "10px 8px" }}>Sector / Depto</th>
-                <th style={{ padding: "10px 8px" }}>Prioridad</th>
-                <th style={{ padding: "10px 8px" }}>Motivo / Justificación</th>
-                <th style={{ padding: "10px 8px", textAlign: "center" }}>Presupuestos Proveedor</th>
-                <th style={{ padding: "10px 8px", textAlign: "center" }}>Estado</th>
-                <th style={{ padding: "10px 8px", textAlign: "right" }}>Acciones</th>
+              <tr>
+                <th>N° Solicitud</th>
+                <th>Fecha</th>
+                <th>Solicitante</th>
+                <th>Sector / Depto</th>
+                <th>Prioridad</th>
+                <th>Motivo / Justificación</th>
+                <th className="t-center">Presupuestos Proveedor</th>
+                <th className="t-center">Estado</th>
+                <th className="t-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -180,50 +179,48 @@ export function PurchaseRequestsPage() {
                 const selectedQuote = r.quotations?.find((q) => q.isSelected);
 
                 return (
-                  <tr key={r.id} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
-                    <td style={{ padding: "12px 8px", fontWeight: "bold", fontFamily: "monospace" }}>
-                      <Link to={`/compras/solicitudes/${r.id}`} style={{ color: "var(--lc-info)", textDecoration: "none" }}>
+                  <tr key={r.id}>
+                    <td className="t-strong t-mono">
+                      <Link className="t-info" to={`/compras/solicitudes/${r.id}`} style={{ textDecoration: "none" }}>
                         {r.requestNumber}
                       </Link>
                     </td>
-                    <td style={{ padding: "12px 8px", fontSize: "0.9rem" }}>
+                    <td>
                       {new Date(r.createdAtUtc).toLocaleDateString("es-AR")}
                     </td>
-                    <td style={{ padding: "12px 8px", fontWeight: 600 }}>
+                    <td className="t-strong">
                       {r.requestedBy}
                     </td>
-                    <td style={{ padding: "12px 8px", color: "var(--ink-soft)" }}>
+                    <td className="muted">
                       {r.department}
                     </td>
-                    <td style={{ padding: "12px 8px" }}>
-                      <span style={{ padding: "2px 8px", borderRadius: "12px", fontSize: "0.78rem", fontWeight: "bold", background: priorityColor.bg, color: priorityColor.text }}>
+                    <td>
+                      <span className="t-small t-strong" style={{ padding: "2px 8px", borderRadius: "12px", background: priorityColor.bg, color: priorityColor.text }}>
                         {r.priority === "Urgent" ? "🚨 Urgente" : r.priority === "High" ? "⚡ Alta" : r.priority === "Low" ? "Baja" : "Normal"}
                       </span>
                     </td>
-                    <td style={{ padding: "12px 8px", maxWidth: "220px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <td style={{ maxWidth: "220px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {r.reason}
                     </td>
-                    <td style={{ padding: "12px 8px", textAlign: "center" }}>
+                    <td className="t-center">
                       <Link
                         to={`/compras/solicitudes/${r.id}`}
-                        className="btn btn-outline"
-                        style={{ padding: "3px 8px", fontSize: "0.8rem", textDecoration: "none", color: quoteCount > 0 ? "#047857" : "var(--ink-soft)" }}
+                        className="btn btn-outline compact"
                       >
                         ⚖️ {quoteCount} {quoteCount === 1 ? "presupuesto" : "presupuestos"}
                         {selectedQuote && " (🏆 Elegido)"}
                       </Link>
                     </td>
-                    <td style={{ padding: "12px 8px", textAlign: "center" }}>
-                      <span style={{ padding: "3px 8px", borderRadius: "10px", fontSize: "0.78rem", fontWeight: "bold", background: statusBadge.bg, color: statusBadge.text }}>
+                    <td className="t-center">
+                      <span className="t-small t-strong" style={{ padding: "3px 8px", borderRadius: "10px", background: statusBadge.bg, color: statusBadge.text }}>
                         {statusBadge.label}
                       </span>
                     </td>
-                    <td style={{ padding: "12px 8px", textAlign: "right" }}>
+                    <td className="t-right">
                       <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
                         <Link
                           to={`/compras/solicitudes/${r.id}`}
-                          className="btn btn-outline"
-                          style={{ padding: "4px 8px", fontSize: "0.8rem", textDecoration: "none" }}
+                          className="btn btn-outline compact"
                           title="Ver detalle y comparar cotizaciones"
                         >
                           👁️ Ver
@@ -235,8 +232,7 @@ export function PurchaseRequestsPage() {
                               type="button"
                               onClick={() => handleApprove(r.id)}
                               disabled={actionLoading}
-                              className="btn"
-                              style={{ padding: "4px 8px", fontSize: "0.8rem", background: "var(--lc-ok)", color: "white" }}
+                              className="btn compact"
                               title="Aprobar para que compras gestione la OC"
                             >
                               ✓ Aprobar
@@ -245,8 +241,7 @@ export function PurchaseRequestsPage() {
                               type="button"
                               onClick={() => setRejectModalId(r.id)}
                               disabled={actionLoading}
-                              className="btn btn-outline"
-                              style={{ padding: "4px 8px", fontSize: "0.8rem", color: "var(--lc-danger)" }}
+                              className="btn btn-outline t-danger compact"
                               title="Rechazar solicitud"
                             >
                               ✕
@@ -261,8 +256,7 @@ export function PurchaseRequestsPage() {
                                 ? `/compras/ordenes/nueva?request_id=${r.id}&supplier_id=${selectedQuote.supplierId}&currency=${selectedQuote.currency}&quote_ref=${encodeURIComponent(selectedQuote.supplierQuoteRef || "")}`
                                 : `/compras/ordenes/nueva?request_id=${r.id}`
                             }
-                            className="btn"
-                            style={{ padding: "4px 8px", fontSize: "0.8rem", background: "var(--lc-info)", color: "white", textDecoration: "none", fontWeight: "bold" }}
+                            className="btn compact"
                             title="Generar Orden de Compra formal"
                           >
                             📝 Generar OC
@@ -270,7 +264,7 @@ export function PurchaseRequestsPage() {
                         )}
 
                         {r.status === "Ordered" && (
-                          <span style={{ fontSize: "0.82rem", color: "var(--lc-info)", fontWeight: "bold" }}>
+                          <span className="t-small t-info t-strong">
                             ✓ OC Generada
                           </span>
                         )}
@@ -287,9 +281,9 @@ export function PurchaseRequestsPage() {
       {/* Reject Modal */}
       {rejectModalId && (
         <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-          <div className="card pad" style={{ background: "white", width: "450px", maxWidth: "90%" }}>
-            <h3 style={{ marginTop: 0, color: "var(--lc-danger)" }}>Rechazar Solicitud de Compra</h3>
-            <p style={{ fontSize: "0.88rem", color: "var(--ink-soft)" }}>
+          <div className="card pad" style={{ width: "450px", maxWidth: "90%" }}>
+            <h3 className="t-danger">Rechazar Solicitud de Compra</h3>
+            <p className="muted">
               Por favor indique el motivo por el cual se rechaza esta solicitud:
             </p>
             <form onSubmit={handleReject}>
@@ -299,13 +293,13 @@ export function PurchaseRequestsPage() {
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
                 placeholder="Motivo del rechazo (ej: stock suficiente en pañol, no presupuestado, etc.)..."
-                style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid var(--surface-border)", marginBottom: "16px" }}
+                style={{ width: "100%", marginBottom: "16px" }}
               />
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
                 <button type="button" onClick={() => setRejectModalId(null)} className="btn btn-outline">
                   Cancelar
                 </button>
-                <button type="submit" disabled={actionLoading} className="btn" style={{ background: "var(--lc-danger)", color: "white" }}>
+                <button type="submit" disabled={actionLoading} className="btn danger">
                   Confirmar Rechazo
                 </button>
               </div>

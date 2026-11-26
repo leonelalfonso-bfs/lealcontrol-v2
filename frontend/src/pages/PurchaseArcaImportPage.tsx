@@ -98,35 +98,19 @@ export function PurchaseArcaImportPage() {
 
       {/* Upload Zone */}
       <div
-        className="card pad"
-        style={{
-          border: "2px dashed var(--lc-info)",
-          background: "linear-gradient(135deg, rgba(2, 132, 199, 0.04), rgba(14, 165, 233, 0.08))",
-          marginBottom: "20px",
-          textAlign: "center",
-          padding: "30px 20px"
-        }}
-      >
-        <div style={{ fontSize: "2rem", marginBottom: "8px" }}>📥</div>
-        <h3 style={{ margin: "0 0 6px 0", color: "var(--lc-info)" }}>
+        className="card pad t-center"
+       style={{ marginBottom: "20px", padding: "30px 20px" }}>
+        <div className="t-xl" style={{ marginBottom: "8px" }}>📥</div>
+        <h3 className="t-info" style={{ margin: "0 0 6px 0" }}>
           Subir archivo CSV de "Mis Comprobantes Recibidos"
         </h3>
-        <p style={{ margin: "0 0 16px 0", fontSize: "0.9rem", color: "var(--ink-soft)" }}>
+        <p className="muted" style={{ margin: "0 0 16px 0" }}>
           Descargá el reporte CSV directamente desde el portal de ARCA / AFIP y soltalo acá para importar automáticamente.
         </p>
 
         <label
           className="btn"
-          style={{
-            background: "linear-gradient(135deg, var(--lc-info), var(--lc-info))",
-            color: "white",
-            padding: "10px 24px",
-            fontSize: "0.95rem",
-            fontWeight: "bold",
-            cursor: "pointer",
-            display: "inline-block"
-          }}
-        >
+         style={{ cursor: "pointer" }}>
           {importing ? "Procesando e Importando CSV..." : "📁 Seleccionar Archivo CSV de AFIP"}
           <input
             type="file"
@@ -139,13 +123,13 @@ export function PurchaseArcaImportPage() {
       </div>
 
       {importResult && (
-        <div style={{ padding: "14px 18px", background: "var(--lc-ok-bg)", color: "var(--lc-ok)", borderRadius: "8px", marginBottom: "20px", border: "1px solid #6ee7b7" }}>
+        <div className="t-ok" style={{ padding: "14px 18px", background: "var(--lc-ok-bg)", borderRadius: "8px", marginBottom: "20px", border: "1px solid #6ee7b7" }}>
           <strong>✓ Resultado de Importación:</strong> {importResult.message}
         </div>
       )}
 
       {error && (
-        <div style={{ padding: "14px 18px", background: "var(--lc-danger-bg)", color: "var(--lc-danger)", borderRadius: "8px", marginBottom: "20px", border: "1px solid var(--lc-danger)" }}>
+        <div className="t-danger alert" style={{ marginBottom: "20px" }}>
           <strong>Error:</strong> {error}
         </div>
       )}
@@ -198,24 +182,24 @@ export function PurchaseArcaImportPage() {
       {/* Vouchers Table */}
       <div className="card pad" style={{ marginTop: "16px" }}>
         {loading ? (
-          <div style={{ padding: "30px", textAlign: "center", color: "var(--ink-soft)" }}>Cargando comprobantes ARCA...</div>
+          <div className="t-center muted" style={{ padding: "30px" }}>Cargando comprobantes ARCA...</div>
         ) : vouchers.length === 0 ? (
-          <div style={{ padding: "40px", textAlign: "center", color: "var(--ink-soft)" }}>
+          <div className="t-center muted" style={{ padding: "40px" }}>
             No hay comprobantes en estado <strong>{statusFilter}</strong>.
           </div>
         ) : (
-          <table className="table" style={{ width: "100%", borderCollapse: "collapse" }}>
+          <table className="table">
             <thead>
-              <tr style={{ borderBottom: "2px solid rgba(0,0,0,0.06)", textAlign: "left", fontSize: "0.82rem", color: "var(--ink-soft)" }}>
-                <th style={{ padding: "10px 8px" }}>Fecha</th>
-                <th style={{ padding: "10px 8px" }}>Tipo</th>
-                <th style={{ padding: "10px 8px" }}>N° Comprobante</th>
-                <th style={{ padding: "10px 8px" }}>Emisor / Razón Social</th>
-                <th style={{ padding: "10px 8px", textAlign: "right" }}>Neto Grav.</th>
-                <th style={{ padding: "10px 8px", textAlign: "right" }}>IVA</th>
-                <th style={{ padding: "10px 8px", textAlign: "right" }}>Total</th>
-                <th style={{ padding: "10px 8px", textAlign: "center" }}>Estado</th>
-                <th style={{ padding: "10px 8px", textAlign: "right" }}>Acciones</th>
+              <tr>
+                <th>Fecha</th>
+                <th>Tipo</th>
+                <th>N° Comprobante</th>
+                <th>Emisor / Razón Social</th>
+                <th className="t-right">Neto Grav.</th>
+                <th className="t-right">IVA</th>
+                <th className="t-right">Total</th>
+                <th className="t-center">Estado</th>
+                <th className="t-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -228,44 +212,43 @@ export function PurchaseArcaImportPage() {
                     : { bg: "var(--lc-warn-bg)", text: "var(--lc-warn)", label: "Pendiente" };
 
                 return (
-                  <tr key={v.id} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
-                    <td style={{ padding: "10px 8px", fontSize: "0.88rem" }}>
+                  <tr key={v.id}>
+                    <td>
                       {new Date(v.issueDate).toLocaleDateString("es-AR")}
                     </td>
-                    <td style={{ padding: "10px 8px" }}>
-                      <span style={{ padding: "2px 6px", borderRadius: "4px", background: "var(--lc-surface-2)", fontWeight: "bold", fontSize: "0.8rem", color: "var(--lc-info)" }}>
+                    <td>
+                      <span className="t-strong t-small t-info" style={{ padding: "2px 6px", borderRadius: "4px", background: "var(--lc-surface-2)" }}>
                         {v.voucherType}
                       </span>
                     </td>
-                    <td style={{ padding: "10px 8px", fontFamily: "monospace", fontWeight: "bold" }}>
+                    <td className="t-mono t-strong">
                       {v.formattedNumber}
                     </td>
-                    <td style={{ padding: "10px 8px" }}>
-                      <div style={{ fontWeight: 600 }}>{v.issuerName}</div>
-                      <div style={{ fontSize: "0.8rem", color: "var(--ink-soft)" }}>CUIT: {v.issuerCuit}</div>
+                    <td>
+                      <div className="t-strong">{v.issuerName}</div>
+                      <div className="t-small muted">CUIT: {v.issuerCuit}</div>
                     </td>
-                    <td style={{ padding: "10px 8px", textAlign: "right", fontFamily: "monospace" }}>
+                    <td className="t-right t-mono">
                       $ {v.netAmount.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                     </td>
-                    <td style={{ padding: "10px 8px", textAlign: "right", fontFamily: "monospace", color: "var(--lc-ok)" }}>
+                    <td className="t-right t-mono t-ok">
                       $ {v.vatAmount.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                     </td>
-                    <td style={{ padding: "10px 8px", textAlign: "right", fontFamily: "monospace", fontWeight: "bold" }}>
+                    <td className="t-right t-mono t-strong">
                       $ {v.totalAmount.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                     </td>
-                    <td style={{ padding: "10px 8px", textAlign: "center" }}>
-                      <span style={{ padding: "3px 8px", borderRadius: "10px", fontSize: "0.75rem", fontWeight: "bold", background: badge.bg, color: badge.text }}>
+                    <td className="t-center">
+                      <span className="t-small t-strong" style={{ padding: "3px 8px", borderRadius: "10px", background: badge.bg, color: badge.text }}>
                         {badge.label}
                       </span>
                     </td>
-                    <td style={{ padding: "10px 8px", textAlign: "right" }}>
+                    <td className="t-right">
                       <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
                         {v.status === "Pending" && (
                           <>
                             <Link
                               to={`/compras/facturas/nueva?arca_id=${v.id}`}
-                              className="btn"
-                              style={{ padding: "4px 8px", fontSize: "0.8rem", background: "var(--lc-ok)", color: "white", textDecoration: "none" }}
+                              className="btn compact"
                               title="Registrar factura con 1 clic"
                             >
                               ⚡ Registrar Factura
@@ -273,8 +256,7 @@ export function PurchaseArcaImportPage() {
 
                             <Link
                               to={`/clientes/nuevo?type=supplier&cuit=${v.issuerCuit}&name=${encodeURIComponent(v.issuerName)}&returnUrl=/compras/arca`}
-                              className="btn btn-outline"
-                              style={{ padding: "4px 8px", fontSize: "0.8rem", textDecoration: "none", color: "var(--lc-ink-2)" }}
+                              className="btn btn-outline compact"
                               title="Abrir ficha oficial para registrar proveedor"
                             >
                               👥 Registrar Proveedor
@@ -283,8 +265,7 @@ export function PurchaseArcaImportPage() {
                             <button
                               type="button"
                               onClick={() => handleIgnore(v.id)}
-                              className="btn btn-outline"
-                              style={{ padding: "4px 8px", fontSize: "0.8rem", color: "var(--lc-ink-3)" }}
+                              className="btn btn-outline muted compact"
                               title="Ignorar comprobante"
                             >
                               ✕
@@ -293,7 +274,7 @@ export function PurchaseArcaImportPage() {
                         )}
 
                         {v.status === "Registered" && (
-                          <span style={{ fontSize: "0.82rem", color: "var(--lc-ok)", fontWeight: "bold" }}>
+                          <span className="t-small t-ok t-strong">
                             ✓ En Cuentas por Pagar
                           </span>
                         )}

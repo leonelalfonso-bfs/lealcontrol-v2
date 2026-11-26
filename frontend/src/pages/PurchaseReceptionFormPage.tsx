@@ -223,7 +223,7 @@ export function PurchaseReceptionFormPage() {
 
   if (loading) {
     return (
-      <div className="page-wide" style={{ padding: "40px", textAlign: "center" }}>
+      <div className="page-wide t-center" style={{ padding: "40px" }}>
         <p>Cargando datos de recepción...</p>
       </div>
     );
@@ -259,29 +259,23 @@ export function PurchaseReceptionFormPage() {
       {linkedInvoice && (
         <div
           className="card pad"
-          style={{
-            marginBottom: "20px",
-            background: "linear-gradient(135deg, rgba(14, 165, 233, 0.08), rgba(59, 130, 246, 0.04))",
-            borderLeft: "4px solid var(--lc-info)"
-          }}
-        >
+         style={{ marginBottom: "20px", borderLeft: "4px solid var(--lc-info)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
-              <span style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", color: "var(--lc-info)" }}>
+              <span className="t-small t-strong t-info t-caps">
                 📥 Ingreso Vinculado a Factura de Compra
               </span>
-              <h3 style={{ margin: "4px 0 0 0", color: "#0c4a6e" }}>
+              <h3 style={{ margin: "4px 0 0 0" }}>
                 Factura {linkedInvoice.invoiceType} {linkedInvoice.formattedNumber} — {linkedInvoice.supplierName}
               </h3>
-              <p className="muted" style={{ margin: "2px 0 0 0", fontSize: "0.82rem" }}>
+              <p className="muted t-small" style={{ margin: "2px 0 0 0" }}>
                 Fecha emisión: {new Date(linkedInvoice.issueDate).toLocaleDateString("es-AR")} · Total:{" "}
                 {linkedInvoice.currency} {linkedInvoice.total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
               </p>
             </div>
             <span
-              className="badge ok"
-              style={{ padding: "6px 12px", borderRadius: "8px", fontWeight: 700, fontSize: "0.82rem" }}
-            >
+              className="badge ok t-strong t-small"
+             style={{ padding: "6px 12px", borderRadius: "8px" }}>
               Costos Unitarios Vinculados
             </span>
           </div>
@@ -290,13 +284,13 @@ export function PurchaseReceptionFormPage() {
 
       <form onSubmit={handleSubmit}>
         <div className="card pad" style={{ marginBottom: "20px" }}>
-          <h3 style={{ marginTop: 0, marginBottom: "16px", fontSize: "1.05rem", color: "var(--brand-accent)" }}>
+          <h3 className="t-accent" style={{ marginBottom: "16px" }}>
             1. Datos de la Recepción & Depósito Destino
           </h3>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
             <div>
-              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+              <label>
                 Proveedor *
               </label>
               <CustomerPicker
@@ -308,7 +302,7 @@ export function PurchaseReceptionFormPage() {
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+              <label>
                 Razón Social Proveedor *
               </label>
               <input
@@ -316,7 +310,7 @@ export function PurchaseReceptionFormPage() {
                 required
                 value={supplierName}
                 onChange={(e) => setSupplierName(e.target.value)}
-                style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                style={{ width: "100%" }}
               />
             </div>
           </div>
@@ -332,7 +326,7 @@ export function PurchaseReceptionFormPage() {
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
-              <label style={{ display: "inline-flex", alignItems: "center", gap: "8px", cursor: "pointer", fontWeight: 700, margin: 0 }}>
+              <label style={{ alignItems: "center", gap: "8px", cursor: "pointer", margin: 0 }}>
                 <input
                   type="checkbox"
                   checked={hasSupplierRemito}
@@ -346,7 +340,7 @@ export function PurchaseReceptionFormPage() {
               </label>
 
               {!hasSupplierRemito && (
-                <span className="badge" style={{ background: "rgba(59, 130, 246, 0.1)", color: "var(--lc-info)", fontWeight: 600, padding: "4px 10px", borderRadius: 8 }}>
+                <span className="badge t-info t-strong" style={{ background: "rgba(59, 130, 246, 0.1)", padding: "4px 10px", borderRadius: 8 }}>
                   ℹ️ Recepción Directa (Sin remito de proveedor — se asignará número interno de recepción automáticamente)
                 </span>
               )}
@@ -354,24 +348,23 @@ export function PurchaseReceptionFormPage() {
 
             {hasSupplierRemito && (
               <div style={{ marginTop: "12px", maxWidth: "340px" }}>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+                <label>
                   N° Remito del Proveedor *
                 </label>
-                <input
+                <input className="t-strong"
                   type="text"
                   required={hasSupplierRemito}
                   placeholder="Ej. R-0001-00012345"
                   value={supplierRemitoNumber}
                   onChange={(e) => setSupplierRemitoNumber(e.target.value)}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)", fontWeight: "bold" }}
-                />
+                 style={{ width: "100%" }}/>
               </div>
             )}
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", marginBottom: "16px" }}>
             <div>
-              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+              <label>
                 Fecha de Recepción *
               </label>
               <input
@@ -379,19 +372,18 @@ export function PurchaseReceptionFormPage() {
                 required
                 value={receptionDate}
                 onChange={(e) => setReceptionDate(e.target.value)}
-                style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+              <label>
                 Depósito de Ingreso *
               </label>
-              <select
+              <select className="t-strong"
                 value={warehouseLocation}
                 onChange={(e) => setWarehouseLocation(e.target.value)}
-                style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)", fontWeight: 600 }}
-              >
+               style={{ width: "100%" }}>
                 {warehouses.length > 0 ? (
                   warehouses.map((w) => (
                     <option key={w.id} value={w.name}>
@@ -405,7 +397,7 @@ export function PurchaseReceptionFormPage() {
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+              <label>
                 Recibido Por / Responsable
               </label>
               <input
@@ -413,13 +405,13 @@ export function PurchaseReceptionFormPage() {
                 value={receivedBy}
                 onChange={(e) => setReceivedBy(e.target.value)}
                 placeholder="Ej. Juan Pérez (Depósito)"
-                style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                style={{ width: "100%" }}
               />
             </div>
           </div>
 
           <div>
-            <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+            <label>
               Observaciones / Notas de Entrega
             </label>
             <input
@@ -427,7 +419,7 @@ export function PurchaseReceptionFormPage() {
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Ej. Bultos en buen estado, transporte Andesmar, precinto intacto..."
-              style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+              style={{ width: "100%" }}
             />
           </div>
         </div>
@@ -435,7 +427,7 @@ export function PurchaseReceptionFormPage() {
         {/* Section 2: Items */}
         <div className="card pad" style={{ marginBottom: "20px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-            <h3 style={{ margin: 0, fontSize: "1.05rem", color: "var(--brand-accent)" }}>
+            <h3 className="t-accent" style={{ margin: 0 }}>
               2. Ítems a Ingresar al Stock
             </h3>
             <button
@@ -446,27 +438,27 @@ export function PurchaseReceptionFormPage() {
               + Agregar Ítem
             </button>
           </div>
-          <p className="muted" style={{ fontSize: "0.85rem", marginBottom: 12 }}>
+          <p className="muted t-small" style={{ marginBottom: 12 }}>
             Cada línea debe vincularse a un producto del catálogo. Sin producto no se genera movimiento de inventario y la recepción será rechazada.
           </p>
 
           <div className="table-wrap">
-            <table className="table" style={{ width: "100%", borderCollapse: "collapse" }}>
+            <table className="table">
               <thead>
-                <tr style={{ borderBottom: "2px solid rgba(0,0,0,0.06)", textAlign: "left", fontSize: "0.85rem", color: "var(--ink-soft)" }}>
-                  <th style={{ padding: "8px", width: "220px" }}>Producto Catálogo</th>
-                  <th style={{ padding: "8px", width: "120px" }}>Código</th>
-                  <th style={{ padding: "8px" }}>Descripción</th>
-                  <th style={{ padding: "8px", width: "110px", textAlign: "right" }}>Cantidad</th>
-                  <th style={{ padding: "8px", width: "80px" }}>Unidad</th>
-                  <th style={{ padding: "8px", width: "150px" }}>N° Serie / Lote</th>
-                  <th style={{ padding: "8px", width: "50px", textAlign: "center" }}></th>
+                <tr>
+                  <th style={{ width: "220px" }}>Producto Catálogo</th>
+                  <th style={{ width: "120px" }}>Código</th>
+                  <th>Descripción</th>
+                  <th className="t-right" style={{ width: "110px" }}>Cantidad</th>
+                  <th style={{ width: "80px" }}>Unidad</th>
+                  <th style={{ width: "150px" }}>N° Serie / Lote</th>
+                  <th className="t-center" style={{ width: "50px" }}></th>
                 </tr>
               </thead>
               <tbody>
                 {items.map((row, index) => (
-                  <tr key={index} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
-                    <td style={{ padding: "6px 8px" }}>
+                  <tr key={index}>
+                    <td>
                       <ProductPicker
                         aria-label={`Producto del renglón ${index + 1}`}
                         value={row.productId || ""}
@@ -476,61 +468,55 @@ export function PurchaseReceptionFormPage() {
                         placeholder="Manual / Sin catálogo"
                       />
                     </td>
-                    <td style={{ padding: "6px 8px" }}>
-                      <input
+                    <td>
+                      <input className="t-small t-mono"
                         type="text"
                         required
                         value={row.code}
                         onChange={(e) => handleItemChange(index, "code", e.target.value)}
                         placeholder="CÓDIGO"
-                        style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontSize: "0.85rem", fontFamily: "monospace" }}
-                      />
+                       style={{ width: "100%" }}/>
                     </td>
-                    <td style={{ padding: "6px 8px" }}>
-                      <input
+                    <td>
+                      <input className="t-small"
                         type="text"
                         required
                         value={row.description}
                         onChange={(e) => handleItemChange(index, "description", e.target.value)}
                         placeholder="Descripción del ítem recibido..."
-                        style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontSize: "0.85rem" }}
-                      />
+                       style={{ width: "100%" }}/>
                     </td>
-                    <td style={{ padding: "6px 8px", textAlign: "right" }}>
-                      <input
+                    <td className="t-right">
+                      <input className="t-small t-right t-strong"
                         type="number"
                         min="1"
                         step="1"
                         required
                         value={row.quantity}
                         onChange={(e) => handleItemChange(index, "quantity", parseInt(e.target.value, 10) || 1)}
-                        style={{ width: "90px", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontSize: "0.85rem", textAlign: "right", fontWeight: "bold" }}
-                      />
+                       style={{ width: "90px" }}/>
                     </td>
-                    <td style={{ padding: "6px 8px" }}>
-                      <input
+                    <td>
+                      <input className="t-small"
                         type="text"
                         value={row.unitMeasure}
                         onChange={(e) => handleItemChange(index, "unitMeasure", e.target.value)}
-                        style={{ width: "60px", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontSize: "0.85rem" }}
-                      />
+                       style={{ width: "60px" }}/>
                     </td>
-                    <td style={{ padding: "6px 8px" }}>
-                      <input
+                    <td>
+                      <input className="t-small"
                         type="text"
                         value={row.serialNumber || ""}
                         onChange={(e) => handleItemChange(index, "serialNumber", e.target.value)}
                         placeholder="Opcional..."
-                        style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontSize: "0.85rem" }}
-                      />
+                       style={{ width: "100%" }}/>
                     </td>
-                    <td style={{ padding: "6px 8px", textAlign: "center" }}>
+                    <td className="t-center">
                       {items.length > 1 && (
                         <button
                           type="button"
-                          className="btn ghost compact"
+                          className="btn ghost compact t-danger"
                           onClick={() => removeItemRow(index)}
-                          style={{ color: "var(--lc-danger)", padding: "4px 8px" }}
                           title="Eliminar renglón"
                         >
                           ✕
@@ -554,7 +540,6 @@ export function PurchaseReceptionFormPage() {
             type="submit"
             className="btn btn-primary"
             disabled={submitting}
-            style={{ padding: "10px 24px", fontWeight: "bold" }}
           >
             {submitting ? "Registrando ingreso..." : "💾 Confirmar Recepción e Ingresar Stock"}
           </button>

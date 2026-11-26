@@ -119,7 +119,7 @@ export function PurchaseRequestFormPage() {
   };
 
   if (loading) {
-    return <div style={{ padding: "40px", textAlign: "center" }}>Cargando formulario de solicitud...</div>;
+    return <div className="t-center" style={{ padding: "40px" }}>Cargando formulario de solicitud...</div>;
   }
 
   return (
@@ -137,20 +137,20 @@ export function PurchaseRequestFormPage() {
       </div>
 
       {error && (
-        <div style={{ padding: "12px 16px", background: "var(--lc-danger-bg)", color: "var(--lc-danger)", borderRadius: "8px", marginBottom: "16px", border: "1px solid var(--lc-danger)" }}>
+        <div className="t-danger alert" style={{ marginBottom: "16px" }}>
           {error}
         </div>
       )}
 
       <form onSubmit={handleSubmit}>
         <div className="card pad" style={{ marginBottom: "20px" }}>
-          <h3 style={{ marginTop: 0, marginBottom: "16px", fontSize: "1.05rem", color: "var(--brand-accent)" }}>
+          <h3 className="t-accent" style={{ marginBottom: "16px" }}>
             Datos del Solicitante & Justificación
           </h3>
 
           <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", gap: "16px", marginBottom: "16px" }}>
             <div>
-              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+              <label>
                 Solicitante *
               </label>
               <input
@@ -158,18 +158,18 @@ export function PurchaseRequestFormPage() {
                 required
                 value={requestedBy}
                 onChange={(e) => setRequestedBy(e.target.value)}
-                style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+              <label>
                 Departamento / Sector *
               </label>
               <select
                 value={department}
                 onChange={(e) => setDepartment(e.target.value)}
-                style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                style={{ width: "100%" }}
               >
                 <option value="Taller de Balanzas">Taller de Balanzas</option>
                 <option value="Operaciones / En Campo">Operaciones / En Campo</option>
@@ -180,13 +180,13 @@ export function PurchaseRequestFormPage() {
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+              <label>
                 Prioridad *
               </label>
               <select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value)}
-                style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                style={{ width: "100%" }}
               >
                 <option value="Low">Baja (Sin apuro)</option>
                 <option value="Normal">Normal</option>
@@ -198,19 +198,19 @@ export function PurchaseRequestFormPage() {
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "16px" }}>
             <div>
-              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+              <label>
                 Fecha Límite Requerida
               </label>
               <input
                 type="date"
                 value={requiredDate}
                 onChange={(e) => setRequiredDate(e.target.value)}
-                style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+              <label>
                 Motivo / Destino de la Compra *
               </label>
               <input
@@ -219,7 +219,7 @@ export function PurchaseRequestFormPage() {
                 placeholder="Ej: Repuesto para orden de trabajo #102 en cliente Bunge..."
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                style={{ width: "100%" }}
               />
             </div>
           </div>
@@ -227,25 +227,25 @@ export function PurchaseRequestFormPage() {
 
         {/* Items Table */}
         <div className="card pad" style={{ marginBottom: "20px" }}>
-          <h3 style={{ marginTop: 0, marginBottom: "16px", fontSize: "1.05rem", color: "var(--brand-accent)" }}>
+          <h3 className="t-accent" style={{ marginBottom: "16px" }}>
             Artículos o Repuestos Requeridos
           </h3>
 
-          <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "12px" }}>
+          <table style={{ marginBottom: "12px" }}>
             <thead>
-              <tr style={{ borderBottom: "2px solid rgba(0,0,0,0.06)", fontSize: "0.82rem", color: "var(--ink-soft)", textAlign: "left" }}>
-                <th style={{ width: "25%", padding: "8px 4px" }}>Catálogo</th>
-                <th style={{ width: "38%", padding: "8px 4px" }}>Descripción del Ítem</th>
-                <th style={{ width: "12%", padding: "8px 4px", textAlign: "center" }}>Cantidad</th>
-                <th style={{ width: "10%", padding: "8px 4px", textAlign: "center" }}>Unidad</th>
-                <th style={{ width: "15%", padding: "8px 4px" }}>Notas Ítem</th>
-                <th style={{ width: "4%", padding: "8px 4px" }}></th>
+              <tr>
+                <th style={{ width: "25%" }}>Catálogo</th>
+                <th style={{ width: "38%" }}>Descripción del Ítem</th>
+                <th className="t-center" style={{ width: "12%" }}>Cantidad</th>
+                <th className="t-center" style={{ width: "10%" }}>Unidad</th>
+                <th style={{ width: "15%" }}>Notas Ítem</th>
+                <th style={{ width: "4%" }}></th>
               </tr>
             </thead>
             <tbody>
               {items.map((it, idx) => (
-                <tr key={idx} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
-                  <td style={{ padding: "8px 4px" }}>
+                <tr key={idx}>
+                  <td>
                     <ProductPicker
                       aria-label={`Producto del renglón ${idx + 1}`}
                       value={it.productId || ""}
@@ -255,50 +255,45 @@ export function PurchaseRequestFormPage() {
                       placeholder="Ítem libre"
                     />
                   </td>
-                  <td style={{ padding: "8px 4px" }}>
-                    <input
+                  <td>
+                    <input className="t-small"
                       type="text"
                       required
                       value={it.description}
                       onChange={(e) => handleItemChange(idx, "description", e.target.value)}
                       placeholder="Descripción del ítem requerido..."
-                      style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontSize: "0.85rem" }}
-                    />
+                     style={{ width: "100%" }}/>
                   </td>
-                  <td style={{ padding: "8px 4px" }}>
-                    <input
+                  <td>
+                    <input className="t-center t-small t-strong"
                       type="number"
                       step="any"
                       min="0"
                       required
                       value={it.quantity}
                       onChange={(e) => handleItemChange(idx, "quantity", e.target.value === "" ? "" : parseFloat(e.target.value))}
-                      style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", textAlign: "center", fontSize: "0.85rem", fontWeight: "bold" }}
-                    />
+                     style={{ width: "100%" }}/>
                   </td>
-                  <td style={{ padding: "8px 4px" }}>
-                    <input
+                  <td>
+                    <input className="t-center t-small"
                       type="text"
                       value={it.unitMeasure}
                       onChange={(e) => handleItemChange(idx, "unitMeasure", e.target.value)}
-                      style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", textAlign: "center", fontSize: "0.85rem" }}
-                    />
+                     style={{ width: "100%" }}/>
                   </td>
-                  <td style={{ padding: "8px 4px" }}>
-                    <input
+                  <td>
+                    <input className="t-small"
                       type="text"
                       placeholder="Ej: marca sugerida..."
                       value={it.notes || ""}
                       onChange={(e) => handleItemChange(idx, "notes", e.target.value)}
-                      style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontSize: "0.85rem" }}
-                    />
+                     style={{ width: "100%" }}/>
                   </td>
-                  <td style={{ padding: "8px 4px", textAlign: "center" }}>
-                    <button
+                  <td className="t-center">
+                    <button className="t-danger"
                       type="button"
                       onClick={() => removeItemRow(idx)}
-                      style={{ background: "transparent", border: "none", color: "var(--lc-danger)", cursor: "pointer", fontSize: "1.1rem" }}
-                    >
+                     style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: "1.1rem" }}>
                       ✕
                     </button>
                   </td>
@@ -307,7 +302,7 @@ export function PurchaseRequestFormPage() {
             </tbody>
           </table>
 
-          <button type="button" onClick={addItemRow} className="btn btn-outline" style={{ fontSize: "0.85rem" }}>
+          <button type="button" onClick={addItemRow} className="btn btn-outline">
             + Agregar Línea
           </button>
         </div>
@@ -316,7 +311,7 @@ export function PurchaseRequestFormPage() {
           <Link to="/compras/solicitudes" className="btn btn-outline">
             Cancelar
           </Link>
-          <button type="submit" disabled={submitting} className="btn btn-primary" style={{ padding: "10px 24px", fontWeight: "bold" }}>
+          <button type="submit" disabled={submitting} className="btn btn-primary">
             {submitting ? "Enviando..." : "🚀 Enviar Solicitud a Compras"}
           </button>
         </div>

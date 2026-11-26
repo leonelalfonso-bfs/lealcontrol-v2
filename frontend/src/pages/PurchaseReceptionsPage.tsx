@@ -87,7 +87,7 @@ export function PurchaseReceptionsPage() {
       </div>
 
       {error && (
-        <div className="alert" style={{ background: "var(--lc-danger-bg)", color: "var(--lc-danger)", marginBottom: 12 }}>
+        <div className="alert t-danger" style={{ marginBottom: 12 }}>
           {error}
         </div>
       )}
@@ -103,24 +103,24 @@ export function PurchaseReceptionsPage() {
 
       <div className="card pad" style={{ marginTop: "16px" }}>
         {loading ? (
-          <div style={{ padding: "20px", textAlign: "center", color: "var(--ink-soft)" }}>Cargando recepciones...</div>
+          <div className="t-center muted" style={{ padding: "20px" }}>Cargando recepciones...</div>
         ) : receptions.length === 0 ? (
-          <div style={{ padding: "30px", textAlign: "center", color: "var(--ink-soft)" }}>
+          <div className="t-center muted" style={{ padding: "30px" }}>
             No se encontraron recepciones de mercadería registradas.
           </div>
         ) : (
-          <table className="table" style={{ width: "100%", borderCollapse: "collapse" }}>
+          <table className="table">
             <thead>
-              <tr style={{ borderBottom: "2px solid rgba(0,0,0,0.06)", textAlign: "left", fontSize: "0.85rem", color: "var(--ink-soft)" }}>
-                <th style={{ padding: "10px 8px" }}>N° Recepción</th>
-                <th style={{ padding: "10px 8px" }}>Fecha</th>
-                <th style={{ padding: "10px 8px" }}>Proveedor</th>
-                <th style={{ padding: "10px 8px" }}>Origen / Remito</th>
-                <th style={{ padding: "10px 8px" }}>Depósito Destino</th>
-                <th style={{ padding: "10px 8px" }}>Recibido Por</th>
-                <th style={{ padding: "10px 8px", textAlign: "center" }}>Cant. Ítems</th>
-                <th style={{ padding: "10px 8px", textAlign: "center" }}>Estado</th>
-                <th style={{ padding: "10px 8px", textAlign: "center" }}>Acciones</th>
+              <tr>
+                <th>N° Recepción</th>
+                <th>Fecha</th>
+                <th>Proveedor</th>
+                <th>Origen / Remito</th>
+                <th>Depósito Destino</th>
+                <th>Recibido Por</th>
+                <th className="t-center">Cant. Ítems</th>
+                <th className="t-center">Estado</th>
+                <th className="t-center">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -132,66 +132,53 @@ export function PurchaseReceptionsPage() {
                 return (
                   <tr
                     key={r.id}
-                    style={{
-                      borderBottom: "1px solid rgba(0,0,0,0.04)",
-                      opacity: cancelled ? 0.65 : 1
-                    }}
-                  >
-                    <td style={{ padding: "12px 8px", fontWeight: "bold", fontFamily: "monospace" }}>
+                   style={{ opacity: cancelled ? 0.65 : 1 }}>
+                    <td className="t-strong t-mono">
                       📦 {r.receptionNumber}
                     </td>
-                    <td style={{ padding: "12px 8px", fontSize: "0.9rem" }}>
+                    <td>
                       {new Date(r.receptionDate).toLocaleDateString("es-AR")}
                     </td>
-                    <td style={{ padding: "12px 8px", fontWeight: 600 }}>
+                    <td className="t-strong">
                       {r.supplierName}
                     </td>
-                    <td style={{ padding: "12px 8px" }}>
+                    <td>
                       {hasRemito ? (
-                        <strong style={{ fontFamily: "monospace", color: "var(--lc-accent-strong)" }}>
+                        <strong className="t-mono t-accent">
                           🚚 {r.supplierRemitoNumber}
                         </strong>
                       ) : (
-                        <span className="badge" style={{ background: "rgba(59, 130, 246, 0.1)", color: "var(--lc-info)", fontSize: "0.78rem" }}>
+                        <span className="badge t-info t-small" style={{ background: "rgba(59, 130, 246, 0.1)" }}>
                           ⚡ Recepción Directa
                         </span>
                       )}
                     </td>
-                    <td style={{ padding: "12px 8px" }}>
-                      <span style={{ padding: "2px 8px", borderRadius: "6px", background: "var(--lc-surface-2)", fontSize: "0.82rem", color: "var(--lc-ink-2)" }}>
+                    <td>
+                      <span className="t-small muted" style={{ padding: "2px 8px", borderRadius: "6px", background: "var(--lc-surface-2)" }}>
                         📍 {r.warehouseLocation}
                       </span>
                     </td>
-                    <td style={{ padding: "12px 8px", color: "var(--ink-soft)", fontSize: "0.88rem" }}>
+                    <td className="muted">
                       {r.receivedBy || "—"}
                     </td>
-                    <td style={{ padding: "12px 8px", textAlign: "center", fontWeight: "bold" }}>
+                    <td className="t-center t-strong">
                       {r.items.length}
                     </td>
-                    <td style={{ padding: "12px 8px", textAlign: "center" }}>
+                    <td className="t-center">
                       {cancelled ? (
-                        <span className="badge off" style={{ color: "var(--lc-danger)", background: "rgba(239,68,68,0.12)" }}>Anulada</span>
+                        <span className="badge off t-danger" style={{ background: "rgba(239,68,68,0.12)" }}>Anulada</span>
                       ) : alreadyInvoiced ? (
-                        <span className="badge ok" style={{ color: "var(--lc-ok)", background: "rgba(16,185,129,0.12)" }}>Facturada</span>
+                        <span className="badge ok t-ok" style={{ background: "rgba(16,185,129,0.12)" }}>Facturada</span>
                       ) : (
-                        <span className="badge warn" style={{ color: "var(--lc-warn)", background: "rgba(245,158,11,0.15)" }}>Sin factura</span>
+                        <span className="badge warn t-warn" style={{ background: "rgba(245,158,11,0.15)" }}>Sin factura</span>
                       )}
                     </td>
-                    <td style={{ padding: "12px 8px", textAlign: "center" }}>
+                    <td className="t-center">
                       <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
                         {!cancelled && !alreadyInvoiced && (
                           <Link
                             to={`/compras/facturas/nueva?reception_id=${r.id}`}
                             className="btn compact"
-                            style={{
-                              fontSize: "0.78rem",
-                              padding: "4px 10px",
-                              background: "var(--lc-info)",
-                              color: "#fff",
-                              fontWeight: 700,
-                              textDecoration: "none",
-                              borderRadius: 6
-                            }}
                             title="Cargar la factura vinculada a esta recepción (sin volver a ingresar stock)"
                           >
                             🧾 Facturar
@@ -200,9 +187,8 @@ export function PurchaseReceptionsPage() {
                         {!cancelled && (
                           <button
                             type="button"
-                            className="btn btn-outline compact"
+                            className="btn btn-outline compact t-danger"
                             disabled={busyId === r.id}
-                            style={{ fontSize: "0.78rem", color: "var(--lc-danger)", borderColor: "var(--lc-danger-bg)" }}
                             onClick={() => void cancelReception(r)}
                           >
                             Anular

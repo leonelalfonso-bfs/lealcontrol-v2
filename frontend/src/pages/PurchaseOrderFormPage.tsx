@@ -265,7 +265,7 @@ export function PurchaseOrderFormPage() {
   };
 
   if (loading) {
-    return <div style={{ padding: "40px", textAlign: "center" }}>Cargando formulario de orden de compra...</div>;
+    return <div className="t-center" style={{ padding: "40px" }}>Cargando formulario de orden de compra...</div>;
   }
 
   return (
@@ -281,7 +281,7 @@ export function PurchaseOrderFormPage() {
       </div>
 
       {error && (
-        <div style={{ padding: "12px 16px", background: "var(--lc-danger-bg)", color: "var(--lc-danger)", borderRadius: "8px", marginBottom: "16px", border: "1px solid var(--lc-danger)" }}>
+        <div className="t-danger alert" style={{ marginBottom: "16px" }}>
           {error}
         </div>
       )}
@@ -291,14 +291,13 @@ export function PurchaseOrderFormPage() {
           {/* Main Info Card */}
           <div className="card pad">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h3 style={{ margin: 0, fontSize: "1.05rem", color: "var(--brand-accent)" }}>
+              <h3 className="t-accent" style={{ margin: 0 }}>
                 1. Datos del Proveedor & Condiciones Comerciales
               </h3>
               <button
                 type="button"
                 onClick={() => setShowQuickSupplierModal(true)}
-                className="btn btn-primary"
-                style={{ padding: "6px 14px", fontSize: "0.82rem", background: "var(--lc-accent)" }}
+                className="btn btn-primary compact"
               >
                 + Nuevo Proveedor Completo
               </button>
@@ -307,14 +306,13 @@ export function PurchaseOrderFormPage() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
               <div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                  <label style={{ fontSize: "0.85rem", fontWeight: "bold" }}>
+                  <label>
                     Seleccionar Proveedor *
                   </label>
-                  <button
+                  <button className="t-small t-accent t-strong"
                     type="button"
                     onClick={() => setShowQuickSupplierModal(true)}
-                    style={{ fontSize: "0.76rem", color: "var(--lc-accent-strong)", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}
-                  >
+                   style={{ background: "none", border: "none", cursor: "pointer" }}>
                     + Alta Rápida
                   </button>
                 </div>
@@ -327,7 +325,7 @@ export function PurchaseOrderFormPage() {
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+                <label>
                   CUIT / Documento *
                 </label>
                 <input
@@ -336,20 +334,20 @@ export function PurchaseOrderFormPage() {
                   onChange={(e) => setSupplierDocument(e.target.value)}
                   required
                   placeholder="30-xxxxxxxx-x"
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                  style={{ width: "100%" }}
                 />
               </div>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", marginBottom: "16px" }}>
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+                <label>
                   Moneda
                 </label>
                 <select
                   value={currency}
                   onChange={(e) => setCurrency(e.target.value)}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                  style={{ width: "100%" }}
                 >
                   <option value="ARS">Pesos Argentinos (ARS)</option>
                   <option value="USD">Dólares Estadounidenses (USD)</option>
@@ -357,7 +355,7 @@ export function PurchaseOrderFormPage() {
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+                <label>
                   Tipo de Cambio (TC)
                 </label>
                 <input
@@ -365,52 +363,52 @@ export function PurchaseOrderFormPage() {
                   step="0.01"
                   value={exchangeRate}
                   onChange={(e) => setExchangeRate(parseFloat(e.target.value) || 1)}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                  style={{ width: "100%" }}
                 />
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+                <label>
                   Fecha Estimada de Entrega
                 </label>
                 <input
                   type="date"
                   value={expectedDeliveryDate}
                   onChange={(e) => setExpectedDeliveryDate(e.target.value)}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                  style={{ width: "100%" }}
                 />
               </div>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+                <label>
                   Condición de Pago
                 </label>
                 <input
                   type="text"
                   value={paymentTerms}
                   onChange={(e) => setPaymentTerms(e.target.value)}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                  style={{ width: "100%" }}
                 />
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+                <label>
                   Lugar / Dirección de Entrega
                 </label>
                 <input
                   type="text"
                   value={deliveryAddress}
                   onChange={(e) => setDeliveryAddress(e.target.value)}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                  style={{ width: "100%" }}
                 />
               </div>
             </div>
 
             {/* Items Table */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "24px", marginBottom: "12px" }}>
-              <h3 style={{ margin: 0, fontSize: "1.05rem", color: "var(--brand-accent)" }}>
+              <h3 className="t-accent" style={{ margin: 0 }}>
                 2. Artículos / Repuestos / Insumos a Adquirir
               </h3>
               <button
@@ -419,29 +417,28 @@ export function PurchaseOrderFormPage() {
                   setQuickProductLineIndex(null);
                   setShowQuickProductModal(true);
                 }}
-                className="btn btn-outline"
-                style={{ fontSize: "0.82rem", padding: "4px 10px", color: "var(--lc-accent-strong)", borderColor: "var(--lc-accent)", fontWeight: 700 }}
+                className="btn btn-outline compact"
               >
                 + Crear Insumo / Producto
               </button>
             </div>
 
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "12px" }}>
+              <table style={{ marginBottom: "12px" }}>
                 <thead>
-                  <tr style={{ borderBottom: "2px solid rgba(0,0,0,0.06)", fontSize: "0.82rem", color: "var(--ink-soft)", textAlign: "left" }}>
-                    <th style={{ width: "30%", padding: "8px 4px" }}>Catálogo / Código</th>
-                    <th style={{ width: "32%", padding: "8px 4px" }}>Descripción</th>
-                    <th style={{ width: "10%", padding: "8px 4px", textAlign: "center" }}>Cant.</th>
-                    <th style={{ width: "13%", padding: "8px 4px", textAlign: "right" }}>Precio U.</th>
-                    <th style={{ width: "10%", padding: "8px 4px", textAlign: "center" }}>IVA</th>
-                    <th style={{ width: "5%", padding: "8px 4px" }}></th>
+                  <tr>
+                    <th style={{ width: "30%" }}>Catálogo / Código</th>
+                    <th style={{ width: "32%" }}>Descripción</th>
+                    <th className="t-center" style={{ width: "10%" }}>Cant.</th>
+                    <th className="t-right" style={{ width: "13%" }}>Precio U.</th>
+                    <th className="t-center" style={{ width: "10%" }}>IVA</th>
+                    <th style={{ width: "5%" }}></th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((it, idx) => (
-                    <tr key={idx} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
-                      <td style={{ padding: "8px 4px" }}>
+                    <tr key={idx}>
+                      <td>
                         <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
                           <ProductPicker
                             aria-label={`Producto del renglón ${idx + 1}`}
@@ -451,79 +448,65 @@ export function PurchaseOrderFormPage() {
                             price="cost"
                             placeholder="Ítem libre"
                           />
-                          <button
+                          <button className="t-strong t-small"
                             type="button"
                             onClick={() => {
                               setQuickProductLineIndex(idx);
                               setShowQuickProductModal(true);
                             }}
                             title="Crear un producto nuevo y asignarlo aquí"
-                            style={{
-                              padding: "4px 8px",
-                              borderRadius: "6px",
-                              background: "var(--lc-accent)",
-                              color: "#fff",
-                              border: "none",
-                              fontWeight: 800,
-                              cursor: "pointer",
-                              fontSize: "0.85rem"
-                            }}
+                            style={{ padding: "4px 8px", borderRadius: "6px", background: "var(--lc-accent)", color: "#fff", border: "none", cursor: "pointer" }}
                           >
                             +
                           </button>
                         </div>
                       </td>
-                      <td style={{ padding: "8px 4px" }}>
-                        <input
+                      <td>
+                        <input className="t-small"
                           type="text"
                           required
                           value={it.description}
                           onChange={(e) => handleItemChange(idx, "description", e.target.value)}
                           placeholder="Descripción del ítem..."
-                          style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontSize: "0.85rem" }}
-                        />
+                         style={{ width: "100%" }}/>
                       </td>
-                      <td style={{ padding: "8px 4px" }}>
-                        <input
+                      <td>
+                        <input className="t-center t-small"
                           type="number"
                           step="any"
                           min="0"
                           required
                           value={it.quantity}
                           onChange={(e) => handleItemChange(idx, "quantity", e.target.value === "" ? "" : parseFloat(e.target.value))}
-                          style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", textAlign: "center", fontSize: "0.85rem" }}
-                        />
+                         style={{ width: "100%" }}/>
                       </td>
-                      <td style={{ padding: "8px 4px" }}>
-                        <input
+                      <td>
+                        <input className="t-right t-small t-mono"
                           type="number"
                           step="0.01"
                           min="0"
                           required
                           value={it.unitPrice}
                           onChange={(e) => handleItemChange(idx, "unitPrice", parseFloat(e.target.value) || 0)}
-                          style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", textAlign: "right", fontSize: "0.85rem", fontFamily: "monospace" }}
-                        />
+                         style={{ width: "100%" }}/>
                       </td>
-                      <td style={{ padding: "8px 4px" }}>
-                        <select
+                      <td>
+                        <select className="t-small"
                           value={it.taxRate}
                           onChange={(e) => handleItemChange(idx, "taxRate", parseFloat(e.target.value))}
-                          style={{ width: "100%", padding: "6px 4px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontSize: "0.82rem" }}
-                        >
+                         style={{ width: "100%" }}>
                           <option value="21">21%</option>
                           <option value="10.5">10.5%</option>
                           <option value="27">27%</option>
                           <option value="0">0%</option>
                         </select>
                       </td>
-                      <td style={{ padding: "8px 4px", textAlign: "center" }}>
-                        <button
+                      <td className="t-center">
+                        <button className="t-danger"
                           type="button"
                           onClick={() => removeItemRow(idx)}
-                          style={{ background: "transparent", border: "none", color: "var(--lc-danger)", cursor: "pointer", fontSize: "1.1rem" }}
                           title="Eliminar fila"
-                        >
+                         style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: "1.1rem" }}>
                           ✕
                         </button>
                       </td>
@@ -537,7 +520,6 @@ export function PurchaseOrderFormPage() {
               type="button"
               onClick={addItemRow}
               className="btn btn-outline"
-              style={{ fontSize: "0.85rem" }}
             >
               + Agregar Ítem
             </button>
@@ -545,46 +527,44 @@ export function PurchaseOrderFormPage() {
 
           {/* Right Sidebar: Totals & Final Notes */}
           <div className="card pad" style={{ position: "sticky", top: "20px" }}>
-            <h3 style={{ marginTop: 0, marginBottom: "16px", fontSize: "1.05rem", color: "var(--brand-accent)" }}>
+            <h3 className="t-accent" style={{ marginBottom: "16px" }}>
               Resumen de Orden
             </h3>
 
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px", fontSize: "0.9rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
               <span className="muted">Subtotal Neto:</span>
               <strong>{currency} {subtotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</strong>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "14px", fontSize: "0.9rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "14px" }}>
               <span className="muted">IVA Estimado:</span>
               <strong>{currency} {taxAmount.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</strong>
             </div>
 
             <div style={{ borderTop: "2px solid rgba(0,0,0,0.08)", paddingTop: "12px", marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-              <span style={{ fontSize: "1rem", fontWeight: "bold" }}>Total OC:</span>
-              <span style={{ fontSize: "1.3rem", fontWeight: "900", color: "var(--lc-ok)" }}>
+              <span className="t-strong">Total OC:</span>
+              <span className="t-ok" style={{ fontSize: "1.3rem", fontWeight: "900" }}>
                 {currency} {grandTotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
               </span>
             </div>
 
             <div style={{ marginBottom: "20px" }}>
-              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+              <label>
                 Instrucciones / Observaciones
               </label>
-              <textarea
+              <textarea className="t-small"
                 rows={4}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Observaciones de entrega, referencias de presupuesto..."
-                style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)", fontSize: "0.85rem" }}
-              />
+               style={{ width: "100%" }}/>
             </div>
 
             <button
               type="submit"
               disabled={submitting}
               className="btn btn-primary"
-              style={{ width: "100%", padding: "12px", fontWeight: "bold", fontSize: "0.95rem" }}
-            >
+             style={{ width: "100%" }}>
               {submitting ? "Generando Orden..." : "📋 Confirmar & Emitir Orden"}
             </button>
           </div>
