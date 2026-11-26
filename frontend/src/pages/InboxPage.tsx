@@ -35,15 +35,18 @@ function isOwnBrand(name: string): boolean {
   );
 }
 
+/** Fecha de la lista: hora si es de hoy, "ayer", el día de la semana si es de los últimos 6 días, y el año si no es este. */
 function formatThreadDate(dateStr: string): string {
   if (!dateStr) return "";
   const d = new Date(dateStr);
-  const now = new Date();
-  const isToday = d.toDateString() === now.toDateString();
-  if (isToday) {
-    return d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
-  }
-  return d.toLocaleDateString("es-AR", { day: "numeric", month: "short" });
+  const startOfDay = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const days = Math.round((startOfDay(new Date()) - startOfDay(d)) / 86_400_000);
+  if (days <= 0) return d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+  if (days === 1) return "ayer";
+  if (days < 7) return d.toLocaleDateString("es-AR", { weekday: "short" });
+  return d.toLocaleDateString("es-AR", d.getFullYear() === new Date().getFullYear()
+    ? { day: "numeric", month: "short" }
+    : { day: "numeric", month: "short", year: "numeric" });
 }
 
 function getConversationChannel(c: Conversation): "instagram" | "facebook" | "email" {
@@ -771,7 +774,7 @@ export function InboxPage() {
                     >
                       {displayName}
                     </span>
-                    <span className="t-small muted" style={{ whiteSpace: "nowrap", flexShrink: 0 }}>
+                    <span className="t-small muted" style={{ whiteSpace: "nowrap", flexShrink: 0 }} title={new Date(c.lastMessageAtUtc).toLocaleString("es-AR")}>
                       {formatThreadDate(c.lastMessageAtUtc)}
                     </span>
                     {c.unreadCount > 0 && (
