@@ -270,4 +270,163 @@ public sealed class CommercialAssistantTests : IAsyncLifetime
         Assert.True(draft.Ok);
         Assert.Contains("OBJETIVO DE ESTE BORRADOR", fakeAi.LastPrompt);
     }
+
+    private sealed class FakePartialConfirmationAi : IAiClient
+    {
+        public string? LastPrompt;
+        public Task<AiCompletion> CompleteJsonAsync(string apiKey, string model, string system, string user,
+            IReadOnlyDictionary<string, JsonElement> schema, int maxTokens, CancellationToken ct, bool deeper = false, bool webSearch = false)
+        {
+            LastPrompt = user;
+            var matchedLineIndex = 1;
+            foreach (var rawLine in user.Split('\n'))
+            {
+                if (rawLine.Contains("Placa principal indicador", StringComparison.OrdinalIgnoreCase))
+                {
+                    var m = System.Text.RegularExpressions.Regex.Match(rawLine, @"\[(\d+)\]");
+                    if (m.Success && int.TryParse(m.Groups[1].Value, out var idx))
+                    {
+                        matchedLineIndex = idx;
+                        break;
+                    }
+                }
+            }
+
+            var json = JsonSerializer.Serialize(new
+            {
+                category = "seguimiento_cliente",
+                urgency = 3,
+                summary = "Metalúrgica Sur confirma la Placa principal del presupuesto P-2026-8801 con OC-9941.",
+                is_new_business = true, // aunque la IA marque true, al matchear presupuesto existente NO debe duplicar oportunidad
+                opportunity_title = "Confirmación duplicada que no debe crearse",
+                company = "Metalúrgica Sur SA",
+                contact_name = "Laura Díaz",
+                position = "Compras",
+                cuit = "30712345671",
+                phone = "",
+                email = "",
+                location = "",
+                product = "Placa principal",
+                quote_deadline = "",
+                missing_info = "",
+                confirmed_quote_number = "P-2026-8801",
+                purchase_order_number = "OC-9941",
+                confirmed_line_numbers = new[] { matchedLineIndex }
+            });
+            return Task.FromResult(new AiCompletion(json, 1000, 160, "end_turn"));
+        }
+    }
+
+    [Fact]
+    public async Task Detects_partial_purchase_confirmation_links_existing_quote_without_duplicate_opportunity_and_converts_selected_line()
+    {
+        var tenantId = CrmWebApplicationFactory.DemoTenantId;
+        var cs = _factory.DatabaseConnectionString;
+        var now = _factory.Services.GetRequiredService<TimeProvider>().GetUtcNow().UtcDateTime;
+
+        using (var scope = _factory.Services.CreateScope())
+            await scope.ServiceProvider.GetRequiredService<LealControl.Api.SuperAdmin.ICommunicationsInboxSettings>().SetEnabledAsync(true);
+
+        using var admin = _factory.CreateAuthenticatedClient();
+        using var inbox = _factory.CreateClientForUser(Guid.NewGuid(), "partial@lealcontrol.com", "Admin", "[\"communications\"]");
+
+        // Cliente existente + presupuesto previo a la IA con 3 ítems obligatorios.
+        var customer = await Json(await admin.PostAsJsonAsync("/api/v1/crm/customers", new
+        {
+            legalName = "Metalúrgica Sur SA",
+            documentType = "Cuit",
+            documentNumber = "30712345671",
+            taxCondition = "ResponsableInscripto",
+            email = "compras@metalurgicasur.com.ar",
+            isCustomer = true
+        }));
+        var customerId = customer.GetProperty("id").GetGuid();
+
+        Guid quoteId;
+        Guid line2Id;
+        await using (var sales = new SalesDbContext(new DbContextOptionsBuilder<SalesDbContext>().UseNpgsql(cs).Options))
+        {
+            await sales.EnsureTablesCreatedAsync();
+            var qRes = Quote.Draft(new LealControl.BuildingBlocks.Tenancy.TenantId(tenantId), "P-2026-8801", customerId, null, "ARS", null, null, 15, now.AddDays(-10));
+            Assert.True(qRes.IsSuccess);
+            var quote = qRes.Value;
+            quote.AddLine("Calibración general", 1m, 80000m, now.AddDays(-10));
+            quote.AddLine("Placa principal indicador", 2m, 120000m, now.AddDays(-10));
+            quote.AddLine("Pintura epoxi", 1m, 50000m, now.AddDays(-10));
+            quote.MarkSent(now.AddDays(-9));
+            sales.Quotes.Add(quote);
+            await sales.SaveChangesAsync();
+            quoteId = quote.Id.Value;
+            line2Id = quote.Lines.ElementAt(1).Id.Value;
+        }
+
+        var putRes = await inbox.PutAsJsonAsync("/api/v1/communications/ai/settings", new
+        {
+            apiKey = "sk-ant-prueba-partial", monthlyBudgetUsd = 10m, mailReadingEnabled = true,
+            autoOpportunities = true, supervisorEnabled = false, businessDescription = "Básculas"
+        });
+        Assert.True(putRes.IsSuccessStatusCode);
+
+        // Mail de confirmación parcial de compra (sin haber vinculado el hilo al presupuesto).
+        var conv = Conversation.Create(tenantId, "email", Guid.NewGuid().ToString("N"),
+            "laura@metalurgicasur.com.ar", "Laura Díaz", "laura@metalurgicasur.com.ar", null,
+            "Confirmamos compra del ítem 2 (Placa principal) con OC-9941.", now.AddMinutes(-3), EmailDirection.Incoming);
+        await using (var comms = new CommunicationsDbContext(new DbContextOptionsBuilder<CommunicationsDbContext>().UseNpgsql(cs).Options))
+        {
+            await comms.EnsureTablesCreatedAsync();
+            comms.Conversations.Add(conv);
+            var msg = EmailMessage.Create(tenantId, Guid.NewGuid(), Guid.NewGuid().ToString("N"), null, conv.ThreadKey, EmailDirection.Incoming,
+                "Confirmación OC-9941", "laura@metalurgicasur.com.ar", "ventas@empresa.com",
+                "Confirmamos compra del ítem 2 (Placa principal) del presupuesto P-2026-8801. OC-9941.", now.AddMinutes(-3));
+            msg.SetConversationId(conv.Id);
+            comms.EmailMessages.Add(msg);
+            await comms.SaveChangesAsync();
+        }
+
+        var fakeAi = new FakePartialConfirmationAi();
+        var reader = new AiMailReader(fakeAi, _factory.Services.GetRequiredService<AiKeyProtector>(), NullLogger<AiMailReader>.Instance);
+        Assert.Equal(1, await reader.ReadPendingAsync(cs, tenantId, now, default));
+
+        // El prompt recibió el presupuesto previo abierto y sus 3 ítems.
+        Assert.NotNull(fakeAi.LastPrompt);
+        Assert.Contains("Presupuestos abiertos de este cliente en el ERP", fakeAi.LastPrompt);
+        Assert.Contains("P-2026-8801", fakeAi.LastPrompt);
+        Assert.Contains("Placa principal indicador", fakeAi.LastPrompt);
+
+        // La conversación quedó vinculada al presupuesto previo y NO abrió oportunidad duplicada.
+        await using (var comms = new CommunicationsDbContext(new DbContextOptionsBuilder<CommunicationsDbContext>().UseNpgsql(cs).Options))
+        {
+            var updated = await comms.Conversations.AsNoTracking().FirstAsync(c => c.Id == conv.Id);
+            Assert.Equal(quoteId, updated.RelatedQuoteId);
+            Assert.Equal(customerId, updated.RelatedCustomerId);
+            Assert.Null(updated.RelatedOpportunityId);
+            Assert.Contains("Confirmación parcial", updated.AiLastTrace ?? "");
+        }
+
+        // El circuito comercial expone la señal de confirmación parcial con el ID exacto de la línea 2.
+        var report = await CommercialCircuitChecker.CheckAsync(cs, tenantId, conv.Id, seesAmounts: true, now, default);
+        Assert.NotNull(report?.PurchaseConfirmation);
+        Assert.True(report.PurchaseConfirmation.IsPartial);
+        Assert.Equal("P-2026-8801", report.PurchaseConfirmation.QuoteNumber);
+        Assert.Equal("OC-9941", report.PurchaseConfirmation.PurchaseOrderNumber);
+        Assert.Equal(1, report.PurchaseConfirmation.ConfirmedCount);
+        Assert.Equal(3, report.PurchaseConfirmation.TotalLineCount);
+        Assert.Equal(line2Id, Assert.Single(report.PurchaseConfirmation.ConfirmedLineIds));
+
+        // Convertir el presupuesto a pedido seleccionando SOLO esa línea y guardando el N° de OC + SourceQuoteLineId.
+        var order = await Json(await admin.PostAsJsonAsync($"/api/v1/sales/orders/from-quote/{quoteId}", new
+        {
+            selectedLineIds = new[] { line2Id },
+            customerPurchaseOrder = "OC-9941"
+        }));
+        Assert.Equal("OC-9941", order.GetProperty("customerPurchaseOrder").GetString());
+        var orderLine = Assert.Single(order.GetProperty("lines").EnumerateArray());
+        Assert.Equal("Placa principal indicador", orderLine.GetProperty("description").GetString());
+        Assert.Equal(line2Id, orderLine.GetProperty("sourceQuoteLineId").GetGuid());
+
+        // Una vez convertido en pedido, el circuito comercial deja de mostrar la confirmación como pendiente.
+        var afterOrder = await CommercialCircuitChecker.CheckAsync(cs, tenantId, conv.Id, seesAmounts: true, now, default);
+        Assert.NotNull(afterOrder);
+        Assert.Null(afterOrder.PurchaseConfirmation);
+    }
 }

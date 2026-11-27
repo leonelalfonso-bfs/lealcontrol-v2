@@ -576,6 +576,10 @@ CREATE INDEX IF NOT EXISTS "IX_remito_return_items_RemitoItemId"
             CREATE INDEX IF NOT EXISTS "IX_invoices_associated"
                 ON sales.invoices ("TenantId", "AssociatedInvoiceId")
                 WHERE "AssociatedInvoiceId" IS NOT NULL;
+            ALTER TABLE sales.orders
+                ADD COLUMN IF NOT EXISTS "CustomerPurchaseOrder" character varying(100);
+            ALTER TABLE sales.order_lines
+                ADD COLUMN IF NOT EXISTS "SourceQuoteLineId" uuid;
             """, cancellationToken);
 
         if (schemaError is not null)

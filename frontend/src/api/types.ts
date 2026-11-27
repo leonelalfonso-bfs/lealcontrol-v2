@@ -2832,6 +2832,16 @@ export type CommercialCircuitReport = {
     overdueAmountArs?: number | null;
     overdueAmountUsd?: number | null;
   } | null;
+  purchaseConfirmation?: {
+    quoteId: string;
+    quoteNumber: string;
+    purchaseOrderNumber?: string | null;
+    isPartial: boolean;
+    confirmedCount: number;
+    totalLineCount: number;
+    confirmedLineIds: string[];
+    confirmedDescriptions: string[];
+  } | null;
 };
 
 export type AiDraftResult = {

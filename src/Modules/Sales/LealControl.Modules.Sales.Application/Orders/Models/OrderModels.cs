@@ -13,7 +13,8 @@ public sealed record OrderLineDto(
     decimal DiscountPercent,
     decimal TaxRate,
     bool IsOptional,
-    decimal LineSubtotal);
+    decimal LineSubtotal,
+    Guid? SourceQuoteLineId = null);
 
 public sealed record OrderDto(
     Guid Id,
@@ -41,7 +42,8 @@ public sealed record OrderDto(
     DateTime CreatedAtUtc,
     DateTime UpdatedAtUtc,
     IReadOnlyList<OrderLineDto> Lines,
-    string? DeliveryTimeText);
+    string? DeliveryTimeText,
+    string? CustomerPurchaseOrder = null);
 
 public sealed record OrderLineWriteModel(
     Guid? ProductId,

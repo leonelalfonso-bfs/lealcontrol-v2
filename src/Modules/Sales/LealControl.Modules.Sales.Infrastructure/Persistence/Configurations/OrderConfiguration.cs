@@ -29,6 +29,7 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(x => x.Warranty).HasMaxLength(200);
         builder.Property(x => x.Notes).HasMaxLength(4000);
         builder.Property(x => x.OwnerName).HasMaxLength(120);
+        builder.Property(x => x.CustomerPurchaseOrder).HasMaxLength(100);
 
         builder.OwnsMany(x => x.Lines, line =>
         {
@@ -40,6 +41,7 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
             line.HasKey(x => x.Id);
             line.Property(x => x.Id).HasColumnName("Id").HasConversion(id => id.Value, value => new OrderLineId(value));
             line.Property(x => x.ProductId).HasColumnName("ProductId");
+            line.Property(x => x.SourceQuoteLineId).HasColumnName("SourceQuoteLineId");
             line.Property(x => x.Description).HasMaxLength(500).IsRequired();
             line.Property(x => x.Quantity).HasPrecision(18, 4);
             line.Property(x => x.UnitPrice).HasPrecision(18, 4);

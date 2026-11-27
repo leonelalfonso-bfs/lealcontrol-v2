@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import { ExcelToolbar, excelDate, excelNumber } from "../components/ExcelTools";
 import type { CustomerSummary, Quote } from "../api/types";
@@ -8,6 +8,7 @@ import { matchesSearch, parseSearch } from "../lib/search";
 
 export function QuotesPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [customers, setCustomers] = useState<CustomerSummary[]>([]);
   const [search, setSearch] = useState("");
@@ -18,7 +19,8 @@ export function QuotesPage() {
   const [error, setError] = useState<string | null>(null);
   const [customerError, setCustomerError] = useState<string | null>(null);
   const [convertQuote, setConvertQuote] = useState<Quote | null>(null);
-  const [selectedOptionalIds, setSelectedOptionalIds] = useState<string[]>([]);
+  const [selectedLineIds, setSelectedLineIds] = useState<string[]>([]);
+  const [convertOc, setConvertOc] = useState("");
   const [converting, setConverting] = useState(false);
 
   const fetchQuotes = async () => {
@@ -117,19 +119,39 @@ export function QuotesPage() {
     }
   };
 
+  // Si venimos desde la Bandeja ("Revisar y generar pedido"), abrir directamente la selección de ítems pre-marcada.
+  useEffect(() => {
+    const quoteId = searchParams.get("convertQuoteId");
+    if (!quoteId) return;
+    const preLines = (searchParams.get("lines") || "").split(",").map((x) => x.trim()).filter(Boolean);
+    const preOc = searchParams.get("oc") || "";
+    setSearchParams({}, { replace: true });
+    void (async () => {
+      try {
+        setConverting(true);
+        const full = await api.getQuote(quoteId);
+        const allLines = full.lines || [];
+        const validPre = preLines.filter((id) => allLines.some((l) => l.id === id));
+        setConvertQuote(full);
+        setSelectedLineIds(validPre.length > 0 ? validPre : allLines.filter((l) => !l.isOptional).map((l) => l.id));
+        setConvertOc(preOc);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Error al cargar el presupuesto para convertir");
+      } finally {
+        setConverting(false);
+      }
+    })();
+  }, [searchParams, setSearchParams]);
+
   const openConvertModal = async (e: React.MouseEvent, quoteId: string) => {
     e.stopPropagation();
     try {
       setConverting(true);
       const full = await api.getQuote(quoteId);
-      const optionalLines = (full.lines || []).filter((l) => l.isOptional);
-      if (optionalLines.length === 0) {
-        const order = await api.createOrderFromQuote(full.id, []);
-        navigate(`/pedidos/${order.id}`);
-        return;
-      }
+      const allLines = full.lines || [];
       setConvertQuote(full);
-      setSelectedOptionalIds([]);
+      setSelectedLineIds(allLines.filter((l) => !l.isOptional).map((l) => l.id));
+      setConvertOc("");
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "Error al preparar la conversión");
     } finally {
@@ -139,10 +161,15 @@ export function QuotesPage() {
 
   const confirmConvertToOrder = async () => {
     if (!convertQuote) return;
+    if (selectedLineIds.length === 0) {
+      alert("Seleccioná al menos un ítem del presupuesto para generar el pedido.");
+      return;
+    }
     try {
       setConverting(true);
-      const order = await api.createOrderFromQuote(convertQuote.id, selectedOptionalIds);
+      const order = await api.createOrderFromQuote(convertQuote.id, [], selectedLineIds, convertOc);
       setConvertQuote(null);
+      setConvertOc("");
       navigate(`/pedidos/${order.id}`);
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "Error al convertir a pedido");
@@ -177,8 +204,8 @@ export function QuotesPage() {
     }
   };
 
-  const toggleOptional = (lineId: string) => {
-    setSelectedOptionalIds((prev) =>
+  const toggleLine = (lineId: string) => {
+    setSelectedLineIds((prev) =>
       prev.includes(lineId) ? prev.filter((id) => id !== lineId) : [...prev, lineId]
     );
   };
@@ -367,50 +394,69 @@ export function QuotesPage() {
             <div className="section-head">
               <div>
                 <span className="eyebrow">PEDIDO DE VENTA</span>
-                <h2>Ítems opcionales del presupuesto {convertQuote.quoteNumber}</h2>
+                <h2>Ítems a incluir de {convertQuote.quoteNumber}</h2>
               </div>
               <button type="button" className="icon-button" onClick={() => setConvertQuote(null)} disabled={converting}>
                 ×
               </button>
             </div>
             <p className="muted">
-              Los renglones obligatorios se incluyen siempre. Marcá cuáles opcionales querés pasar al pedido.
+              Elegí los renglones confirmados por el cliente (podés confirmar el presupuesto completo o solo algunos ítems).
             </p>
+            <label style={{ display: "block", marginTop: 8 }}>
+              <span className="t-small muted">N° de Orden de Compra del cliente (opcional)</span>
+              <input
+                type="text"
+                value={convertOc}
+                onChange={(e) => setConvertOc(e.target.value)}
+                placeholder="Ej. OC-4521"
+                maxLength={100}
+                style={{ width: "100%", marginTop: 4 }}
+              />
+            </label>
             <div className="stack" style={{ gap: 8, marginTop: 12, maxHeight: 320, overflow: "auto" }}>
-              {(convertQuote.lines || [])
-                .filter((l) => !l.isOptional)
-                .map((l) => (
-                  <label key={l.id} className="card pad" style={{ opacity: 0.85, cursor: "default" }}>
-                    <input type="checkbox" checked disabled />{" "}
-                    <strong>{l.description}</strong>
-                    <span className="muted" style={{ marginLeft: 8 }}>
-                      (obligatorio) · cant. {l.quantity}
-                    </span>
-                  </label>
-                ))}
-              {(convertQuote.lines || [])
-                .filter((l) => l.isOptional)
-                .map((l) => (
-                  <label key={l.id} className="card pad" style={{ cursor: "pointer", borderColor: selectedOptionalIds.includes(l.id) ? "#0284c7" : undefined }}>
+              {(convertQuote.lines || []).map((l) => {
+                const checked = selectedLineIds.includes(l.id);
+                return (
+                  <label
+                    key={l.id}
+                    className="card pad"
+                    style={{
+                      cursor: "pointer",
+                      borderColor: checked ? "var(--lc-accent)" : undefined,
+                      opacity: checked ? 1 : 0.72
+                    }}
+                  >
                     <input
                       type="checkbox"
-                      checked={selectedOptionalIds.includes(l.id)}
-                      onChange={() => toggleOptional(l.id)}
+                      checked={checked}
+                      onChange={() => toggleLine(l.id)}
                     />{" "}
                     <strong>{l.description}</strong>
                     <span className="muted" style={{ marginLeft: 8 }}>
-                      (opcional) · cant. {l.quantity}
+                      {l.isOptional ? "(opcional) · " : ""}cant. {l.quantity}
                     </span>
                   </label>
-                ))}
+                );
+              })}
             </div>
-            <div className="toolbar" style={{ justifyContent: "flex-end", marginTop: 16 }}>
-              <button type="button" className="btn btn-outline" onClick={() => setConvertQuote(null)} disabled={converting}>
-                Cancelar
-              </button>
-              <button type="button" className="btn" onClick={() => void confirmConvertToOrder()} disabled={converting}>
-                {converting ? "Generando…" : "Confirmar pedido"}
-              </button>
+            <div className="toolbar" style={{ justifyContent: "space-between", alignItems: "center", marginTop: 16 }}>
+              <span className="muted t-small">
+                {selectedLineIds.length} de {(convertQuote.lines || []).length} ítems seleccionados
+              </span>
+              <div className="row" style={{ gap: 8 }}>
+                <button type="button" className="btn btn-outline" onClick={() => setConvertQuote(null)} disabled={converting}>
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => void confirmConvertToOrder()}
+                  disabled={converting || selectedLineIds.length === 0}
+                >
+                  {converting ? "Generando…" : "Confirmar pedido"}
+                </button>
+              </div>
             </div>
           </div>
         </div>

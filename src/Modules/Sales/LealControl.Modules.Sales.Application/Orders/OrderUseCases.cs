@@ -19,7 +19,9 @@ public sealed record CreateOrderCommand(OrderWriteModel Model)
 
 public sealed record CreateOrderFromQuoteCommand(
     Guid QuoteId,
-    IReadOnlyList<Guid>? IncludeOptionalLineIds = null)
+    IReadOnlyList<Guid>? IncludeOptionalLineIds = null,
+    IReadOnlyList<Guid>? SelectedLineIds = null,
+    string? CustomerPurchaseOrder = null)
     : IRequest<Result<OrderDto>>;
 
 public sealed record UpdateOrderCommand(Guid Id, OrderWriteModel Model)
@@ -73,8 +75,10 @@ internal static class OrderMappingExtensions
                 l.DiscountPercent,
                 l.TaxRate,
                 l.IsOptional,
-                l.LineSubtotal)).ToList(),
-            order.DeliveryTimeText);
+                l.LineSubtotal,
+                l.SourceQuoteLineId)).ToList(),
+            order.DeliveryTimeText,
+            order.CustomerPurchaseOrder);
     }
 }
 
@@ -194,10 +198,19 @@ internal sealed class CreateOrderFromQuoteCommandHandler : IRequestHandler<Creat
         var orderNumber = $"PED-{(count + 1):D4}";
         var now = DateTime.UtcNow;
 
-        var includeOptional = new HashSet<Guid>(request.IncludeOptionalLineIds ?? Array.Empty<Guid>());
-        var linesToAdd = quote.Lines
-            .Where(line => !line.IsOptional || includeOptional.Contains(line.Id.Value))
-            .ToList();
+        List<QuoteLine> linesToAdd;
+        if (request.SelectedLineIds is { Count: > 0 })
+        {
+            var selected = new HashSet<Guid>(request.SelectedLineIds);
+            linesToAdd = quote.Lines.Where(line => selected.Contains(line.Id.Value)).ToList();
+        }
+        else
+        {
+            var includeOptional = new HashSet<Guid>(request.IncludeOptionalLineIds ?? Array.Empty<Guid>());
+            linesToAdd = quote.Lines
+                .Where(line => !line.IsOptional || includeOptional.Contains(line.Id.Value))
+                .ToList();
+        }
 
         if (linesToAdd.Count == 0)
         {
@@ -228,7 +241,8 @@ internal sealed class CreateOrderFromQuoteCommandHandler : IRequestHandler<Creat
             quote.Notes,
             quote.OwnerName,
             OrderStatus.Confirmed,
-            quote.DeliveryTimeText);
+            quote.DeliveryTimeText,
+            request.CustomerPurchaseOrder);
 
         foreach (var line in linesToAdd)
         {
@@ -240,7 +254,8 @@ internal sealed class CreateOrderFromQuoteCommandHandler : IRequestHandler<Creat
                 line.CurrencyCode,
                 line.DiscountPercent,
                 line.TaxRate,
-                isOptional: false);
+                isOptional: false,
+                sourceQuoteLineId: line.Id.Value);
         }
 
         // Marcar la cotización como Ordered

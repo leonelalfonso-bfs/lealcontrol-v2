@@ -1303,6 +1303,37 @@ export function InboxPage() {
                       {commercialCheck.isComplete ? "Al día" : `${commercialCheck.missingItems.length} pendiente${commercialCheck.missingItems.length === 1 ? "" : "s"}`}
                     </span>
                   </div>
+                  {commercialCheck.purchaseConfirmation && (
+                    <div className="stack" style={{ gap: 6, padding: "8px 10px", borderRadius: 8, background: "var(--lc-ok-bg)", border: "1px solid var(--lc-line)" }}>
+                      <div className="row" style={{ justifyContent: "space-between", alignItems: "center", gap: 6 }}>
+                        <strong className="t-small">
+                          {commercialCheck.purchaseConfirmation.isPartial ? "Confirmación parcial" : "Confirmación de compra"}
+                        </strong>
+                        <span className="badge ok">{commercialCheck.purchaseConfirmation.quoteNumber}</span>
+                      </div>
+                      <div className="t-small">
+                        {commercialCheck.purchaseConfirmation.isPartial
+                          ? `Confirma ${commercialCheck.purchaseConfirmation.confirmedCount} de ${commercialCheck.purchaseConfirmation.totalLineCount} ítems`
+                          : "Confirma el presupuesto completo"}
+                        {commercialCheck.purchaseConfirmation.purchaseOrderNumber
+                          ? ` · OC ${commercialCheck.purchaseConfirmation.purchaseOrderNumber}`
+                          : ""}
+                      </div>
+                      {commercialCheck.purchaseConfirmation.confirmedDescriptions.length > 0 && (
+                        <ul className="t-small muted" style={{ margin: 0, paddingLeft: 16 }}>
+                          {commercialCheck.purchaseConfirmation.confirmedDescriptions.slice(0, 3).map((d, idx) => (
+                            <li key={idx}>{d}</li>
+                          ))}
+                        </ul>
+                      )}
+                      <Link
+                        className="btn compact"
+                        to={`/presupuestos?convertQuoteId=${encodeURIComponent(commercialCheck.purchaseConfirmation.quoteId)}&lines=${encodeURIComponent(commercialCheck.purchaseConfirmation.confirmedLineIds.join(","))}${commercialCheck.purchaseConfirmation.purchaseOrderNumber ? `&oc=${encodeURIComponent(commercialCheck.purchaseConfirmation.purchaseOrderNumber)}` : ""}`}
+                      >
+                        Revisar y generar pedido →
+                      </Link>
+                    </div>
+                  )}
                   {commercialCheck.aiQuoteDeadlineUtc && (
                     <div className="t-small" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, padding: "4px 6px", borderRadius: 6, background: "var(--lc-surface-2)" }}>
                       <span className="muted">Cierre de cotización</span>

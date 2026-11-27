@@ -20,9 +20,12 @@ using LealControl.Modules.Crm.Domain.Opportunities;
 using LealControl.Modules.Crm.Domain.Shared;
 using LealControl.Modules.Crm.Domain.ValueObjects;
 using LealControl.Modules.Crm.Infrastructure.Persistence;
+using LealControl.Modules.Sales.Domain.Quotes;
+using LealControl.Modules.Sales.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 
 namespace LealControl.Api.Ai;
 
@@ -46,7 +49,8 @@ internal sealed class ScopedAiArcaCuitLookup(IServiceScopeFactory scopes) : IAiA
 public sealed record MailReading(
     string Category, int Urgency, string Summary, bool IsNewBusiness, string OpportunityTitle,
     string Company, string ContactName, string Position, string Cuit, string Phone, string Email, string Location, string Product,
-    string QuoteDeadline = "", string MissingInfo = "");
+    string QuoteDeadline = "", string MissingInfo = "",
+    string ConfirmedQuoteNumber = "", string PurchaseOrderNumber = "", IReadOnlyList<int>? ConfirmedLineNumbers = null);
 
 /// <summary>
 /// Lectura de mails con IA: a cada conversación con un mail nuevo del contacto le pone categoría, urgencia y resumen.
@@ -206,11 +210,13 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
             .Take(6)
             .ToListAsync(ct);
         var extractedAttachments = EmailAttachmentTextExtractor.ExtractAll(rawAttachments);
+        var openQuotes = await LoadCandidateOpenQuotesAsync(
+            connectionString, tenant, conversation, customerCandidates, messages, extractedAttachments, nowUtc, ct);
 
         MailReading reading;
         try
         {
-            var completion = await ai.CompleteJsonAsync(apiKey, AiModels.Reader, system, Thread(messages, extractedAttachments), Schema, 1200, ct);
+            var completion = await ai.CompleteJsonAsync(apiKey, AiModels.Reader, system, Thread(messages, extractedAttachments, openQuotes), Schema, 1200, ct);
             aiDb.Usage.Add(AiUsage.Record(tenantId, Feature, AiModels.Reader, completion.InputTokens, completion.OutputTokens,
                 AiModels.Cost(AiModels.Reader, completion.InputTokens, completion.OutputTokens),
                 completion.StopReason is "end_turn" ? null : $"La IA terminó por {completion.StopReason}", nowUtc));
@@ -279,7 +285,54 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
             trace.Add($"Clasificado como {reading.Category} (no crea clientes ni contactos)");
         }
 
-        if (settings.AutoOpportunities && Commercial.Contains(reading.Category) && reading.IsNewBusiness && conversation.RelatedOpportunityId is null)
+        var matchedExistingQuote = false;
+        var confirmedQuote = ResolveConfirmedQuote(reading, openQuotes);
+        if (confirmedQuote is not null)
+        {
+            matchedExistingQuote = true;
+            conversation.LinkDocument(confirmedQuote.Id, null, null);
+            if (conversation.RelatedCustomerId is null)
+            {
+                conversation.LinkCustomer(confirmedQuote.CustomerId);
+                matchedCustomerId ??= new CustomerId(confirmedQuote.CustomerId);
+            }
+            if (confirmedQuote.OpportunityId is { } qOppId && conversation.RelatedOpportunityId is null)
+            {
+                conversation.LinkOpportunity(qOppId);
+            }
+
+            var requestedIndices = (reading.ConfirmedLineNumbers ?? [])
+                .Where(n => n >= 1 && n <= confirmedQuote.Lines.Count)
+                .Distinct()
+                .OrderBy(n => n)
+                .ToList();
+
+            var mandatoryCount = confirmedQuote.Lines.Count(l => !l.IsOptional);
+            var confirmedLines = requestedIndices.Count > 0
+                ? requestedIndices.Select(idx => confirmedQuote.Lines[idx - 1]).ToList()
+                : confirmedQuote.Lines.Where(l => !l.IsOptional).ToList();
+            if (confirmedLines.Count == 0) confirmedLines = confirmedQuote.Lines.ToList();
+
+            var isPartial = requestedIndices.Count > 0 && confirmedLines.Count < Math.Max(1, mandatoryCount);
+            var oc = NullIfEmpty(reading.PurchaseOrderNumber);
+            var signal = new PurchaseConfirmationSignal(
+                confirmedQuote.Id,
+                confirmedQuote.QuoteNumber,
+                oc,
+                isPartial,
+                confirmedLines.Count,
+                Math.Max(mandatoryCount, confirmedQuote.Lines.Count),
+                confirmedLines.Select(l => l.Id).ToList(),
+                confirmedLines.Select(l => l.Description).ToList());
+            conversation.SetAiPurchaseConfirmation(JsonSerializer.Serialize(signal));
+
+            var ocText = oc is null ? "" : $" · OC {oc}";
+            trace.Add(isPartial
+                ? $"Confirmación parcial sobre {confirmedQuote.QuoteNumber} ({confirmedLines.Count} de {signal.TotalLineCount} ítems){ocText}"
+                : $"Confirmación de compra sobre {confirmedQuote.QuoteNumber}{ocText}");
+        }
+
+        if (!matchedExistingQuote && settings.AutoOpportunities && Commercial.Contains(reading.Category) && reading.IsNewBusiness && conversation.RelatedOpportunityId is null)
         {
             await OpenOpportunityAsync(crm, tenant, conversation, reading, matchedCustomerId, nowUtc, ct);
             if (conversation.RelatedOpportunityId is not null) trace.Add("Oportunidad abierta");
@@ -890,10 +943,112 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
         cuit: solo los 11 dígitos.
         quote_deadline: si el mail o algún adjunto indica fecha límite de entrega de cotización, pliego o licitación, devolvela en formato YYYY-MM-DD; si no hay fecha límite explícita, dejalo vacío.
         missing_info: solo si es pedido_cotizacion o consulta_comercial y faltan datos técnicos o comerciales clave para poder cotizar (ej. "Localidad de instalación; capacidad o dimensiones del equipo; cantidad"), listalos brevemente separados por punto y coma; si está todo lo necesario o no es un pedido comercial, dejalo vacío.
+        confirmed_quote_number: si el cliente está confirmando una compra, aprobando o enviando una Orden de Compra sobre uno de los "Presupuestos abiertos de este cliente en el ERP" listados abajo, devolvé exactamente su número (ej. "P-2026-3761") y poné category = "seguimiento_cliente" e is_new_business = false; si no corresponde a ninguno, dejalo vacío.
+        purchase_order_number: si el mail o algún adjunto trae número de Orden de Compra (OC / PO), devolvelo (ej. "OC-4521"); si no, vacío.
+        confirmed_line_numbers: si confirmó solo algunos ítems del presupuesto listado (confirmación parcial), devolvé la lista de sus números de renglón [1], [2], etc. (ej. [2]); si confirmó todo el presupuesto o no es confirmación de compra, devolvé [].
         """;
 
-    /// <summary>Los últimos mensajes de la conversación, del más viejo al más nuevo; el último recibido, completo + texto de adjuntos.</summary>
-    private static string Thread(List<EmailMessage> newestFirst, IReadOnlyList<EmailAttachmentTextExtractor.ExtractedAttachment>? attachments = null)
+    private sealed record CandidateQuoteLine(Guid Id, string Description, decimal Quantity, bool IsOptional);
+    private sealed record CandidateQuote(Guid Id, string QuoteNumber, int Revision, string Status, Guid CustomerId, Guid? OpportunityId, IReadOnlyList<CandidateQuoteLine> Lines);
+
+    private static async Task<List<CandidateQuote>> LoadCandidateOpenQuotesAsync(
+        string connectionString,
+        TenantId tenant,
+        Conversation conversation,
+        List<CustomerCandidate> customerCandidates,
+        List<EmailMessage> messages,
+        IReadOnlyList<EmailAttachmentTextExtractor.ExtractedAttachment> attachments,
+        DateTime nowUtc,
+        CancellationToken ct)
+    {
+        try
+        {
+            // 1) Identificar cliente candidato sin gastar tokens (ya vinculado, mail exacto o dominio corporativo único).
+            Guid? candidateCustomerId = conversation.RelatedCustomerId;
+            if (candidateCustomerId is null)
+            {
+                var sender = (conversation.ParticipantEmail ?? "").Trim().ToLowerInvariant();
+                var byEmail = customerCandidates
+                    .Where(c => c.Email == sender || c.ContactEmails.Contains(sender))
+                    .Select(c => c.Id.Value).Distinct().ToList();
+                if (byEmail.Count == 1)
+                {
+                    candidateCustomerId = byEmail[0];
+                }
+                else
+                {
+                    var domain = ExtractCorporateDomain(sender);
+                    if (domain is not null)
+                    {
+                        var byDomain = customerCandidates
+                            .Where(c => HasDomain(c.Email, domain) || c.ContactEmails.Any(e => HasDomain(e, domain)))
+                            .Select(c => c.Id.Value).Distinct().ToList();
+                        if (byDomain.Count == 1) candidateCustomerId = byDomain[0];
+                    }
+                }
+            }
+
+            // 2) También buscar menciones explícitas de números de presupuesto (P-2026-3761, P-00042) en asunto/cuerpo/adjuntos.
+            var combinedText = string.Join("\n",
+                messages.Select(m => $"{m.Subject}\n{m.BodyPreview}")
+                    .Concat(attachments.Select(a => a.Text)));
+            var mentionedNumbers = QuoteNumberRegex().Matches(combinedText)
+                .Select(m => m.Value.ToUpperInvariant())
+                .Distinct()
+                .Take(4)
+                .ToList();
+
+            if (candidateCustomerId is null && mentionedNumbers.Count == 0) return [];
+
+            await using var sales = new SalesDbContext(new DbContextOptionsBuilder<SalesDbContext>().UseNpgsql(connectionString).Options);
+            var since = nowUtc.AddDays(-180);
+            var query = sales.Quotes.AsNoTracking()
+                .Include(q => q.Lines)
+                .Where(q => q.TenantId == tenant
+                    && (q.Status == QuoteStatus.Draft || q.Status == QuoteStatus.Sent || q.Status == QuoteStatus.Accepted)
+                    && q.UpdatedAtUtc >= since);
+
+            if (candidateCustomerId is { } cid && mentionedNumbers.Count > 0)
+                query = query.Where(q => q.CustomerId == cid || mentionedNumbers.Contains(q.QuoteNumber.ToUpper()));
+            else if (candidateCustomerId is { } cidOnly)
+                query = query.Where(q => q.CustomerId == cidOnly);
+            else
+                query = query.Where(q => mentionedNumbers.Contains(q.QuoteNumber.ToUpper()));
+
+            var list = await query.OrderByDescending(q => q.UpdatedAtUtc).Take(4).ToListAsync(ct);
+            return list.Select(q => new CandidateQuote(
+                q.Id.Value,
+                q.QuoteNumber,
+                q.Revision,
+                q.Status.ToString(),
+                q.CustomerId,
+                q.OpportunityId,
+                q.Lines.Select(l => new CandidateQuoteLine(l.Id.Value, l.Description, l.Quantity, l.IsOptional)).ToList()
+            )).ToList();
+        }
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UndefinedTable)
+        {
+            return [];
+        }
+    }
+
+    private static CandidateQuote? ResolveConfirmedQuote(MailReading reading, List<CandidateQuote> openQuotes)
+    {
+        if (openQuotes.Count == 0) return null;
+        if (!string.IsNullOrWhiteSpace(reading.ConfirmedQuoteNumber))
+        {
+            var normalized = reading.ConfirmedQuoteNumber.Trim();
+            var exact = openQuotes.FirstOrDefault(q => string.Equals(q.QuoteNumber, normalized, StringComparison.OrdinalIgnoreCase));
+            if (exact is not null) return exact;
+        }
+        return null;
+    }
+
+    /// <summary>Los últimos mensajes de la conversación, del más viejo al más nuevo; el último recibido, completo + adjuntos + presupuestos abiertos.</summary>
+    private static string Thread(
+        List<EmailMessage> newestFirst,
+        IReadOnlyList<EmailAttachmentTextExtractor.ExtractedAttachment>? attachments = null,
+        IReadOnlyList<CandidateQuote>? openQuotes = null)
     {
         var lastIncoming = newestFirst.First(m => m.Direction == EmailDirection.Incoming);
         var text = new StringBuilder();
@@ -911,6 +1066,20 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
             {
                 text.AppendLine($"[Adjunto: {att.FileName}]");
                 text.AppendLine(att.Text);
+            }
+        }
+        if (openQuotes is { Count: > 0 })
+        {
+            text.AppendLine("\n--- Presupuestos abiertos de este cliente en el ERP ---");
+            foreach (var q in openQuotes)
+            {
+                text.AppendLine($"[Presupuesto {q.QuoteNumber} · Rev. {q.Revision} · {q.Status}]");
+                for (var i = 0; i < q.Lines.Count; i++)
+                {
+                    var l = q.Lines[i];
+                    var opt = l.IsOptional ? " (opcional)" : "";
+                    text.AppendLine($"  [{i + 1}] {l.Description} x {l.Quantity:0.##}{opt}");
+                }
             }
         }
         return text.ToString();
@@ -939,6 +1108,14 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
         using var doc = JsonDocument.Parse(json);
         var r = doc.RootElement;
         string S(string name) => r.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString()!.Trim() : "";
+        var confirmedLines = new List<int>();
+        if (r.TryGetProperty("confirmed_line_numbers", out var arr) && arr.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in arr.EnumerateArray())
+            {
+                if (item.TryGetInt32(out var num) && num > 0) confirmedLines.Add(num);
+            }
+        }
         var category = S("category");
         return new MailReading(
             Categories.Contains(category) ? category : "otro",
@@ -946,7 +1123,8 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
             S("summary"),
             r.TryGetProperty("is_new_business", out var b) && b.ValueKind == JsonValueKind.True,
             S("opportunity_title"), S("company"), S("contact_name"), S("position"), S("cuit"), S("phone"), S("email"), S("location"), S("product"),
-            S("quote_deadline"), S("missing_info"));
+            S("quote_deadline"), S("missing_info"),
+            S("confirmed_quote_number"), S("purchase_order_number"), confirmedLines);
     }
 
     public static readonly IReadOnlyDictionary<string, JsonElement> Schema = new Dictionary<string, JsonElement>
@@ -969,16 +1147,23 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
             ["product"] = new { type = "string" },
             ["quote_deadline"] = new { type = "string" },
             ["missing_info"] = new { type = "string" },
+            ["confirmed_quote_number"] = new { type = "string" },
+            ["purchase_order_number"] = new { type = "string" },
+            ["confirmed_line_numbers"] = new { type = "array", items = new { type = "integer" } },
         }),
         ["required"] = JsonSerializer.SerializeToElement(new[]
         {
-            "category", "urgency", "summary", "is_new_business", "opportunity_title", "company", "contact_name", "position", "cuit", "phone", "email", "location", "product", "quote_deadline", "missing_info"
+            "category", "urgency", "summary", "is_new_business", "opportunity_title", "company", "contact_name", "position", "cuit", "phone", "email", "location", "product", "quote_deadline", "missing_info",
+            "confirmed_quote_number", "purchase_order_number", "confirmed_line_numbers"
         }),
         ["additionalProperties"] = JsonSerializer.SerializeToElement(false),
     };
 
     private static string FirstNonEmpty(params string?[] values) => values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v))?.Trim() ?? "";
     private static string? NullIfEmpty(string value) => string.IsNullOrWhiteSpace(value) ? null : value;
+
+    [GeneratedRegex(@"\bP-\d{4}-\d{1,6}\b|\bP-\d{3,6}\b", RegexOptions.IgnoreCase)]
+    private static partial Regex QuoteNumberRegex();
 
     [GeneratedRegex(@"<(style|script|head)[^>]*>.*?</\1>", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
     private static partial Regex Styles();
