@@ -1144,7 +1144,13 @@ export function FinanceAccountsPage() {
                             ? `Diferencia con el sistema: ${money(x.systemBalance - x.reportedBalance, x.currency)}` : undefined}
                         >
                           {x.reportedBalance == null ? (
-                            <span className="muted">—</span>
+                            x.reconciliationStatus === "PendingBank" ? (
+                              <span className="muted t-small" title="Movimiento cargado en el sistema, pendiente de aparecer en el extracto del banco">
+                                Pendiente banco
+                              </span>
+                            ) : (
+                              <span className="muted">—</span>
+                            )
                           ) : (
                             <span className="t-strong" style={{ color: Math.abs(x.systemBalance - x.reportedBalance) > 0.01 ? "var(--lc-danger)" : "var(--lc-ok)" }}>
                               {money(x.reportedBalance, x.currency)}
