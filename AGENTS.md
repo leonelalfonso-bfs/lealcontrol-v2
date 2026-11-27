@@ -54,8 +54,13 @@ Este archivo manda sobre cómo se trabaja; si algo choca, preguntale al dueño.
   oportunidades), `AiSupervisor` (Sonnet, prioridades del día desde las 6), configuración y gasto en schema `ai`. Los tests
   usan un `IAiClient` falso: nunca llamar a la API real en tests.
 - Frontend (React + TS): sistema de diseño "Relieve y vidrio" en `frontend/src/styles/` (tokens `--lc-*` en
-  `ds/tokens.css`). **Nada de colores ni tamaños sueltos**: usar clases (`btn`, `card pad`, `badge ok|warn|danger|info|off`,
-  `alert`, `grid-2`, `t-small`, `muted`, `t-strong`, etc.). Estilos en línea solo para ubicación (márgenes, anchos).
+  `ds/tokens.css`). **Regla estricta de orden visual (no se negocia)**: nunca romper el estilo general ni escribir
+  estilos sueltos por página (nada de colores fijos como `white`, `#fff`, `rgba(255,255,255,...)`, ni fondos o tamaños
+  sueltos en `style={{...}}`). Usar siempre las clases del sistema (`btn`, `card pad`, `badge ok|warn|danger|info|off`,
+  `alert`, `grid-2`, `t-small`, `muted`, `t-strong`) y tokens semánticos (`--lc-surface`, `--lc-surface-2`, `--lc-ink`,
+  `--lc-line`, `--lc-accent-soft`, `--lc-warn-bg`, etc.) para que **modo claro y modo oscuro** funcionen prolijos en
+  todas las pantallas. Si hace falta una clase nueva, se agrega en `frontend/src/styles/modules/<módulo>.css` usando solo
+  tokens `--lc-*`; `style={{...}}` queda reservado únicamente a layout mínimo (márgenes/anchos puntuales).
 - Tests de API: `CrmWebApplicationFactory` (reloj de pruebas fijo en 2/10/2026: usar `TimeProvider` del factory para "ahora").
 
 ## Estado al 26/11/2026 (último PR fusionado: #201)

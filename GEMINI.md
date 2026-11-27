@@ -9,3 +9,6 @@
 ## 🖥️ Arquitectura de Navegación y Formularios (Sin Modales Flotantes)
 * **Pantallas Completas Dedicadas (Form Pages)**: Para la creación y edición de registros y entidades con carga de datos (comprobantes, modelos contables, informes de ensayo, contratos, etc.), **NO utilizar modales flotantes (`modal-backdrop` / popups pequeños)**. Se deben utilizar páginas completas dedicadas (`*FormPage.tsx`) con rutas propias (ej. `/modulo/nuevo`, `/modulo/:id`), aprovechando el 100% del ancho y alto de la pantalla, con botones claros de "← Cancelar / Volver" y "💾 Guardar".
 
+## 🎨 Orden del Sistema de Diseño (Modo Claro y Modo Oscuro)
+* **No romper el estilo general ni escribir estilos sueltos por página**: Prohibido hardcodear colores (`white`, `#fff`, `rgba(255,255,255,...)`, `#fffaf0`, etc.) en páginas o CSS de módulos. Usar siempre los tokens semánticos `--lc-*` de `frontend/src/styles/ds/tokens.css` y las clases del sistema de diseño (`card`, `btn`, `badge`, `alert`, `toolbar`, etc.) para que tanto el modo claro como el modo oscuro sean 100% consistentes y legibles. Si un módulo necesita una regla nueva, declararla en `frontend/src/styles/modules/<módulo>.css` con tokens `--lc-*`.
+

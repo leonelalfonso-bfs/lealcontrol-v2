@@ -5,24 +5,24 @@
 
 .health-line {margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--lc-line); font-size: .76rem; font-weight: 700;}
 .mail-layout {display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(380px, .75fr); gap: 18px; align-items: start;}
-.mail-account-form {display: grid; gap: 14px; position: sticky; top: 76px; border-top: 3px solid #477cc8;}
+.mail-account-form {display: grid; gap: 14px; position: sticky; top: 76px; border-top: 3px solid var(--lc-accent);}
 .provider-picker {display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px;}
-.provider-picker button {padding: 9px 6px; border: 1px solid var(--lc-line); border-radius: 10px; background: rgba(255,255,255,.74); color: var(--lc-ink-2); font-weight: 700; cursor: pointer;}
-.provider-picker button.active {border-color: rgba(71,124,200,.35); background: #e8f0fc; color: #3769ae;}
-.oauth-notice {display: grid; gap: 4px; padding: 12px; border-left: 3px solid #d18435; border-radius: 8px; background: #fff4e5; color: #875722; font-size: .8rem;}
+.provider-picker button {padding: 9px 6px; border: 1px solid var(--lc-line); border-radius: 10px; background: var(--lc-surface-2); color: var(--lc-ink-2); font-weight: 700; cursor: pointer;}
+.provider-picker button.active {border-color: var(--lc-accent); background: var(--lc-accent-soft); color: var(--lc-accent-ink);}
+.oauth-notice {display: grid; gap: 4px; padding: 12px; border-left: 3px solid var(--lc-warn); border-radius: 8px; background: var(--lc-warn-bg); color: var(--lc-warn); font-size: .8rem;}
 .mail-account-list {display: grid; gap: 10px;}
-.mail-account-card {display: grid; grid-template-columns: 42px 1fr auto; gap: 12px; align-items: center; padding: 14px; border: 1px solid var(--lc-line); border-radius: 13px; background: rgba(255,255,255,.72);}
-.provider-mark {width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; background: #edf1f6; color: #65748d; font-weight: 900;}
+.mail-account-card {display: grid; grid-template-columns: 42px 1fr auto; gap: 12px; align-items: center; padding: 14px; border: 1px solid var(--lc-line); border-radius: 13px; background: var(--lc-surface-2);}
+.provider-mark {width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; background: var(--lc-surface-sunken); color: var(--lc-ink-2); font-weight: 900;}
 .mail-account-main {display: grid; gap: 2px; min-width: 0;}
 .mail-account-main span {color: var(--lc-ink-2);}
 .mail-account-main small {color: var(--lc-ink-2);}
 .mail-account-main .mail-health {display: inline-flex; width: fit-content; margin: 3px 0; padding: 3px 8px; border-radius: 999px; font-size: .72rem; font-weight: 750;}
-.mail-account-main .mail-health-ok {color: #247253; background: #e5f5ec;}
-.mail-account-main .mail-health-warning {color: #895713; background: #fff0d7;}
-.mail-account-main .mail-health-error {color: #a33d3d; background: #fde8e7;}
+.mail-account-main .mail-health-ok {color: var(--lc-ok); background: var(--lc-ok-bg);}
+.mail-account-main .mail-health-warning {color: var(--lc-warn); background: var(--lc-warn-bg);}
+.mail-account-main .mail-health-error {color: var(--lc-danger); background: var(--lc-danger-bg);}
 .mail-account-main .mail-health-neutral {color: var(--lc-ink-2); background: var(--lc-line);}
-.mail-account-main .mail-health-hint-warning {color: #895713;}
-.mail-account-main .mail-health-hint-error {color: #a33d3d;}
+.mail-account-main .mail-health-hint-warning {color: var(--lc-warn);}
+.mail-account-main .mail-health-hint-error {color: var(--lc-danger);}
 .mail-account-actions {display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px;}
 @media (max-width: 1050px) {
   .mail-layout {grid-template-columns: 1fr;}
@@ -51,7 +51,7 @@
   min-height: 0;
   overflow-y: auto;
   border-left: 1px solid var(--lc-line);
-  background: rgba(248, 250, 252, .72);}
+  background: var(--lc-surface-2);}
 .inbox-context-head {display: grid;
   gap: 4px;
   padding: 14px 16px;
@@ -84,7 +84,7 @@
 .message-list > button {width: 100%; display: grid; grid-template-columns: 10px minmax(0,1fr) auto; gap: 10px;
   padding: 16px; border: 0; border-bottom: 1px solid var(--lc-line);
   background: transparent; color: var(--lc-ink); text-align: left; cursor: pointer;}
-.message-list > button:hover, .message-list > button.active {background: rgba(232, 237, 255, .68);}
+.message-list > button:hover, .message-list > button.active {background: var(--lc-accent-soft);}
 .message-list > button div {display: grid; gap: 4px; min-width: 0;}
 .message-list > button div > strong, .message-list > button b, .message-list > button small {overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
 .message-list > button small, .message-list > button time {color: var(--lc-ink-2); font-size: .74rem;}
@@ -141,9 +141,12 @@
   .channel-grid {grid-template-columns: 1fr;}
 }
 .message-html {display: block; width: 100%; min-height: 160px; border: 1px solid var(--lc-line); border-radius: 10px; background: white;}
-.channel-filter {display: flex; gap: 8px; margin-bottom: 14px; padding: 8px; overflow-x: auto; background: rgba(255,255,255,.58);}
+.channel-filter {display: flex; gap: 8px; margin-bottom: 14px; padding: 8px; overflow-x: auto; background: var(--lc-surface-2); border: 1px solid var(--lc-line); border-radius: var(--lc-radius-control);}
 .channel-filter button {display: flex; align-items: center; gap: 8px; min-width: 120px; padding: 10px 13px; border: 1px solid transparent; border-radius: 11px; background: transparent; color: var(--lc-ink-2); font: inherit; cursor: pointer;}
-.channel-filter button:hover, .channel-filter button.selected {border-color: rgba(93,103,206,.18); background: linear-gradient(135deg, rgba(255,255,255,.95), rgba(231,235,255,.86)); color: var(--lc-accent);}
+.channel-filter button:hover, .channel-filter button.selected {border-color: var(--lc-line-2); background: var(--lc-surface); color: var(--lc-accent-strong); box-shadow: var(--lc-raise-1);}
+.inbox-note-bubble {align-self: center; width: min(100%, 620px); padding: 12px 16px; border-radius: 10px; background: var(--lc-warn-bg); border: 1px solid var(--lc-line-2); color: var(--lc-ink); white-space: pre-wrap;}
+.inbox-note-bar {padding: 10px 20px; border-top: 1px solid var(--lc-line); background: var(--lc-surface-2); display: flex; gap: 8px; align-items: center;}
+.email-signature-paper {background: #ffffff; color: #1f2937; border: 1px solid var(--lc-line); border-radius: var(--lc-radius-xs); padding: 12px;}
 .account-cards {display: grid;
   grid-template-columns: repeat(3, minmax(260px, 1fr));
   gap: 18px;}

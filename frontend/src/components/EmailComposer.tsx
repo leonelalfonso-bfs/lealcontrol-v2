@@ -196,8 +196,8 @@ export function EmailComposer({ context, onClose, onSent }: { context: EmailCont
         {draftNote && <div className="success-banner" style={{ margin: 0 }}>{draftNote}</div>}
         <textarea required rows={10} value={body} onChange={(e) => setBody(e.target.value)} />
         {(signature || signatureLogoUrl) && (
-          <div className="card pad" style={{ background: "white", marginTop: -4 }}>
-            <div className="muted t-small" style={{ marginBottom: 4 }}>
+          <div className="email-signature-paper" style={{ marginTop: -4 }}>
+            <div className="t-small" style={{ marginBottom: 4, color: "#64748b" }}>
               Firma que se agregará al enviar ({selectedAccount?.displayName}):
             </div>
             <div dangerouslySetInnerHTML={{ __html: buildSignatureHtml(signature, signatureLogoUrl) }} />

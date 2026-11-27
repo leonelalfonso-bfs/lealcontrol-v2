@@ -307,8 +307,8 @@ export function MailSettingsPage({ embedded = false }: { embedded?: boolean }) {
             )}
           </div>
           {(form.signature.trim() || form.signatureLogoUrl.trim()) && (
-            <div className="card pad" style={{ background: "white" }}>
-              <div className="muted t-small" style={{ marginBottom: 6 }}>Vista previa de la firma</div>
+            <div className="email-signature-paper">
+              <div className="t-small" style={{ marginBottom: 6, color: "#64748b" }}>Vista previa de la firma</div>
               <div dangerouslySetInnerHTML={{ __html: buildSignatureHtml(form.signature, form.signatureLogoUrl) }} />
             </div>
           )}

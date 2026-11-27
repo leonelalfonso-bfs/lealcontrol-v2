@@ -76,44 +76,44 @@
   background:
     radial-gradient(circle at 8% 10%, color-mix(in srgb, var(--crm-blue) 13%, transparent) 0, transparent 34%),
     radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--crm-violet) 10%, transparent) 0, transparent 30%),
-    rgba(255, 255, 255, .5);
+    var(--lc-surface-glass);
   backdrop-filter: blur(18px) saturate(120%);}
 .opportunities-page .filters {border-color: color-mix(in srgb, var(--crm-blue) 12%, var(--lc-line));
-  background: rgba(255, 255, 255, .72);}
+  background: var(--lc-surface-glass);}
 .crm-pipeline .pipeline-col {position: relative;
   overflow: hidden;
-  background: rgba(255, 255, 255, .58);}
-.crm-pipeline .stage-discovery {background: color-mix(in srgb, var(--crm-blue) 5%, rgba(255,255,255,.76));}
-.crm-pipeline .stage-proposal {background: color-mix(in srgb, var(--crm-violet) 5%, rgba(255,255,255,.76));}
-.crm-pipeline .stage-negotiation {background: color-mix(in srgb, var(--crm-amber) 6%, rgba(255,255,255,.76));}
-.crm-pipeline .stage-won {background: color-mix(in srgb, var(--crm-green) 6%, rgba(255,255,255,.76));}
-.crm-pipeline .stage-lost {background: color-mix(in srgb, var(--crm-red) 5%, rgba(255,255,255,.76));}
-.crm-pipeline .stage-discovery .count-badge {background: color-mix(in srgb, var(--crm-blue) 15%, white); color: #315da9;}
-.crm-pipeline .stage-proposal .count-badge {background: color-mix(in srgb, var(--crm-violet) 15%, white); color: #6246b4;}
-.crm-pipeline .stage-negotiation .count-badge {background: color-mix(in srgb, var(--crm-amber) 18%, white); color: #9a6515;}
-.crm-pipeline .stage-won .count-badge {background: color-mix(in srgb, var(--crm-green) 17%, white); color: #267a54;}
-.crm-pipeline .stage-lost .count-badge {background: color-mix(in srgb, var(--crm-red) 14%, white); color: #a6403c;}
-.crm-pipeline .opp-card {border: 1px solid rgba(121, 139, 175, .2);
-  background: rgba(255, 255, 255, .86);
+  background: var(--lc-surface-2);}
+.crm-pipeline .stage-discovery {background: color-mix(in srgb, var(--crm-blue) 8%, var(--lc-surface-2));}
+.crm-pipeline .stage-proposal {background: color-mix(in srgb, var(--crm-violet) 8%, var(--lc-surface-2));}
+.crm-pipeline .stage-negotiation {background: color-mix(in srgb, var(--crm-amber) 9%, var(--lc-surface-2));}
+.crm-pipeline .stage-won {background: color-mix(in srgb, var(--crm-green) 9%, var(--lc-surface-2));}
+.crm-pipeline .stage-lost {background: color-mix(in srgb, var(--crm-red) 8%, var(--lc-surface-2));}
+.crm-pipeline .stage-discovery .count-badge {background: var(--lc-info-bg); color: var(--lc-info);}
+.crm-pipeline .stage-proposal .count-badge {background: var(--lc-violet-bg); color: var(--lc-violet);}
+.crm-pipeline .stage-negotiation .count-badge {background: var(--lc-warn-bg); color: var(--lc-warn);}
+.crm-pipeline .stage-won .count-badge {background: var(--lc-ok-bg); color: var(--lc-ok);}
+.crm-pipeline .stage-lost .count-badge {background: var(--lc-danger-bg); color: var(--lc-danger);}
+.crm-pipeline .opp-card {border: 1px solid var(--lc-line);
+  background: var(--lc-surface);
   transition: transform .18s ease, border-color .18s ease, background .18s ease;}
 .crm-pipeline .opp-card:hover {transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--crm-blue) 32%, var(--lc-line));
-  background: rgba(255, 255, 255, .98);}
+  border-color: color-mix(in srgb, var(--crm-blue) 36%, var(--lc-line-2));
+  background: var(--lc-surface);}
 .proposal-chip {border-left: 3px solid var(--crm-violet);
-  background: color-mix(in srgb, var(--crm-violet) 10%, white);
-  color: #6046b0;}
+  background: var(--lc-violet-bg);
+  color: var(--lc-violet);}
 .opportunity-summary {border-color: color-mix(in srgb, var(--crm-blue) 18%, var(--lc-line));
-  background: rgba(255, 255, 255, .76);}
+  background: var(--lc-surface);}
 .opportunity-summary > div {padding: 10px 12px;
-  border-left: 3px solid color-mix(in srgb, var(--crm-blue) 65%, white);
+  border-left: 3px solid var(--crm-blue);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--crm-blue) 4%, white);}
-.opportunity-summary > div:nth-child(2) {border-left-color: var(--crm-green); background: color-mix(in srgb, var(--crm-green) 5%, white);}
-.opportunity-summary > div:nth-child(3) {border-left-color: var(--crm-violet); background: color-mix(in srgb, var(--crm-violet) 5%, white);}
-.opportunity-summary > div:nth-child(4) {border-left-color: var(--crm-amber); background: color-mix(in srgb, var(--crm-amber) 5%, white);}
-.opportunity-summary > div:nth-child(5) {border-left-color: var(--crm-red); background: color-mix(in srgb, var(--crm-red) 4%, white);}
+  background: var(--lc-surface-2);}
+.opportunity-summary > div:nth-child(2) {border-left-color: var(--crm-green); background: var(--lc-surface-2);}
+.opportunity-summary > div:nth-child(3) {border-left-color: var(--crm-violet); background: var(--lc-surface-2);}
+.opportunity-summary > div:nth-child(4) {border-left-color: var(--crm-amber); background: var(--lc-surface-2);}
+.opportunity-summary > div:nth-child(5) {border-left-color: var(--crm-red); background: var(--lc-surface-2);}
 .activity-composer {border-top: 3px solid var(--crm-green);
-  background: color-mix(in srgb, var(--crm-green) 3%, rgba(255,255,255,.9));}
+  background: var(--lc-surface);}
 .opportunity-workspace .stack > .card:first-child {border-top: 3px solid var(--crm-violet);}
 .opportunity-workspace .stack > .card:nth-child(2) {border-top: 3px solid var(--crm-blue);}
 .crm-help .help-flow {border-top: 3px solid var(--crm-blue);}
@@ -125,7 +125,7 @@
 .crm-help .help-grid > .card:first-child {border-top: 3px solid var(--crm-green);}
 .crm-help .help-grid > .card:last-child {border-top: 3px solid var(--crm-violet);}
 .transition-dialog {border-top: 4px solid var(--crm-violet);
-  background: rgba(252, 253, 255, .96);}
+  background: var(--lc-surface);}
 .sales-step {display: flex;
   align-items: center;
   justify-content: center;
@@ -134,7 +134,7 @@
   padding: 9px 10px;
   border: 1px solid var(--lc-line);
   border-radius: 10px;
-  background: rgba(255,255,255,.68);
+  background: var(--lc-surface-2);
   color: var(--lc-ink-2);
   font-size: .8rem;
   font-weight: 700;}
@@ -143,18 +143,18 @@
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: #edf1f6;
-  color: #65748d;
+  background: var(--lc-surface-sunken);
+  color: var(--lc-ink-2);
   font-size: .7rem;}
-.sales-step.complete {border-color: color-mix(in srgb, #3a9a70 18%, var(--lc-line));
-  background: #edf8f2;
-  color: #357b5d;}
-.sales-step.complete > span {background: #3a9a70; color: white;}
-.sales-step.active {border-color: color-mix(in srgb, #d18435 32%, var(--lc-line));
-  background: #fff4e5;
-  color: #9a601d;}
-.sales-step.active > span {background: #d18435; color: white;}
-.customer-next-action {display: flex; justify-content: space-between; gap: 16px; align-items: center; margin-bottom: 14px; padding: 12px 14px; border: 1px solid #c5daf8; border-radius: 10px; background: #f3f8ff;}
+.sales-step.complete {border-color: var(--lc-ok);
+  background: var(--lc-ok-bg);
+  color: var(--lc-ok);}
+.sales-step.complete > span {background: var(--lc-ok); color: var(--lc-surface);}
+.sales-step.active {border-color: var(--lc-warn);
+  background: var(--lc-warn-bg);
+  color: var(--lc-warn);}
+.sales-step.active > span {background: var(--lc-warn); color: var(--lc-surface);}
+.customer-next-action {display: flex; justify-content: space-between; gap: 16px; align-items: center; margin-bottom: 14px; padding: 12px 14px; border: 1px solid var(--lc-line-2); border-radius: 10px; background: var(--lc-info-bg); color: var(--lc-ink);}
 .customer-next-action strong {display: block; margin-bottom: 2px;}
-.customer-next-action.overdue {border-color: #f1b4b4; background: #fff5f5;}
-.customer-next-action.today {border-color: #f0d48a; background: #fffbeb;}
+.customer-next-action.overdue {border-color: var(--lc-danger); background: var(--lc-danger-bg);}
+.customer-next-action.today {border-color: var(--lc-warn); background: var(--lc-warn-bg);}

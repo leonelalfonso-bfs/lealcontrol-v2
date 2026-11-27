@@ -10,6 +10,7 @@
 :root {
   --ins-surface: var(--lc-surface);
   --ins-surface-2: var(--lc-surface-2);
+  --ins-popover-bg: var(--lc-surface);
   --ins-line: var(--lc-line);
   --ins-line-2: var(--lc-line-2);
   --ins-ink: var(--lc-ink);
@@ -37,6 +38,7 @@
   /* Región oscura: los componentes del menú leen estos valores. */
   --ins-surface: transparent;
   --ins-surface-2: var(--lc-chrome-hover);
+  --ins-popover-bg: var(--lc-graphite-850);
   --ins-line: var(--lc-chrome-line);
   --ins-line-2: rgba(255, 255, 255, 0.16);
   --ins-ink: var(--lc-ink-on-dark);
@@ -45,6 +47,7 @@
   --ins-accent: var(--lc-orange-400);
   --ins-accent-soft: rgba(242, 140, 40, 0.16);
   --ins-accent-ink: #ffc48a;
+  --ins-danger: #f4908a;
   --mod-ink-mix: 40%;
   position: sticky;
   top: 14px;
@@ -115,11 +118,11 @@
 
 .ins-popover {
   position: absolute;
-  z-index: 80;
+  z-index: 120;
   min-width: 100%;
   border-radius: 12px;
-  border: 1px solid var(--ins-line);
-  background: var(--ins-surface);
+  border: 1px solid var(--ins-line-2);
+  background: var(--ins-popover-bg);
   box-shadow: var(--ins-shadow-3);
   padding: 6px;
   animation: ins-pop 140ms var(--ins-ease);

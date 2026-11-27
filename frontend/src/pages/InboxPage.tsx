@@ -950,7 +950,7 @@ export function InboxPage() {
                   if (item.kind === "note") {
                     const author = tenantUsers.find((u) => u.id === item.note.authorUserId)?.fullName || "Operador";
                     return (
-                      <div key={item.id} style={{ alignSelf: "center", width: "min(100%, 620px)", padding: "12px 16px", borderRadius: 10, background: "#fff7dd", border: "1px solid #edcd79", color: "#493b17", whiteSpace: "pre-wrap" }}>
+                      <div key={item.id} className="inbox-note-bubble">
                         <div className="t-strong t-small" style={{ marginBottom: 5 }}>
                           📝 Nota interna · {author} · {new Date(item.at).toLocaleString("es-AR")}
                         </div>
@@ -1017,7 +1017,7 @@ export function InboxPage() {
                 <div ref={chatBottomRef} />
               </div>
 
-              <form onSubmit={saveNote} style={{ padding: "10px 20px", borderTop: "1px solid var(--lc-line)", background: "#fffaf0", display: "flex", gap: 8, alignItems: "center" }}>
+              <form onSubmit={saveNote} className="inbox-note-bar">
                 <input
                   type="text"
                   aria-label="Nota interna"
