@@ -78,6 +78,9 @@ public sealed class Order : AggregateRoot<OrderId>
 
     public string? OwnerName { get; private set; }
 
+    /// <summary>Número de Orden de Compra (OC) del cliente, cuando existe.</summary>
+    public string? CustomerPurchaseOrder { get; private set; }
+
     public DateTime CreatedAtUtc { get; private set; }
 
     public DateTime UpdatedAtUtc { get; private set; }
@@ -106,7 +109,8 @@ public sealed class Order : AggregateRoot<OrderId>
         string? notes = null,
         string? ownerName = null,
         OrderStatus initialStatus = OrderStatus.Draft,
-        string? deliveryTimeText = null)
+        string? deliveryTimeText = null,
+        string? customerPurchaseOrder = null)
     {
         var order = new Order(OrderId.New(), tenantId, orderNumber, customerId, createdAtUtc)
         {
@@ -127,6 +131,7 @@ public sealed class Order : AggregateRoot<OrderId>
             Warranty = warranty,
             Notes = notes,
             OwnerName = ownerName,
+            CustomerPurchaseOrder = string.IsNullOrWhiteSpace(customerPurchaseOrder) ? null : customerPurchaseOrder.Trim(),
             Status = initialStatus
         };
 
@@ -141,7 +146,8 @@ public sealed class Order : AggregateRoot<OrderId>
         string currencyCode,
         decimal discountPercent,
         decimal taxRate,
-        bool isOptional = false)
+        bool isOptional = false,
+        Guid? sourceQuoteLineId = null)
     {
         var line = new OrderLine(
             OrderLineId.New(),
@@ -152,7 +158,8 @@ public sealed class Order : AggregateRoot<OrderId>
             currencyCode,
             discountPercent,
             taxRate,
-            isOptional);
+            isOptional,
+            sourceQuoteLineId);
 
         _lines.Add(line);
         RecalculateTotals();

@@ -44,6 +44,8 @@ public sealed class Conversation
     public string? AiMissingInfo { get; private set; }
     /// <summary>Fecha límite de entrega de cotización/oferta detectada por la IA en el mail o adjunto.</summary>
     public DateTime? AiQuoteDeadlineUtc { get; private set; }
+    /// <summary>JSON compacto cuando la IA detecta confirmación de compra (total o parcial) sobre un presupuesto existente.</summary>
+    public string? AiPurchaseConfirmationJson { get; private set; }
 
     public void SetAiTrace(string? trace)
     {
@@ -56,6 +58,12 @@ public sealed class Conversation
         var text = (missingInfo ?? "").Trim();
         AiMissingInfo = text.Length == 0 ? null : text.Length > 500 ? text[..500] : text;
         AiQuoteDeadlineUtc = quoteDeadlineUtc;
+    }
+
+    public void SetAiPurchaseConfirmation(string? json)
+    {
+        var text = (json ?? "").Trim();
+        AiPurchaseConfirmationJson = text.Length == 0 ? null : text;
     }
 
     /// <summary>El nombre que leyó la IA (contacto · empresa), solo si hoy se muestra una dirección de mail.</summary>

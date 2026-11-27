@@ -24,7 +24,10 @@ using Microsoft.AspNetCore.Routing;
 namespace LealControl.Modules.Sales.Infrastructure.Http;
 
 public record UpdateOrderStatusRequest(OrderStatus Status);
-public sealed record CreateOrderFromQuoteRequest(IReadOnlyList<Guid>? IncludeOptionalLineIds);
+public sealed record CreateOrderFromQuoteRequest(
+    IReadOnlyList<Guid>? IncludeOptionalLineIds = null,
+    IReadOnlyList<Guid>? SelectedLineIds = null,
+    string? CustomerPurchaseOrder = null);
 public sealed record ProductionBomLineRequest(Guid ComponentProductId, decimal Quantity, string Unit, decimal ScrapPercent, string? AppliesToVariant, bool IsOptional, int SortOrder, Guid? SubstituteProductId);
 public sealed record ProductionBomRequest(Guid ProductId, string Version, string Name, string? Description, decimal OutputQuantity, string OutputUnit, bool IsActive, DateTime? ValidFromUtc, DateTime? ValidToUtc, IReadOnlyList<ProductionBomLineRequest> Lines);
 public sealed record ProductionOrderRequest(string Number, Guid ProductId, Guid? BomId, decimal PlannedQuantity, string Unit, DateTime? PlannedStartUtc, DateTime? PlannedEndUtc, string? Notes);
@@ -227,7 +230,7 @@ public static class SalesEndpoints
             CancellationToken cancellationToken) =>
         {
             var result = await sender.Send(
-                new CreateOrderFromQuoteCommand(quoteId, body?.IncludeOptionalLineIds),
+                new CreateOrderFromQuoteCommand(quoteId, body?.IncludeOptionalLineIds, body?.SelectedLineIds, body?.CustomerPurchaseOrder),
                 cancellationToken);
             return result.IsSuccess
                 ? result.ToCreated($"/api/v1/sales/orders/{result.Value.Id}")

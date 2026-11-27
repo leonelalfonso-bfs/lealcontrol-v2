@@ -18,7 +18,8 @@ public sealed class OrderLine : Entity<OrderLineId>
         string currencyCode,
         decimal discountPercent,
         decimal taxRate,
-        bool isOptional)
+        bool isOptional,
+        Guid? sourceQuoteLineId = null)
         : base(id)
     {
         ProductId = productId;
@@ -29,10 +30,13 @@ public sealed class OrderLine : Entity<OrderLineId>
         DiscountPercent = discountPercent;
         TaxRate = taxRate;
         IsOptional = isOptional;
+        SourceQuoteLineId = sourceQuoteLineId;
         Recalculate();
     }
 
     public Guid? ProductId { get; private set; }
+
+    public Guid? SourceQuoteLineId { get; private set; }
 
     public string Description { get; private set; } = string.Empty;
 

@@ -29,6 +29,15 @@ public sealed record CircuitLeadInfo(Guid Id, string Name, string Status);
 public sealed record CircuitOpportunityInfo(Guid Id, string Title, string Stage, string StageLabel, decimal? Amount, string? Currency, string? OwnerName, bool HasNextAction, DateTime? NextFollowUpUtc);
 public sealed record CircuitQuoteInfo(Guid Id, string Number, int Revision, string Status, string StatusLabel, DateTime? SentAtUtc, int? DaysSinceSent, DateTime ValidUntilUtc, bool IsExpired, decimal? Total, string Currency);
 public sealed record CircuitCustomerHistory(int TotalQuotes, int AcceptedQuotes, int OverdueInvoicesCount, decimal? OverdueAmountArs, decimal? OverdueAmountUsd);
+public sealed record PurchaseConfirmationSignal(
+    Guid QuoteId,
+    string QuoteNumber,
+    string? PurchaseOrderNumber,
+    bool IsPartial,
+    int ConfirmedCount,
+    int TotalLineCount,
+    IReadOnlyList<Guid> ConfirmedLineIds,
+    IReadOnlyList<string> ConfirmedDescriptions);
 public sealed record CircuitFinding(string Code, string Severity, string Text, string? Link);
 
 public sealed record CommercialCircuitReport(
@@ -42,7 +51,8 @@ public sealed record CommercialCircuitReport(
     string? AiLastTrace = null,
     string? AiMissingInfo = null,
     DateTime? AiQuoteDeadlineUtc = null,
-    CircuitCustomerHistory? CustomerHistory = null);
+    CircuitCustomerHistory? CustomerHistory = null,
+    PurchaseConfirmationSignal? PurchaseConfirmation = null);
 
 /// <summary>
 /// Revisión determinística (sin IA, costo $0) del circuito comercial de una conversación:
@@ -268,10 +278,36 @@ public static class CommercialCircuitChecker
             }
         }
 
+        PurchaseConfirmationSignal? purchaseConfirmation = null;
+        if (!string.IsNullOrWhiteSpace(conversation.AiPurchaseConfirmationJson))
+        {
+            try
+            {
+                var parsed = JsonSerializer.Deserialize<PurchaseConfirmationSignal>(conversation.AiPurchaseConfirmationJson);
+                if (parsed is not null)
+                {
+                    var matchingQuote = quotes.FirstOrDefault(q => q.Id == parsed.QuoteId);
+                    if (matchingQuote is null || matchingQuote.Status != nameof(QuoteStatus.Ordered))
+                    {
+                        purchaseConfirmation = parsed;
+                        var ocPart = string.IsNullOrWhiteSpace(parsed.PurchaseOrderNumber) ? "" : $" (OC {parsed.PurchaseOrderNumber})";
+                        var scopeText = parsed.IsPartial
+                            ? $"Confirmación parcial detectada sobre {parsed.QuoteNumber}{ocPart}: {parsed.ConfirmedCount} de {parsed.TotalLineCount} ítems."
+                            : $"Confirmación de compra detectada sobre {parsed.QuoteNumber}{ocPart}.";
+                        missing.Insert(0, new("quote.confirmed", "ok", scopeText, $"/presupuestos?convertQuoteId={parsed.QuoteId}"));
+                    }
+                }
+            }
+            catch
+            {
+                // JSON inválido o viejo: ignorar silenciosamente.
+            }
+        }
+
         var isComplete = !missing.Any(m => m.Severity is "warn" or "danger");
         return new CommercialCircuitReport(
             customerInfo, contactInfo, leadInfo, oppInfo, quotes, missing, isComplete,
-            conversation.AiLastTrace, conversation.AiMissingInfo, conversation.AiQuoteDeadlineUtc, history);
+            conversation.AiLastTrace, conversation.AiMissingInfo, conversation.AiQuoteDeadlineUtc, history, purchaseConfirmation);
     }
 
     private static async Task<CircuitCustomerHistory?> LoadCustomerHistoryAsync(
