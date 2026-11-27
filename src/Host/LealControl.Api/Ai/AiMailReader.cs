@@ -45,7 +45,8 @@ internal sealed class ScopedAiArcaCuitLookup(IServiceScopeFactory scopes) : IAiA
 /// <summary>Lo que la IA lee de un mail.</summary>
 public sealed record MailReading(
     string Category, int Urgency, string Summary, bool IsNewBusiness, string OpportunityTitle,
-    string Company, string ContactName, string Position, string Cuit, string Phone, string Email, string Location, string Product);
+    string Company, string ContactName, string Position, string Cuit, string Phone, string Email, string Location, string Product,
+    string QuoteDeadline = "", string MissingInfo = "");
 
 /// <summary>
 /// Lectura de mails con IA: a cada conversación con un mail nuevo del contacto le pone categoría, urgencia y resumen.
@@ -198,10 +199,18 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
             return new(false, false, "Sin mails entrantes para analizar.");
         }
 
+        var messageIds = messages.Select(m => m.Id).ToList();
+        var rawAttachments = await comms.EmailAttachments.AsNoTracking()
+            .Where(a => a.TenantId == tenantId && messageIds.Contains(a.EmailMessageId) && !a.IsInline)
+            .OrderBy(a => a.SizeBytes)
+            .Take(6)
+            .ToListAsync(ct);
+        var extractedAttachments = EmailAttachmentTextExtractor.ExtractAll(rawAttachments);
+
         MailReading reading;
         try
         {
-            var completion = await ai.CompleteJsonAsync(apiKey, AiModels.Reader, system, Thread(messages), Schema, 1200, ct);
+            var completion = await ai.CompleteJsonAsync(apiKey, AiModels.Reader, system, Thread(messages, extractedAttachments), Schema, 1200, ct);
             aiDb.Usage.Add(AiUsage.Record(tenantId, Feature, AiModels.Reader, completion.InputTokens, completion.OutputTokens,
                 AiModels.Cost(AiModels.Reader, completion.InputTokens, completion.OutputTokens),
                 completion.StopReason is "end_turn" ? null : $"La IA terminó por {completion.StopReason}", nowUtc));
@@ -222,7 +231,13 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
         }
 
         var trace = new List<string>();
+        if (extractedAttachments.Count > 0)
+            trace.Add($"Adjuntos leídos: {string.Join(", ", extractedAttachments.Select(a => a.FileName))}");
         conversation.SetAiReading(reading.Category, reading.Urgency, reading.Summary, nowUtc);
+        var quoteDeadlineUtc = ParseQuoteDeadlineUtc(reading.QuoteDeadline);
+        conversation.SetAiQuoteReadiness(
+            Commercial.Contains(reading.Category) ? reading.MissingInfo : null,
+            quoteDeadlineUtc);
         conversation.SetNameFromAi(string.Join(" · ", new[] { reading.ContactName, reading.Company }.Where(x => x.Length > 0)));
 
         CustomerId? matchedCustomerId = null;
@@ -269,6 +284,28 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
             await OpenOpportunityAsync(crm, tenant, conversation, reading, matchedCustomerId, nowUtc, ct);
             if (conversation.RelatedOpportunityId is not null) trace.Add("Oportunidad abierta");
         }
+
+        if (quoteDeadlineUtc is { } deadlineUtc && conversation.RelatedOpportunityId is { } oppIdForDeadline)
+        {
+            var oppKey = new OpportunityId(oppIdForDeadline);
+            var hasScheduled = await crm.Activities.AsNoTracking().AnyAsync(
+                a => a.TenantId == tenant && a.OpportunityId == oppKey && !a.IsDone && (a.DueDate != null || a.NextFollowUpOn != null), ct);
+            if (!hasScheduled)
+            {
+                var customerKey = conversation.RelatedCustomerId is { } cidVal ? new CustomerId(cidVal) : (CustomerId?)null;
+                var leadKey = conversation.RelatedLeadId is { } lidVal ? new LeadId(lidVal) : (LeadId?)null;
+                var deadlineAct = Activity.Log(
+                    tenant, ActivityType.Note,
+                    $"Cierre de cotización (detectado por IA): {deadlineUtc.AddHours(-3):dd/MM/yyyy}",
+                    customerKey, leadKey, oppKey, null, deadlineUtc, nowUtc, deadlineUtc);
+                if (deadlineAct.IsSuccess)
+                {
+                    crm.Activities.Add(deadlineAct.Value);
+                    trace.Add($"Vence cotización: {deadlineUtc.AddHours(-3):dd/MM/yyyy}");
+                }
+            }
+        }
+
         if (crm.ChangeTracker.HasChanges())
             await crm.SaveChangesAsync(ct);
 
@@ -851,10 +888,12 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
         contact_name: solo nombre y apellido de una persona real; vacío si es una casilla genérica sin nombre.
         position: puesto o cargo de la persona si aparece en el mail o la firma (ej. "Jefe de Planta", "Responsable de Compras"); vacío si no está.
         cuit: solo los 11 dígitos.
+        quote_deadline: si el mail o algún adjunto indica fecha límite de entrega de cotización, pliego o licitación, devolvela en formato YYYY-MM-DD; si no hay fecha límite explícita, dejalo vacío.
+        missing_info: solo si es pedido_cotizacion o consulta_comercial y faltan datos técnicos o comerciales clave para poder cotizar (ej. "Localidad de instalación; capacidad o dimensiones del equipo; cantidad"), listalos brevemente separados por punto y coma; si está todo lo necesario o no es un pedido comercial, dejalo vacío.
         """;
 
-    /// <summary>Los últimos mensajes de la conversación, del más viejo al más nuevo; el último recibido, completo.</summary>
-    private static string Thread(List<EmailMessage> newestFirst)
+    /// <summary>Los últimos mensajes de la conversación, del más viejo al más nuevo; el último recibido, completo + texto de adjuntos.</summary>
+    private static string Thread(List<EmailMessage> newestFirst, IReadOnlyList<EmailAttachmentTextExtractor.ExtractedAttachment>? attachments = null)
     {
         var lastIncoming = newestFirst.First(m => m.Direction == EmailDirection.Incoming);
         var text = new StringBuilder();
@@ -865,7 +904,25 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
             text.AppendLine($"Fecha: {m.OccurredAtUtc:yyyy-MM-dd HH:mm} UTC · Asunto: {m.Subject}");
             text.AppendLine(body.Length > 4000 ? body[..4000] : body);
         }
+        if (attachments is { Count: > 0 })
+        {
+            text.AppendLine("\n--- Texto extraído de adjuntos del hilo ---");
+            foreach (var att in attachments)
+            {
+                text.AppendLine($"[Adjunto: {att.FileName}]");
+                text.AppendLine(att.Text);
+            }
+        }
         return text.ToString();
+    }
+
+    private static DateTime? ParseQuoteDeadlineUtc(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        if (!DateOnly.TryParseExact(raw.Trim(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+            return null;
+        // 18:00 hora Argentina = 21:00 UTC
+        return DateTime.SpecifyKind(date.ToDateTime(new TimeOnly(21, 0)), DateTimeKind.Utc);
     }
 
     private static string FullText(EmailMessage m)
@@ -888,7 +945,8 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
             r.TryGetProperty("urgency", out var u) && u.TryGetInt32(out var urgency) ? Math.Clamp(urgency, 1, 3) : 1,
             S("summary"),
             r.TryGetProperty("is_new_business", out var b) && b.ValueKind == JsonValueKind.True,
-            S("opportunity_title"), S("company"), S("contact_name"), S("position"), S("cuit"), S("phone"), S("email"), S("location"), S("product"));
+            S("opportunity_title"), S("company"), S("contact_name"), S("position"), S("cuit"), S("phone"), S("email"), S("location"), S("product"),
+            S("quote_deadline"), S("missing_info"));
     }
 
     public static readonly IReadOnlyDictionary<string, JsonElement> Schema = new Dictionary<string, JsonElement>
@@ -909,10 +967,12 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
             ["email"] = new { type = "string" },
             ["location"] = new { type = "string" },
             ["product"] = new { type = "string" },
+            ["quote_deadline"] = new { type = "string" },
+            ["missing_info"] = new { type = "string" },
         }),
         ["required"] = JsonSerializer.SerializeToElement(new[]
         {
-            "category", "urgency", "summary", "is_new_business", "opportunity_title", "company", "contact_name", "position", "cuit", "phone", "email", "location", "product"
+            "category", "urgency", "summary", "is_new_business", "opportunity_title", "company", "contact_name", "position", "cuit", "phone", "email", "location", "product", "quote_deadline", "missing_info"
         }),
         ["additionalProperties"] = JsonSerializer.SerializeToElement(false),
     };

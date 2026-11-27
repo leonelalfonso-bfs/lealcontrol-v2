@@ -2823,6 +2823,15 @@ export type CommercialCircuitReport = {
   }>;
   isComplete: boolean;
   aiLastTrace?: string | null;
+  aiMissingInfo?: string | null;
+  aiQuoteDeadlineUtc?: string | null;
+  customerHistory?: {
+    totalQuotes: number;
+    acceptedQuotes: number;
+    overdueInvoicesCount: number;
+    overdueAmountArs?: number | null;
+    overdueAmountUsd?: number | null;
+  } | null;
 };
 
 export type AiDraftResult = {

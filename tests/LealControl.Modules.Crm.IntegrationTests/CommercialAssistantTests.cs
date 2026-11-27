@@ -1,8 +1,10 @@
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using LealControl.Api.Ai;
 using LealControl.Modules.Communications.Infrastructure.Domain;
 using LealControl.Modules.Communications.Infrastructure.Persistence;
+using LealControl.Modules.Sales.Domain.Invoices;
 using LealControl.Modules.Sales.Domain.Quotes;
 using LealControl.Modules.Sales.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -130,5 +132,142 @@ public sealed class CommercialAssistantTests : IAsyncLifetime
         Assert.NotNull(fakeAi.LastUserPrompt);
         Assert.Contains("P-00042 (Rev. 2)", fakeAi.LastUserPrompt);
         Assert.Contains("Enviado", fakeAi.LastUserPrompt);
+    }
+
+    private sealed class FakeAttachmentAndReadinessAi : IAiClient
+    {
+        public string? LastPrompt;
+        public Task<AiCompletion> CompleteJsonAsync(string apiKey, string model, string system, string user,
+            IReadOnlyDictionary<string, JsonElement> schema, int maxTokens, CancellationToken ct, bool deeper = false, bool webSearch = false)
+        {
+            LastPrompt = user;
+            if (schema.TryGetValue("properties", out var props) && props.TryGetProperty("body", out _))
+            {
+                return Task.FromResult(new AiCompletion(
+                    """{"body":"Hola, para cotizar la báscula necesitamos confirmar la localidad y si incluye obra civil."}""",
+                    500, 90, "end_turn"));
+            }
+
+            var deadline = DateTime.UtcNow.AddDays(1).ToString("yyyy-MM-dd");
+            var json = JsonSerializer.Serialize(new
+            {
+                category = "pedido_cotizacion",
+                urgency = 3,
+                summary = "Cerealera pide cotizar báscula 80t según pliego adjunto.",
+                is_new_business = true,
+                opportunity_title = "Báscula 80t según pliego",
+                company = "Cerealera Norte SA",
+                contact_name = "Martín Gómez",
+                position = "Compras",
+                cuit = "30709876542",
+                phone = "",
+                email = "",
+                location = "",
+                product = "Báscula 80t",
+                quote_deadline = deadline,
+                missing_info = "Localidad de instalación; si incluye obra civil"
+            });
+            return Task.FromResult(new AiCompletion(json, 1100, 180, "end_turn"));
+        }
+    }
+
+    [Fact]
+    public async Task Reads_attachment_extracts_deadline_missing_info_and_shows_customer_overdue_history()
+    {
+        var tenantId = CrmWebApplicationFactory.DemoTenantId;
+        var cs = _factory.DatabaseConnectionString;
+        var now = _factory.Services.GetRequiredService<TimeProvider>().GetUtcNow().UtcDateTime;
+
+        using (var scope = _factory.Services.CreateScope())
+            await scope.ServiceProvider.GetRequiredService<LealControl.Api.SuperAdmin.ICommunicationsInboxSettings>().SetEnabledAsync(true);
+
+        using var admin = _factory.CreateAuthenticatedClient();
+        using var inbox = _factory.CreateClientForUser(Guid.NewGuid(), "readiness@lealcontrol.com", "Admin", "[\"communications\"]");
+
+        // Cliente existente con CUIT sintético y una factura vencida autorizada.
+        var customer = await Json(await admin.PostAsJsonAsync("/api/v1/crm/customers", new
+        {
+            legalName = "Cerealera Norte SA",
+            documentType = "Cuit",
+            documentNumber = "30709876542",
+            taxCondition = "ResponsableInscripto",
+            email = "compras@cerealeranorte.com.ar",
+            isCustomer = true
+        }));
+        var customerId = customer.GetProperty("id").GetGuid();
+
+        await using (var sales = new SalesDbContext(new DbContextOptionsBuilder<SalesDbContext>().UseNpgsql(cs).Options))
+        {
+            await sales.EnsureTablesCreatedAsync();
+            var inv = new Invoice(
+                Guid.NewGuid(),
+                new LealControl.BuildingBlocks.Tenancy.TenantId(tenantId),
+                "A", 1, 777, "0001-00000777", null, null,
+                customerId, "Cerealera Norte SA", "30709876542", "ResponsableInscripto", null,
+                now.AddDays(-45), now.AddDays(-15), "ARS", 1m,
+                150000m, 31500m, 0m, 0m, 0m, 0m, 181500m,
+                "12345678901234", now.AddDays(10), null, "Authorized", null, null, now.AddDays(-45));
+            sales.Invoices.Add(inv);
+            await sales.SaveChangesAsync();
+        }
+
+        var putRes = await inbox.PutAsJsonAsync("/api/v1/communications/ai/settings", new
+        {
+            apiKey = "sk-ant-prueba-readiness", monthlyBudgetUsd = 10m, mailReadingEnabled = true,
+            autoOpportunities = true, supervisorEnabled = false, businessDescription = "Básculas"
+        });
+        Assert.True(putRes.IsSuccessStatusCode);
+
+        var conv = Conversation.Create(tenantId, "email", Guid.NewGuid().ToString("N"),
+            "martin@cerealeranorte.com.ar", "Martín Gómez", "martin@cerealeranorte.com.ar", null,
+            "Adjunto pliego de solicitud de cotización.", now.AddMinutes(-5), EmailDirection.Incoming);
+        await using (var comms = new CommunicationsDbContext(new DbContextOptionsBuilder<CommunicationsDbContext>().UseNpgsql(cs).Options))
+        {
+            await comms.EnsureTablesCreatedAsync();
+            comms.Conversations.Add(conv);
+            var msg = EmailMessage.Create(tenantId, Guid.NewGuid(), Guid.NewGuid().ToString("N"), null, conv.ThreadKey, EmailDirection.Incoming,
+                "Solicitud de cotización", "martin@cerealeranorte.com.ar", "ventas@empresa.com",
+                "Adjunto pliego con especificaciones.", now.AddMinutes(-5));
+            msg.SetConversationId(conv.Id);
+            comms.EmailMessages.Add(msg);
+            var csvBytes = Encoding.UTF8.GetBytes("Item,Descripcion,Cantidad\n1,Bascula camiones 80t,1\nCierre oferta,Manana 18hs\n");
+            comms.EmailAttachments.Add(EmailAttachment.Create(tenantId, msg.Id, "pliego.csv", "text/csv", csvBytes.Length, csvBytes));
+            await comms.SaveChangesAsync();
+        }
+
+        var fakeAi = new FakeAttachmentAndReadinessAi();
+        var reader = new AiMailReader(fakeAi, _factory.Services.GetRequiredService<AiKeyProtector>(), NullLogger<AiMailReader>.Instance);
+        Assert.Equal(1, await reader.ReadPendingAsync(cs, tenantId, now, default));
+
+        // El texto del adjunto llegó al prompt de la IA.
+        Assert.NotNull(fakeAi.LastPrompt);
+        Assert.Contains("pliego.csv", fakeAi.LastPrompt);
+        Assert.Contains("Bascula camiones 80t", fakeAi.LastPrompt);
+
+        // El circuito comercial expone traza con adjunto, deadline (que creó próxima acción), missingInfo e historial con deuda vencida.
+        var report = await CommercialCircuitChecker.CheckAsync(cs, tenantId, conv.Id, seesAmounts: true, now, default);
+        Assert.NotNull(report);
+        Assert.Contains("pliego.csv", report.AiLastTrace ?? "");
+        Assert.Contains("Localidad de instalación", report.AiMissingInfo ?? "");
+        Assert.NotNull(report.AiQuoteDeadlineUtc);
+        Assert.NotNull(report.Opportunity);
+        Assert.True(report.Opportunity.HasNextAction);
+        Assert.NotNull(report.CustomerHistory);
+        Assert.Equal(1, report.CustomerHistory.OverdueInvoicesCount);
+        Assert.True(report.CustomerHistory.OverdueAmountArs > 0);
+        Assert.Contains(report.MissingItems, m => m.Code == "customer.overdue" && m.Severity == "danger");
+        Assert.Contains(report.MissingItems, m => m.Code == "quote.missing-info");
+
+        // Sin permiso de montos, oculta el monto vencido pero mantiene la alerta de cantidad.
+        var reportNoAmounts = await CommercialCircuitChecker.CheckAsync(cs, tenantId, conv.Id, seesAmounts: false, now, default);
+        Assert.NotNull(reportNoAmounts?.CustomerHistory);
+        Assert.Equal(1, reportNoAmounts.CustomerHistory.OverdueInvoicesCount);
+        Assert.Null(reportNoAmounts.CustomerHistory.OverdueAmountArs);
+
+        // El borrador con focus=missing_info incluye el objetivo explícito en el prompt.
+        var drafter = new AiReplyDrafter(fakeAi, _factory.Services.GetRequiredService<AiKeyProtector>(), NullLogger<AiReplyDrafter>.Instance);
+        var draft = await drafter.DraftAsync(cs, tenantId, conv.Id, seesAmounts: true, now, default, focus: "missing_info");
+        Assert.True(draft.Ok);
+        Assert.Contains("OBJETIVO DE ESTE BORRADOR", fakeAi.LastPrompt);
     }
 }

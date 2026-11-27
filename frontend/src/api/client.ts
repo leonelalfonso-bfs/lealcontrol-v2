@@ -589,8 +589,11 @@ export const api = {
   runAiSupervisorNow: () => request<{ ok: boolean; count?: number; detail: string }>("/api/v1/communications/ai/settings/supervisor-run-now", { method: "POST" }),
   getCommercialCheck: (conversationId: string) =>
     request<import("./types").CommercialCircuitReport>(`/api/v1/communications/conversations/${conversationId}/commercial-check`),
-  generateAiReplyDraft: (conversationId: string) =>
-    request<import("./types").AiDraftResult>(`/api/v1/communications/conversations/${conversationId}/ai-draft`, { method: "POST" }),
+  generateAiReplyDraft: (conversationId: string, focus?: "missing_info") =>
+    request<import("./types").AiDraftResult>(
+      `/api/v1/communications/conversations/${conversationId}/ai-draft${focus ? `?focus=${encodeURIComponent(focus)}` : ""}`,
+      { method: "POST" }
+    ),
   reanalyzeConversationWithAi: (conversationId: string) =>
     request<{ ok: boolean; trace?: string | null; error?: string | null; customerId?: string | null; opportunityId?: string | null }>(
       `/api/v1/communications/conversations/${conversationId}/ai-reanalyze`,
