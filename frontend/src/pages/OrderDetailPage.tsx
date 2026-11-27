@@ -103,7 +103,22 @@ export function OrderDetailPage() {
           </div>
           <p className="muted">
             Creado el {new Date(order.createdAtUtc).toLocaleDateString("es-AR")}
-            {order.quoteNumber && ` · Origen Cotización #${order.quoteNumber}`}
+            {order.quoteId && order.quoteNumber && (
+              <>
+                {" · "}
+                <Link to={`/presupuestos/${order.quoteId}/editar`} className="t-accent">
+                  Presupuesto {order.quoteNumber}
+                </Link>
+              </>
+            )}
+            {order.opportunityId && (
+              <>
+                {" · "}
+                <Link to={`/oportunidades/${order.opportunityId}`} className="t-accent">
+                  Ver oportunidad CRM →
+                </Link>
+              </>
+            )}
           </p>
         </div>
 

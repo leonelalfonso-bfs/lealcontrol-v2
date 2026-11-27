@@ -30,6 +30,22 @@ internal sealed class QuoteRepository : IQuoteRepository
                     && x.Status != QuoteStatus.Cancelled,
                 cancellationToken);
 
+    public async Task<bool> HasOtherActiveQuoteForOpportunityAsync(
+        TenantId tenantId,
+        Guid opportunityId,
+        Guid excludeQuoteId,
+        CancellationToken cancellationToken = default)
+    {
+        var excludeId = new QuoteId(excludeQuoteId);
+        return await _db.Quotes.AsNoTracking().AnyAsync(
+            x => x.TenantId == tenantId
+                && x.OpportunityId == opportunityId
+                && x.Id != excludeId
+                && x.Status != QuoteStatus.Cancelled
+                && x.Status != QuoteStatus.Rejected,
+            cancellationToken);
+    }
+
     public async Task<IReadOnlyList<Quote>> ListAsync(
         TenantId tenantId,
         CancellationToken cancellationToken = default) =>

@@ -16,6 +16,8 @@ public interface IOrderRepository
 
     Task<Order?> GetOpenByQuoteIdAsync(TenantId tenantId, Guid quoteId, CancellationToken cancellationToken = default);
 
+    Task<bool> HasActiveOrderForOpportunityAsync(TenantId tenantId, Guid opportunityId, Guid? excludeOrderId = null, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<Order>> ListAsync(TenantId tenantId, string? search = null, OrderStatus? status = null, CancellationToken cancellationToken = default);
 
     Task<int> GetCountAsync(TenantId tenantId, CancellationToken cancellationToken = default);
