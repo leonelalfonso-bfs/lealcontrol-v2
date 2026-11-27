@@ -33,12 +33,68 @@ internal sealed class OpportunityQuoteSync(CrmDbContext db, ITenantContext tenan
         return opened.Value.Id.Value;
     }
 
-    public async Task MarkWonAsync(Guid opportunityId, CancellationToken cancellationToken = default)
+    public async Task<Guid?> TryFindUniqueOpenOpportunityAsync(Guid customerId, CancellationToken cancellationToken = default)
     {
-        var opportunity = await db.Opportunities.FirstOrDefaultAsync(o => o.Id == new OpportunityId(opportunityId), cancellationToken);
+        var cid = new CustomerId(customerId);
+        var openIds = await db.Opportunities.AsNoTracking()
+            .Where(o => o.TenantId == tenant.TenantId && o.CustomerId == cid
+                && o.Stage != OpportunityStage.Won && o.Stage != OpportunityStage.Lost)
+            .Select(o => o.Id)
+            .Take(2)
+            .ToListAsync(cancellationToken);
+        return openIds.Count == 1 ? openIds[0].Value : null;
+    }
+
+    public async Task SyncQuoteProgressAsync(Guid opportunityId, decimal amount, string currency, bool isSent, bool isAccepted, CancellationToken cancellationToken = default)
+    {
+        var opportunity = await db.Opportunities.FirstOrDefaultAsync(
+            o => o.TenantId == tenant.TenantId && o.Id == new OpportunityId(opportunityId), cancellationToken);
         if (opportunity is null || opportunity.IsClosed) return;
+
         var now = clock.GetUtcNow().UtcDateTime;
-        // El embudo exige pasar por Negociación antes de ganar.
+        var changed = false;
+
+        if (amount > 0m)
+        {
+            var iso = NormalizeCurrency(currency);
+            if (opportunity.Amount != amount || !string.Equals(opportunity.Currency, iso, StringComparison.OrdinalIgnoreCase))
+            {
+                if (opportunity.UpdateDetails(opportunity.Title, amount, iso, opportunity.OwnerName, opportunity.OwnerId, opportunity.Priority, opportunity.ExpectedCloseDate, now).IsSuccess)
+                    changed = true;
+            }
+        }
+
+        if (isSent && opportunity.Stage is OpportunityStage.Lead or OpportunityStage.Qualified)
+        {
+            if (opportunity.MoveTo(OpportunityStage.Proposal, null, now).IsSuccess)
+                changed = true;
+        }
+
+        if (isAccepted)
+        {
+            if (opportunity.Stage is OpportunityStage.Lead or OpportunityStage.Qualified)
+                opportunity.MoveTo(OpportunityStage.Proposal, null, now);
+            if (opportunity.Stage == OpportunityStage.Proposal && opportunity.MoveTo(OpportunityStage.Negotiation, null, now).IsSuccess)
+                changed = true;
+        }
+
+        if (changed) await db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task MarkWonAsync(Guid opportunityId, decimal? finalAmount = null, string? currency = null, CancellationToken cancellationToken = default)
+    {
+        var opportunity = await db.Opportunities.FirstOrDefaultAsync(
+            o => o.TenantId == tenant.TenantId && o.Id == new OpportunityId(opportunityId), cancellationToken);
+        if (opportunity is null || opportunity.IsClosed) return;
+
+        var now = clock.GetUtcNow().UtcDateTime;
+        if (finalAmount is > 0m)
+        {
+            var iso = NormalizeCurrency(currency ?? opportunity.Currency);
+            opportunity.UpdateDetails(opportunity.Title, finalAmount.Value, iso, opportunity.OwnerName, opportunity.OwnerId, opportunity.Priority, opportunity.ExpectedCloseDate, now);
+        }
+
+        // El embudo exige pasar por Propuesta y Negociación antes de ganar.
         if (opportunity.Stage is OpportunityStage.Lead or OpportunityStage.Qualified) opportunity.MoveTo(OpportunityStage.Proposal, null, now);
         if (opportunity.Stage == OpportunityStage.Proposal) opportunity.MoveTo(OpportunityStage.Negotiation, null, now);
         if (opportunity.MoveTo(OpportunityStage.Won, null, now).IsSuccess) await db.SaveChangesAsync(cancellationToken);
@@ -46,8 +102,23 @@ internal sealed class OpportunityQuoteSync(CrmDbContext db, ITenantContext tenan
 
     public async Task MarkLostAsync(Guid opportunityId, string reason, CancellationToken cancellationToken = default)
     {
-        var opportunity = await db.Opportunities.FirstOrDefaultAsync(o => o.Id == new OpportunityId(opportunityId), cancellationToken);
+        var opportunity = await db.Opportunities.FirstOrDefaultAsync(
+            o => o.TenantId == tenant.TenantId && o.Id == new OpportunityId(opportunityId), cancellationToken);
         if (opportunity is null || opportunity.IsClosed) return;
         if (opportunity.MoveTo(OpportunityStage.Lost, reason, clock.GetUtcNow().UtcDateTime).IsSuccess) await db.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task ReopenFromCancelledOrderAsync(Guid opportunityId, string reason, CancellationToken cancellationToken = default)
+    {
+        var opportunity = await db.Opportunities.FirstOrDefaultAsync(
+            o => o.TenantId == tenant.TenantId && o.Id == new OpportunityId(opportunityId), cancellationToken);
+        if (opportunity is null || opportunity.Stage != OpportunityStage.Won) return;
+
+        var now = clock.GetUtcNow().UtcDateTime;
+        if (opportunity.Reopen(OpportunityStage.Negotiation, reason, now).IsSuccess)
+            await db.SaveChangesAsync(cancellationToken);
+    }
+
+    private static string NormalizeCurrency(string? currency) =>
+        currency is not null && currency.StartsWith("USD", StringComparison.OrdinalIgnoreCase) ? "USD" : "ARS";
 }

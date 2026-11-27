@@ -85,17 +85,23 @@ internal static class OrderMappingExtensions
 internal sealed class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Result<OrderDto>>
 {
     private readonly IOrderRepository _orderRepository;
+    private readonly IQuoteRepository _quoteRepository;
     private readonly ISalesUnitOfWork _unitOfWork;
     private readonly ITenantContext _tenantContext;
+    private readonly IOpportunityQuoteSync _crm;
 
     public CreateOrderCommandHandler(
         IOrderRepository orderRepository,
+        IQuoteRepository quoteRepository,
         ISalesUnitOfWork unitOfWork,
-        ITenantContext tenantContext)
+        ITenantContext tenantContext,
+        IOpportunityQuoteSync crm)
     {
         _orderRepository = orderRepository;
+        _quoteRepository = quoteRepository;
         _unitOfWork = unitOfWork;
         _tenantContext = tenantContext;
+        _crm = crm;
     }
 
     public async Task<Result<OrderDto>> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
@@ -104,16 +110,26 @@ internal sealed class CreateOrderCommandHandler : IRequestHandler<CreateOrderCom
         var orderNumber = $"PED-{(count + 1):D4}";
         var now = DateTime.UtcNow;
 
+        Quote? linkedQuote = null;
+        if (request.Model.QuoteId is { } qid)
+        {
+            linkedQuote = await _quoteRepository.GetByIdAsync(new QuoteId(qid), cancellationToken);
+        }
+
+        var opportunityId = request.Model.OpportunityId
+            ?? linkedQuote?.OpportunityId
+            ?? await _crm.TryFindUniqueOpenOpportunityAsync(request.Model.CustomerId, cancellationToken);
+
         var order = Order.Create(
             _tenantContext.TenantId,
             orderNumber,
             request.Model.CustomerId,
             now,
             request.Model.QuoteId,
-            request.Model.QuoteNumber,
+            request.Model.QuoteNumber ?? linkedQuote?.QuoteNumber,
             request.Model.LocationId,
             request.Model.ContactId,
-            request.Model.OpportunityId,
+            opportunityId,
             request.Model.Currency,
             request.Model.ExchangeRateUsdBillete,
             request.Model.ExchangeRateUsdDivisa,
@@ -140,8 +156,21 @@ internal sealed class CreateOrderCommandHandler : IRequestHandler<CreateOrderCom
                 line.IsOptional);
         }
 
+        if (linkedQuote is not null && linkedQuote.Status is not (QuoteStatus.Ordered or QuoteStatus.Cancelled or QuoteStatus.Rejected))
+        {
+            linkedQuote.MarkOrdered(now);
+        }
+
         await _orderRepository.AddAsync(order, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        if (opportunityId is { } oppId)
+        {
+            if (order.Status == OrderStatus.Draft)
+                await _crm.SyncQuoteProgressAsync(oppId, order.Total, order.Currency, isSent: true, isAccepted: true, cancellationToken);
+            else if (order.Status != OrderStatus.Cancelled)
+                await _crm.MarkWonAsync(oppId, order.Total, order.Currency, cancellationToken);
+        }
 
         return Result.Success(order.ToDto());
     }
@@ -184,6 +213,9 @@ internal sealed class CreateOrderFromQuoteCommandHandler : IRequestHandler<Creat
 
         if (existingOrder is not null)
         {
+            var existingOppId = existingOrder.OpportunityId ?? quote.OpportunityId;
+            if (existingOppId is { } oppId && existingOrder.Status != OrderStatus.Cancelled)
+                await _crm.MarkWonAsync(oppId, existingOrder.Total, existingOrder.Currency, cancellationToken);
             return Result.Success(existingOrder.ToDto());
         }
 
@@ -219,6 +251,13 @@ internal sealed class CreateOrderFromQuoteCommandHandler : IRequestHandler<Creat
                 "Seleccioná al menos un renglón del presupuesto para generar el pedido."));
         }
 
+        var resolvedOpportunityId = quote.OpportunityId
+            ?? await _crm.TryFindUniqueOpenOpportunityAsync(quote.CustomerId, cancellationToken);
+        if (resolvedOpportunityId is { } foundOppId && quote.OpportunityId is null)
+        {
+            quote.AttachOpportunity(foundOppId);
+        }
+
         var order = Order.Create(
             _tenantContext.TenantId,
             orderNumber,
@@ -228,7 +267,7 @@ internal sealed class CreateOrderFromQuoteCommandHandler : IRequestHandler<Creat
             quote.QuoteNumber,
             quote.LocationId,
             quote.ContactId,
-            quote.OpportunityId,
+            resolvedOpportunityId,
             quote.Currency,
             quote.ExchangeRateUsdBillete,
             quote.ExchangeRateUsdDivisa,
@@ -267,8 +306,9 @@ internal sealed class CreateOrderFromQuoteCommandHandler : IRequestHandler<Creat
 
         await _orderRepository.AddAsync(order, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        // El pedido gana la oportunidad del CRM.
-        if (quote.OpportunityId is { } opportunityId) await _crm.MarkWonAsync(opportunityId, cancellationToken);
+        // El pedido gana la oportunidad del CRM y actualiza su monto al del pedido.
+        if (resolvedOpportunityId is { } opportunityId)
+            await _crm.MarkWonAsync(opportunityId, order.Total, order.Currency, cancellationToken);
 
         return Result.Success(order.ToDto());
     }
@@ -278,13 +318,16 @@ internal sealed class UpdateOrderCommandHandler : IRequestHandler<UpdateOrderCom
 {
     private readonly IOrderRepository _orderRepository;
     private readonly ISalesUnitOfWork _unitOfWork;
+    private readonly IOpportunityQuoteSync _crm;
 
     public UpdateOrderCommandHandler(
         IOrderRepository orderRepository,
-        ISalesUnitOfWork unitOfWork)
+        ISalesUnitOfWork unitOfWork,
+        IOpportunityQuoteSync crm)
     {
         _orderRepository = orderRepository;
         _unitOfWork = unitOfWork;
+        _crm = crm;
     }
 
     public async Task<Result<OrderDto>> Handle(UpdateOrderCommand request, CancellationToken cancellationToken)
@@ -318,6 +361,11 @@ internal sealed class UpdateOrderCommandHandler : IRequestHandler<UpdateOrderCom
         _orderRepository.Update(order);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        if (order.OpportunityId is { } oppId && order.Status != OrderStatus.Draft && order.Status != OrderStatus.Cancelled)
+        {
+            await _crm.MarkWonAsync(oppId, order.Total, order.Currency, cancellationToken);
+        }
+
         return Result.Success(order.ToDto());
     }
 }
@@ -327,15 +375,21 @@ internal sealed class UpdateOrderStatusCommandHandler : IRequestHandler<UpdateOr
     private readonly IOrderRepository _orderRepository;
     private readonly IQuoteRepository _quoteRepository;
     private readonly ISalesUnitOfWork _unitOfWork;
+    private readonly ITenantContext _tenantContext;
+    private readonly IOpportunityQuoteSync _crm;
 
     public UpdateOrderStatusCommandHandler(
         IOrderRepository orderRepository,
         IQuoteRepository quoteRepository,
-        ISalesUnitOfWork unitOfWork)
+        ISalesUnitOfWork unitOfWork,
+        ITenantContext tenantContext,
+        IOpportunityQuoteSync crm)
     {
         _orderRepository = orderRepository;
         _quoteRepository = quoteRepository;
         _unitOfWork = unitOfWork;
+        _tenantContext = tenantContext;
+        _crm = crm;
     }
 
     public async Task<Result<OrderDto>> Handle(UpdateOrderStatusCommand request, CancellationToken cancellationToken)
@@ -361,6 +415,20 @@ internal sealed class UpdateOrderStatusCommandHandler : IRequestHandler<UpdateOr
 
         _orderRepository.Update(order);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        if (order.OpportunityId is { } oppId)
+        {
+            if (request.NewStatus == OrderStatus.Cancelled)
+            {
+                var hasOtherActive = await _orderRepository.HasActiveOrderForOpportunityAsync(_tenantContext.TenantId, oppId, order.Id.Value, cancellationToken);
+                if (!hasOtherActive)
+                    await _crm.ReopenFromCancelledOrderAsync(oppId, $"Pedido {order.OrderNumber} anulado", cancellationToken);
+            }
+            else if (request.NewStatus != OrderStatus.Draft)
+            {
+                await _crm.MarkWonAsync(oppId, order.Total, order.Currency, cancellationToken);
+            }
+        }
 
         return Result.Success(order.ToDto());
     }

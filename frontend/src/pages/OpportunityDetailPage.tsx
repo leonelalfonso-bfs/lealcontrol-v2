@@ -27,6 +27,8 @@ export function OpportunityDetailPage() {
   const [opportunity, setOpportunity] = useState<Opportunity | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [salesOrders, setSalesOrders] = useState<Array<{ id: string; number: string; status: string; quoteNumber?: string | null; total?: number | null; currency: string; createdAtUtc: string }>>([]);
+  const [salesInvoices, setSalesInvoices] = useState<Array<{ id: string; number: string; invoiceType: string; status: string; total?: number | null; currency: string; issueDate: string }>>([]);
   const [customerList, setCustomerList] = useState<CustomerSummary[]>([]);
   const [customers, setCustomers] = useState<Record<string, string>>({});
   const [leadInfo, setLeadInfo] = useState<Lead | null>(null);
@@ -99,6 +101,17 @@ export function OpportunityDetailPage() {
     // Conversaciones de la bandeja convertidas en esta oportunidad (si la empresa no tiene
     // Comunicaciones, la API responde 404 y la sección no se muestra).
     if (id) api.listConversations({ opportunityId: id }).then(setConversations).catch(() => setConversations([]));
+    if (id) {
+      api.opportunitySalesChain(id)
+        .then((chain) => {
+          setSalesOrders(chain.orders || []);
+          setSalesInvoices(chain.invoices || []);
+        })
+        .catch(() => {
+          setSalesOrders([]);
+          setSalesInvoices([]);
+        });
+    }
   }, [id]);
 
   const timeline = useMemo(() => {
@@ -610,6 +623,40 @@ export function OpportunityDetailPage() {
                   </Link>
                 </div>
               ))
+            )}
+            {salesOrders.length > 0 && (
+              <div className="stack" style={{ gap: 6, marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--lc-line)" }}>
+                <strong className="t-small muted">Pedidos de venta</strong>
+                {salesOrders.map((ord) => (
+                  <div className="quote-row" key={ord.id}>
+                    <div>
+                      <strong>{ord.number}</strong>
+                      <span className="muted">
+                        {" "}· {label(ord.status)}
+                        {ord.total != null ? ` · ${ord.currency} $${ord.total.toLocaleString("es-AR", { maximumFractionDigits: 2 })}` : ""}
+                      </span>
+                    </div>
+                    <Link to={`/pedidos/${ord.id}`}>Ver pedido</Link>
+                  </div>
+                ))}
+              </div>
+            )}
+            {salesInvoices.length > 0 && (
+              <div className="stack" style={{ gap: 6, marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--lc-line)" }}>
+                <strong className="t-small muted">Facturas emitidas</strong>
+                {salesInvoices.map((inv) => (
+                  <div className="quote-row" key={inv.id}>
+                    <div>
+                      <strong>{inv.invoiceType} {inv.number}</strong>
+                      <span className="muted">
+                        {" "}· {label(inv.status)}
+                        {inv.total != null ? ` · ${inv.currency} $${inv.total.toLocaleString("es-AR", { maximumFractionDigits: 2 })}` : ""}
+                      </span>
+                    </div>
+                    <Link to={`/facturas/${inv.id}`}>Ver factura</Link>
+                  </div>
+                ))}
+              </div>
             )}
           </section>
           {conversations.length > 0 && (

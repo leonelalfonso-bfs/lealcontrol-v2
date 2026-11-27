@@ -411,6 +411,14 @@ export const api = {
     request<CustomerDetail>(`/api/v1/crm/customers/${id}/fiscal-rates`, { method: "PUT", body: JSON.stringify(body) }),
   timeline: (id: string) => request<Activity[]>(`/api/v1/crm/customers/${id}/timeline`),
   opportunityTimeline: (id: string) => request<Activity[]>(`/api/v1/crm/opportunities/${id}/timeline`),
+  opportunitySalesChain: (id: string) =>
+    request<{
+      quotes: Array<{ id: string; number: string; revision: number; status: string; total?: number | null; currency: string; createdAtUtc: string }>;
+      orders: Array<{ id: string; number: string; status: string; quoteNumber?: string | null; total?: number | null; currency: string; createdAtUtc: string }>;
+      invoices: Array<{ id: string; number: string; invoiceType: string; status: string; total?: number | null; currency: string; issueDate: string }>;
+    }>(`/api/v1/crm/opportunities/${id}/sales-chain`),
+  syncOpportunitiesWithSales: () =>
+    request<{ ordersSynced: number; quotesSynced: number }>("/api/v1/crm/opportunities/sync-with-sales", { method: "POST" }),
   opportunities: (id: string) => request<Opportunity[]>(`/api/v1/crm/customers/${id}/opportunities`),
   logActivity: (body: object) =>
     request<Activity>("/api/v1/crm/activities", { method: "POST", body: JSON.stringify(body) }),

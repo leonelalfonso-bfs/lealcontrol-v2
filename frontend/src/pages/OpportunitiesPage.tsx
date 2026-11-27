@@ -40,6 +40,8 @@ export function OpportunitiesPage() {
   const [users, setUsers] = useState<TenantUser[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [syncingSales, setSyncingSales] = useState(false);
+  const [syncNotice, setSyncNotice] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [transition, setTransition] = useState<Transition | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
@@ -71,6 +73,26 @@ export function OpportunitiesPage() {
       setError(null);
     } catch (e) {
       setError((e as Error).message);
+    }
+  };
+
+  const syncWithSales = async () => {
+    setSyncingSales(true);
+    setSyncNotice(null);
+    setError(null);
+    try {
+      const res = await api.syncOpportunitiesWithSales();
+      const total = res.ordersSynced + res.quotesSynced;
+      setSyncNotice(
+        total === 0
+          ? "El embudo ya está al día con Ventas."
+          : `Sincronizado con Ventas: ${res.ordersSynced} oportunidad(es) actualizadas por pedido y ${res.quotesSynced} por presupuesto.`
+      );
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSyncingSales(false);
     }
   };
 
@@ -165,6 +187,15 @@ export function OpportunitiesPage() {
           ]}
         />
         <div className="toolbar">
+          <button
+            type="button"
+            className="btn btn-outline"
+            disabled={syncingSales}
+            onClick={() => void syncWithSales()}
+            title="Actualiza oportunidades abiertas que ya tienen presupuestos enviados o pedidos confirmados en Ventas"
+          >
+            {syncingSales ? "Sincronizando…" : "↻ Sincronizar con Ventas"}
+          </button>
           <Link className="btn btn-outline" to="/crm/ayuda">
             ? Ayuda
           </Link>
@@ -173,6 +204,12 @@ export function OpportunitiesPage() {
           </button>
         </div>
       </div>
+
+      {syncNotice && (
+        <div className="success-banner" style={{ marginBottom: 12 }}>
+          {syncNotice}
+        </div>
+      )}
 
       {error && (
         <div className="alert">

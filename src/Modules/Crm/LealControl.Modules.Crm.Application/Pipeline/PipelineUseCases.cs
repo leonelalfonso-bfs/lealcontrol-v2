@@ -353,19 +353,22 @@ internal sealed class MoveOpportunityCommandHandler : IRequestHandler<MoveOpport
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITenantContext _tenant;
     private readonly IClock _clock;
+    private readonly LealControl.Modules.Crm.Contracts.Opportunities.IOpportunityLossGuard? _lossGuard;
 
     public MoveOpportunityCommandHandler(
         IOpportunityRepository opportunities,
         IActivityRepository activities,
         IUnitOfWork unitOfWork,
         ITenantContext tenant,
-        IClock clock)
+        IClock clock,
+        LealControl.Modules.Crm.Contracts.Opportunities.IOpportunityLossGuard? lossGuard = null)
     {
         _opportunities = opportunities;
         _activities = activities;
         _unitOfWork = unitOfWork;
         _tenant = tenant;
         _clock = clock;
+        _lossGuard = lossGuard;
     }
 
     public async Task<Result<OpportunityDto>> Handle(MoveOpportunityCommand request, CancellationToken cancellationToken)
@@ -374,6 +377,15 @@ internal sealed class MoveOpportunityCommandHandler : IRequestHandler<MoveOpport
         if (opportunity is null)
         {
             return Result<OpportunityDto>.Failure(CrmErrors.OpportunityNotFound);
+        }
+
+        if (request.Stage == OpportunityStage.Lost && _lossGuard is not null)
+        {
+            var blockingReason = await _lossGuard.GetBlockingReasonAsync(opportunity.Id.Value, cancellationToken);
+            if (!string.IsNullOrWhiteSpace(blockingReason))
+            {
+                return Result<OpportunityDto>.Failure(Error.Validation("Crm.Opportunity.HasActiveOrder", blockingReason));
+            }
         }
 
         var previousStage = opportunity.Stage;

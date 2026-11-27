@@ -13,6 +13,12 @@ public interface IQuoteRepository
         Guid opportunityId,
         CancellationToken cancellationToken = default);
 
+    Task<bool> HasOtherActiveQuoteForOpportunityAsync(
+        TenantId tenantId,
+        Guid opportunityId,
+        Guid excludeQuoteId,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<Quote>> ListAsync(TenantId tenantId, CancellationToken cancellationToken = default);
 
     Task<int> CountAsync(TenantId tenantId, CancellationToken cancellationToken = default);

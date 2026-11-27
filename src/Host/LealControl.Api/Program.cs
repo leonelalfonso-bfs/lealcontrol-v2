@@ -106,6 +106,7 @@ try
     builder.Services.AddHostedService<LealControl.Api.Automation.QuoteFollowUpBackgroundService>();
     builder.Services.AddCrmModule(builder.Configuration);
     builder.Services.AddSalesModule(builder.Configuration);
+    builder.Services.AddScoped<LealControl.Modules.Crm.Contracts.Opportunities.IOpportunityLossGuard, LealControl.Api.Automation.SalesOpportunityLossGuard>();
     builder.Services.AddCommunicationsModule(builder.Configuration);
     builder.Services.AddFinanceModule(builder.Configuration);
     builder.Services.AddHumanResourcesModule(builder.Configuration);
@@ -436,6 +437,7 @@ try
     app.MapQualityModule();
     app.MapAutomationEndpoints();
     LealControl.Api.Ai.AiEndpoints.MapAiEndpoints(app);
+    LealControl.Api.Automation.CrmSalesSyncEndpoints.MapCrmSalesSyncEndpoints(app);
     app.MapPublicWebhookEndpoints();
     app.MapGet("/api/v1/public/features", async (ICommunicationsInboxSettings settings, CancellationToken ct) =>
         Results.Ok(new { communicationsInboxEnabled = await settings.IsEnabledAsync(ct) })).AllowAnonymous();
