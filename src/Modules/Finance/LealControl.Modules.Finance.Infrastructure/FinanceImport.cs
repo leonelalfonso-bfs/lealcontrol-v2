@@ -269,6 +269,8 @@ public static class FinanceImport
                 if (existingByFingerprint.TryGetValue(fingerprint, out var queue) && queue.Count > 0)
                 {
                     var match = queue.Dequeue();
+                    // Preservar el orden real del extracto con precisión de milisegundos (PostgreSQL redondea ticks < 1 µs).
+                    match.CreatedAtUtc = stamp.AddMilliseconds(sequence++);
                     if (row.Description.Contains("Titular:") || !string.IsNullOrWhiteSpace(row.ExternalReference))
                     {
                         match.Description = row.Description;
@@ -292,7 +294,7 @@ public static class FinanceImport
                     replacedPending.Add(twin.Id);
                     twin.OperationDateUtc = row.OperationDateUtc;
                     if (row.ReportedBalance.HasValue) twin.ReportedBalance = row.ReportedBalance;
-                    twin.CreatedAtUtc = stamp.AddTicks(sequence++);
+                    twin.CreatedAtUtc = stamp.AddMilliseconds(sequence++);
                     updatedCount++;
                     continue;
                 }
@@ -314,7 +316,7 @@ public static class FinanceImport
                     BankCode = row.BankCode,
                     Origin = FinancialMovementOrigin.Imported,
                     ImportId = importId,
-                    CreatedAtUtc = stamp.AddTicks(sequence++)
+                    CreatedAtUtc = stamp.AddMilliseconds(sequence++)
                 };
                 await FinanceConcepts.ApplySuggestionAsync(db, tenantId, movement, ct);
                 db.Movements.Add(movement);
@@ -824,26 +826,104 @@ public static class FinanceImport
     public static List<FinancialMovement> StatementOrder(IEnumerable<FinancialMovement> movements)
     {
         static decimal Signed(FinancialMovement m) => m.Kind == FinancialMovementKind.Credit ? m.Amount : -m.Amount;
+
         var result = new List<FinancialMovement>();
         decimal? balance = null;
+
         foreach (var day in movements.GroupBy(m => m.OperationDateUtc.Date).OrderBy(g => g.Key))
         {
             var pending = day.OrderBy(m => m.CreatedAtUtc).ThenBy(m => m.Id).ToList();
-            var chained = pending.Where(m => m.ReportedBalance.HasValue).ToList();
-            // Sin saldo anterior, arranca el renglón cuyo saldo previo no es el saldo de ningún otro del día.
-            balance ??= chained.Select(m => (decimal?)(m.ReportedBalance!.Value - Signed(m)))
-                .FirstOrDefault(start => chained.All(o => o.ReportedBalance != start));
-            while (balance.HasValue && chained.FirstOrDefault(m => m.ReportedBalance == balance + Signed(m)) is { } next)
+            var reported = pending.Where(m => m.ReportedBalance.HasValue).ToList();
+
+            if (reported.Count == 0)
             {
-                result.Add(next);
-                chained.Remove(next);
-                pending.Remove(next);
-                balance = next.ReportedBalance;
+                result.AddRange(pending);
+                continue;
             }
-            result.AddRange(pending);
-            var lastReported = pending.LastOrDefault(m => m.ReportedBalance.HasValue);
-            if (lastReported is not null) balance = lastReported.ReportedBalance;
+
+            // Construimos el multigrafo dirigido del día: arista prevBalance -> ReportedBalance por cada movimiento.
+            var outgoing = new Dictionary<decimal, Queue<FinancialMovement>>();
+            var outDegree = new Dictionary<decimal, int>();
+            var inDegree = new Dictionary<decimal, int>();
+
+            foreach (var m in reported)
+            {
+                var to = m.ReportedBalance!.Value;
+                var from = to - Signed(m);
+                if (!outgoing.TryGetValue(from, out var q))
+                    outgoing[from] = q = new Queue<FinancialMovement>();
+                q.Enqueue(m);
+                outDegree[from] = outDegree.GetValueOrDefault(from) + 1;
+                inDegree[to] = inDegree.GetValueOrDefault(to) + 1;
+            }
+
+            // Elegir el saldo inicial del día:
+            // 1) El saldo de cierre del día anterior si tiene aristas salientes hoy.
+            // 2) Si no, el único nodo del día con outDegree > inDegree (inicio real del camino del día).
+            // 3) Si todo el día fuera un ciclo cerrado (suma neta 0), el primero según CreatedAtUtc.
+            decimal startBalance;
+            if (balance.HasValue && outgoing.ContainsKey(balance.Value))
+            {
+                startBalance = balance.Value;
+            }
+            else
+            {
+                var netStarts = outDegree.Keys.Where(k => outDegree[k] > inDegree.GetValueOrDefault(k)).ToList();
+                startBalance = netStarts.Count > 0
+                    ? netStarts[0]
+                    : reported[0].ReportedBalance!.Value - Signed(reported[0]);
+            }
+
+            // Algoritmo de Hierholzer: recorre la cadena completa del día incluyendo ciclos intra-día (ej. +300k, -200k, -100k).
+            var edgeStack = new Stack<FinancialMovement>();
+            var nodeStack = new Stack<decimal>();
+            var pathReversed = new List<FinancialMovement>(reported.Count);
+            nodeStack.Push(startBalance);
+
+            while (nodeStack.Count > 0)
+            {
+                var curr = nodeStack.Peek();
+                if (outgoing.TryGetValue(curr, out var edges) && edges.Count > 0)
+                {
+                    var edge = edges.Dequeue();
+                    edgeStack.Push(edge);
+                    nodeStack.Push(edge.ReportedBalance!.Value);
+                }
+                else
+                {
+                    nodeStack.Pop();
+                    if (edgeStack.Count > 0)
+                        pathReversed.Add(edgeStack.Pop());
+                }
+            }
+
+            pathReversed.Reverse();
+            var used = new HashSet<Guid>();
+            foreach (var m in pathReversed)
+            {
+                result.Add(m);
+                used.Add(m.Id);
+            }
+
+            // Agregar cualquier renglón sin saldo informado (manuales/expectativas) o desconectado manteniendo su orden.
+            foreach (var m in pending)
+            {
+                if (!used.Contains(m.Id))
+                    result.Add(m);
+            }
+
+            // El saldo de cierre real del día es siempre el último del camino encadenado (nunca un sobrante suelto).
+            if (pathReversed.Count > 0)
+            {
+                balance = pathReversed[^1].ReportedBalance;
+            }
+            else
+            {
+                var lastReported = reported[^1];
+                balance = lastReported.ReportedBalance;
+            }
         }
+
         return result;
     }
 
