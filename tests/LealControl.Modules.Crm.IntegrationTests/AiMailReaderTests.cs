@@ -528,4 +528,193 @@ public sealed class AiMailReaderTests : IAsyncLifetime
         Assert.True(aiSettings.GetProperty("monthSpentUsd").GetDecimal() >= 0.02m);
         Assert.True(aiSettings.GetProperty("recentUsage").GetArrayLength() >= 4);
     }
+
+    private sealed class FailOnSecondConvAi : IAiClient
+    {
+        public int FirstCalls;
+        public Task<AiCompletion> CompleteJsonAsync(string apiKey, string model, string system, string user,
+            IReadOnlyDictionary<string, JsonElement> schema, int maxTokens, CancellationToken ct, bool deeper = false, bool webSearch = false)
+        {
+            if (user.Contains("Primera empresa OK"))
+            {
+                FirstCalls++;
+                return Task.FromResult(new AiCompletion(JsonSerializer.Serialize(new
+                {
+                    category = "pedido_cotizacion", urgency = 2, summary = "Pedido 1.", is_new_business = true,
+                    opportunity_title = "Balanza Primera Empresa", company = "Primera Empresa SA", contact_name = "Carlos Ruiz",
+                    position = "Compras", cuit = "", phone = "", email = "", location = "Rosario", product = "Balanza"
+                }), 900, 150, "end_turn"));
+            }
+            if (user.Contains("Segunda falla"))
+            {
+                throw new InvalidOperationException("Falla simulada en segunda conversación");
+            }
+            if (user.Contains("Sin nombre empresa"))
+            {
+                return Task.FromResult(new AiCompletion(JsonSerializer.Serialize(new
+                {
+                    category = "pedido_cotizacion", urgency = 2, summary = "Pide precio con CUIT pero sin nombre.", is_new_business = true,
+                    opportunity_title = "Pedido sin empresa", company = "", contact_name = "Julio Perez",
+                    position = "", cuit = "30709876543", phone = "", email = "", location = "", product = "Balanza"
+                }), 900, 150, "end_turn"));
+            }
+            if (user.Contains("CUIT propio"))
+            {
+                return Task.FromResult(new AiCompletion(JsonSerializer.Serialize(new
+                {
+                    category = "pedido_cotizacion", urgency = 2, summary = "Cita firma con CUIT propio.", is_new_business = true,
+                    opportunity_title = "Consulta con CUIT propio", company = "Empresa Demo Propia SA", contact_name = "Sofia Gomez",
+                    position = "", cuit = "30712345671", phone = "", email = "", location = "", product = "Calibración"
+                }), 900, 150, "end_turn"));
+            }
+            // Match parcial "contiene" por nombre: cliente existente se llama "Metalurgica Cordoba Norte SA", mail dice "Cordoba Norte"
+            return Task.FromResult(new AiCompletion(JsonSerializer.Serialize(new
+            {
+                category = "consulta_comercial", urgency = 2, summary = "Consulta nombre parcial.", is_new_business = true,
+                opportunity_title = "Consulta parcial", company = "Cordoba Norte", contact_name = "Mario",
+                position = "", cuit = "", phone = "", email = "", location = "", product = "Balanza"
+            }), 900, 150, "end_turn"));
+        }
+    }
+
+    private sealed class OwnCuitFakeArca : IAiArcaCuitLookup
+    {
+        public Task<Result<ArcaCuitLookupResult>> LookupCuitAsync(string connectionString, Guid tenantId, string cuit, CancellationToken ct) =>
+            Task.FromResult(Result<ArcaCuitLookupResult>.Success(new ArcaCuitLookupResult(
+                cuit, "EMPRESA DEMO PROPIA S.A.", "Empresa Demo Propia", "ResponsableInscripto", "Av. Principal 100", "Rosario", "SantaFe", "2000", true)));
+    }
+
+    [Fact]
+    public async Task Saves_each_conversation_independently_blocks_own_cuit_and_empty_company_and_hardens_name_matching()
+    {
+        var tenantId = CrmWebApplicationFactory.DemoTenantId;
+        var cs = _factory.DatabaseConnectionString;
+        var now = _factory.Services.GetRequiredService<TimeProvider>().GetUtcNow().UtcDateTime;
+        using (var scope = _factory.Services.CreateScope())
+            await scope.ServiceProvider.GetRequiredService<LealControl.Api.SuperAdmin.ICommunicationsInboxSettings>().SetEnabledAsync(true);
+
+        using var admin = _factory.CreateAuthenticatedClient();
+        using var inbox = _factory.CreateClientForUser(Guid.NewGuid(), "hardening@lealcontrol.com", "Admin", "[\"communications\"]");
+
+        // Configurar CUIT propio de la empresa en CompanySettings.
+        await using (var crm = new LealControl.Modules.Crm.Infrastructure.Persistence.CrmDbContext(
+            new DbContextOptionsBuilder<LealControl.Modules.Crm.Infrastructure.Persistence.CrmDbContext>().UseNpgsql(cs).Options))
+        {
+            var tid = new LealControl.BuildingBlocks.Tenancy.TenantId(tenantId);
+            var existing = await crm.CompanySettings.FirstOrDefaultAsync(s => s.TenantId == tid);
+            if (existing is null)
+            {
+                crm.CompanySettings.Add(new LealControl.Modules.Crm.Domain.Settings.CompanySettings
+                {
+                    TenantId = tid,
+                    LegalName = "Empresa Demo Propia S.A.",
+                    TradeName = "Empresa Demo Propia",
+                    DocumentType = "Cuit",
+                    DocumentNumber = "30712345671",
+                    TaxCondition = "ResponsableInscripto",
+                    IibbRegime = "Local"
+                });
+            }
+            else
+            {
+                existing.DocumentNumber = "30712345671";
+                existing.LegalName = "Empresa Demo Propia S.A.";
+            }
+            await crm.SaveChangesAsync();
+        }
+
+        // Cliente existente cuyo nombre "contiene" "Cordoba Norte" (match parcial no debe vincular automáticamente).
+        await Ok(await admin.PostAsJsonAsync("/api/v1/crm/customers", new
+        {
+            legalName = "Metalurgica Cordoba Norte SA",
+            documentType = "Cuit",
+            documentNumber = "20304050609",
+            taxCondition = "ResponsableInscripto",
+            isCustomer = true
+        }));
+
+        await Ok(await inbox.PutAsJsonAsync("/api/v1/communications/ai/settings", new
+        {
+            apiKey = "sk-ant-prueba-hardening", monthlyBudgetUsd = 10m, mailReadingEnabled = true,
+            autoOpportunities = true, webCuitLookupEnabled = false, businessDescription = "Básculas"
+        }));
+
+        Conversation Mail(string from, string body, DateTime at) =>
+            Conversation.Create(tenantId, "email", Guid.NewGuid().ToString("N"), from, from, from, null, body, at, EmailDirection.Incoming);
+
+        // (1) Dos conversaciones: la primera OK, la segunda falla en medio de la tanda.
+        var c1 = Mail("carlos@primera.com.ar", "Primera empresa OK pide balanza", now.AddMinutes(-20));
+        var c2 = Mail("error@segunda.com.ar", "Segunda falla en el medio", now.AddMinutes(-18));
+        // (2a) CUIT en mail pero sin nombre de empresa -> no crea cliente.
+        var cNoCompany = Mail("julio@gmail.com", "Sin nombre empresa CUIT 30-70987654-3", now.AddMinutes(-15));
+        // (2b) CUIT propio de la empresa en el mail -> ignorado, no se da de alta a sí misma.
+        var cOwnCuit = Mail("sofia@gmail.com", "CUIT propio 30-71111111-8 en firma", now.AddMinutes(-12));
+        // (3) Match parcial "contiene" -> no vincula automáticamente.
+        var cContains = Mail("mario@gmail.com", "Nombre parcial Cordoba Norte", now.AddMinutes(-10));
+
+        var batch1 = new[] { c1, c2 };
+        await using (var comms = new CommunicationsDbContext(new DbContextOptionsBuilder<CommunicationsDbContext>().UseNpgsql(cs).Options))
+        {
+            await comms.EnsureTablesCreatedAsync();
+            comms.Conversations.AddRange(batch1);
+            foreach (var c in batch1)
+            {
+                var msg = EmailMessage.Create(tenantId, Guid.NewGuid(), Guid.NewGuid().ToString("N"), null, c.ThreadKey, EmailDirection.Incoming,
+                    "Asunto", c.ParticipantEmail!, "ventas@empresa.com", c.LastMessagePreview ?? "", c.LastMessageAtUtc);
+                msg.SetConversationId(c.Id);
+                comms.EmailMessages.Add(msg);
+            }
+            await comms.SaveChangesAsync();
+        }
+
+        var fakeAi = new FailOnSecondConvAi();
+        var reader = new AiMailReader(fakeAi, _factory.Services.GetRequiredService<AiKeyProtector>(), NullLogger<AiMailReader>.Instance, new OwnCuitFakeArca());
+
+        // Primera vuelta: c1 se guarda completa (CRM + comms + aiDb), c2 falla y frena la tanda.
+        Assert.Equal(1, await reader.ReadPendingAsync(cs, tenantId, now, default));
+        Assert.Equal(1, fakeAi.FirstCalls);
+
+        // Segunda vuelta (avanzando el reloj >30m para salir del cooldown de error): c1 NO se vuelve a leer ni duplica oportunidad.
+        await reader.ReadPendingAsync(cs, tenantId, now.AddMinutes(40), default);
+        Assert.Equal(1, fakeAi.FirstCalls);
+
+        var oppsAfter = await Json(await admin.GetAsync("/api/v1/crm/opportunities"));
+        Assert.Equal(1, oppsAfter.EnumerateArray().Count(o => o.GetProperty("title").GetString() == "Balanza Primera Empresa"));
+
+        // Ahora agregamos cNoCompany, cOwnCuit y cContains y los procesamos uno a uno.
+        var batch2 = new[] { cNoCompany, cOwnCuit, cContains };
+        await using (var comms = new CommunicationsDbContext(new DbContextOptionsBuilder<CommunicationsDbContext>().UseNpgsql(cs).Options))
+        {
+            comms.Conversations.AddRange(batch2);
+            foreach (var c in batch2)
+            {
+                var msg = EmailMessage.Create(tenantId, Guid.NewGuid(), Guid.NewGuid().ToString("N"), null, c.ThreadKey, EmailDirection.Incoming,
+                    "Asunto", c.ParticipantEmail!, "ventas@empresa.com", c.LastMessagePreview ?? "", c.LastMessageAtUtc);
+                msg.SetConversationId(c.Id);
+                comms.EmailMessages.Add(msg);
+            }
+            await comms.SaveChangesAsync();
+        }
+
+        foreach (var c in batch2)
+        {
+            var r = await reader.ReanalyzeConversationAsync(cs, tenantId, c.Id, now.AddMinutes(45), default);
+            Assert.True(r.Ok);
+            Assert.Null(r.CustomerId); // ninguno de los 3 debe crear ni vincular cliente automáticamente
+        }
+
+        // Verificar que la empresa propia nunca fue creada como cliente.
+        var customersAfter = await Json(await admin.GetAsync("/api/v1/crm/customers"));
+        Assert.DoesNotContain(customersAfter.GetProperty("items").EnumerateArray(), c => c.GetProperty("documentNumber").GetString() == "30712345671");
+
+        // (3) ArcaNameMatchesCompany: 1 palabra común requiere >= 5 letras y no ser genérica.
+        Assert.False(AiMailReader.ArcaNameMatchesCompany("Servicios Sur", "Servicios Industriales del Sur SA", null));
+        Assert.False(AiMailReader.ArcaNameMatchesCompany("Agro Sol", "Sol S.A.", null));
+        Assert.True(AiMailReader.ArcaNameMatchesCompany("Tecpetrol", "TECPETROL SOCIEDAD ANONIMA", null));
+
+        // (4) PublicEmailDomains unificado.
+        Assert.Null(PublicEmailDomains.ExtractCorporateDomain("usuario@gmail.com"));
+        Assert.Null(AiMailReader.ExtractCorporateDomain("usuario@fibertel.com.ar"));
+        Assert.Equal("empresa.com.ar", PublicEmailDomains.ExtractCorporateDomain("ventas@empresa.com.ar"));
+    }
 }

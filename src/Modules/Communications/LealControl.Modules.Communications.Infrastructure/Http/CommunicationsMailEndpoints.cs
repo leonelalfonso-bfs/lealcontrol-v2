@@ -729,25 +729,8 @@ internal static class CommunicationsMailEndpoints
         return group;
     }
 
-    private static readonly HashSet<string> GenericSuggestionDomains = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "gmail.com", "googlemail.com", "hotmail.com", "hotmail.com.ar", "hotmail.es",
-        "outlook.com", "outlook.com.ar", "outlook.es", "live.com", "live.com.ar", "msn.com",
-        "yahoo.com", "yahoo.com.ar", "yahoo.es", "icloud.com", "me.com", "mac.com",
-        "proton.me", "protonmail.com", "aol.com", "gmx.com", "yandex.com", "mail.com", "zoho.com",
-        "fibertel.com.ar", "speedy.com.ar", "arnet.com.ar", "ciudad.com.ar", "infovia.com.ar",
-        "sinectis.com.ar", "telecom.com.ar"
-    };
-
-    private static string? ExtractCorporateDomainForSuggestions(string email)
-    {
-        if (string.IsNullOrWhiteSpace(email)) return null;
-        var at = email.LastIndexOf('@');
-        if (at <= 0 || at >= email.Length - 1) return null;
-        var domain = email[(at + 1)..].Trim().ToLowerInvariant();
-        if (!domain.Contains('.') || GenericSuggestionDomains.Contains(domain)) return null;
-        return domain;
-    }
+    private static string? ExtractCorporateDomainForSuggestions(string email) =>
+        PublicEmailDomains.ExtractCorporateDomain(email);
 
     private static string? ExtractCompanyHint(string? participantName)
     {
