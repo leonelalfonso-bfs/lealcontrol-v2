@@ -89,6 +89,13 @@ export function CrmHelpPage() {
             Desde Clientes podés filtrar por <strong>A revisar</strong> para controlarlos antes de emitir la primera factura.
           </li>
           <li>
+            <strong>Revisión del circuito y borradores de respuesta:</strong> en cada hilo de la Bandeja se muestra el
+            estado real del circuito comercial (cliente, contacto, oportunidad, presupuestos con revisión/fecha y faltantes)
+            calculado directamente por código, sin consumir tokens de IA. Al responder, podés tocar <strong>Sugerir respuesta (IA)</strong>
+            para armar un borrador con ese contexto real (nunca se envía solo). En Configuración → Correo también tenés el botón
+            <strong>Generar informe ahora</strong> para actualizar las prioridades del Supervisor comercial cuando quieras.
+          </li>
+          <li>
             <strong>Presupuesto sin respuesta:</strong> pasados 5 días hábiles desde que se envió, si sigue en estado Enviado
             y el cliente no escribió un mail después (en una conversación vinculada a él), el sistema crea un llamado de
             seguimiento para ese día, en la oportunidad del presupuesto. Se crea una sola vez por envío.

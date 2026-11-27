@@ -42,6 +42,7 @@ public static class AiEndpoints
         services.AddSingleton<IAiArcaCuitLookup, ScopedAiArcaCuitLookup>();
         services.AddSingleton<AiMailReader>();
         services.AddSingleton<AiSupervisor>();
+        services.AddSingleton<AiReplyDrafter>();
         services.AddScoped<LealControl.Modules.Crm.Application.Leads.ILeadConvertedHook, CommunicationsLeadConvertedHook>();
         services.AddSingleton<LealControl.BuildingBlocks.Notices.INoticeProvider, AiBriefingNotices>();
         services.AddHostedService<AiBackgroundService>();
@@ -132,6 +133,53 @@ public static class AiEndpoints
                 await db.SaveChangesAsync(ct);
                 return Results.Ok(new { ok = false, detail = ex.Message });
             }
+        });
+
+        // Generar ahora el informe diario del supervisor comercial (a demanda, respetando el tope mensual).
+        group.MapPost("/supervisor-run-now", async (
+            ITenantContext tenant, ITenantConnectionProvider connections, AiSupervisor supervisor, TimeProvider clock, CancellationToken ct) =>
+        {
+            var now = clock.GetUtcNow().UtcDateTime;
+            var cs = await connections.GetConnectionStringAsync(tenant.TenantId, ct);
+            var generated = await supervisor.GenerateAsync(cs, tenant.TenantId.Value, now, ct, force: true);
+            if (!generated)
+                return Results.Ok(new { ok = false, detail = "No se pudo generar el informe. Revisá que la clave esté cargada y no se haya alcanzado el tope mensual." });
+
+            var today = LealControl.BuildingBlocks.Time.ArgentinaTime.Today(new DateTimeOffset(now, TimeSpan.Zero));
+            await using var db = await OpenAsync(cs, ct);
+            var json = await db.Briefings.AsNoTracking()
+                .Where(b => b.TenantId == tenant.TenantId.Value && b.Day == today)
+                .Select(b => b.ItemsJson).FirstOrDefaultAsync(ct) ?? "[]";
+            var count = (JsonSerializer.Deserialize<List<BriefingItem>>(json) ?? []).Count;
+            return Results.Ok(new
+            {
+                ok = true,
+                count,
+                detail = count == 0
+                    ? "Informe generado: hoy no hay avisos comerciales pendientes para priorizar."
+                    : $"Informe del supervisor actualizado con {count} prioridad{(count == 1 ? "" : "es")} para hoy (visible en Mis avisos)."
+            });
+        });
+
+        // Revisión del circuito comercial de un hilo (100% código, costo $0 en tokens).
+        var convGroup = app.MapGroup("/api/v1/communications/conversations").RequireAuthorization();
+        convGroup.MapGet("/{id:guid}/commercial-check", async (
+            Guid id, ITenantContext tenant, ITenantConnectionProvider connections,
+            LealControl.BuildingBlocks.Security.ISensitiveDataAccess access, TimeProvider clock, CancellationToken ct) =>
+        {
+            var cs = await connections.GetConnectionStringAsync(tenant.TenantId, ct);
+            var report = await CommercialCircuitChecker.CheckAsync(cs, tenant.TenantId.Value, id, access.CanSeeAmounts, clock.GetUtcNow().UtcDateTime, ct);
+            return report is null ? Results.NotFound() : Results.Ok(report);
+        });
+
+        // Borrador de respuesta con IA a pedido (nunca se envía solo; usa el estado real del circuito).
+        convGroup.MapPost("/{id:guid}/ai-draft", async (
+            Guid id, ITenantContext tenant, ITenantConnectionProvider connections,
+            LealControl.BuildingBlocks.Security.ISensitiveDataAccess access, AiReplyDrafter drafter, TimeProvider clock, CancellationToken ct) =>
+        {
+            var cs = await connections.GetConnectionStringAsync(tenant.TenantId, ct);
+            var result = await drafter.DraftAsync(cs, tenant.TenantId.Value, id, access.CanSeeAmounts, clock.GetUtcNow().UtcDateTime, ct);
+            return result.Circuit is null ? Results.NotFound() : Results.Ok(result);
         });
 
         return app;
