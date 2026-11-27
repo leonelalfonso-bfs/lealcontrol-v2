@@ -120,6 +120,8 @@ export function InboxPage() {
   const [tenantUsers, setTenantUsers] = useState<TenantUser[]>([]);
   const [suggestedMatches, setSuggestedMatches] = useState<CustomerMatch[]>([]);
   const [commercialCheck, setCommercialCheck] = useState<CommercialCircuitReport | null>(null);
+  const [reanalyzingAi, setReanalyzingAi] = useState(false);
+  const [aiTraceNotice, setAiTraceNotice] = useState<string | null>(null);
   const [pendingAudio, setPendingAudio] = useState<{ base64: string; mimeType: string; fileName: string } | null>(null);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [compose, setCompose] = useState(false);
@@ -334,6 +336,7 @@ export function InboxPage() {
   }, [customerSearch, linkCustomerOpen]);
 
   useEffect(() => {
+    setAiTraceNotice(null);
     if (!selectedConversationId) {
       setSuggestedMatches([]);
       setCommercialCheck(null);
@@ -342,6 +345,28 @@ export function InboxPage() {
     void api.getSuggestedMatches(selectedConversationId).then(setSuggestedMatches).catch(() => setSuggestedMatches([]));
     void api.getCommercialCheck(selectedConversationId).then(setCommercialCheck).catch(() => setCommercialCheck(null));
   }, [selectedConversationId, activeConversation?.relatedCustomerId, activeConversation?.relatedOpportunityId, activeConversation?.relatedLeadId]);
+
+  const reanalyzeWithAi = async () => {
+    if (!selectedConversationId) return;
+    setReanalyzingAi(true);
+    setAiTraceNotice(null);
+    setError(null);
+    try {
+      const res = await api.reanalyzeConversationWithAi(selectedConversationId);
+      if (res.ok) {
+        setAiTraceNotice(res.trace || "Análisis completado.");
+      } else {
+        setError(res.error || "No se pudo re-analizar el hilo con IA.");
+      }
+      await loadConversations();
+      const updatedCheck = await api.getCommercialCheck(selectedConversationId).catch(() => null);
+      if (updatedCheck) setCommercialCheck(updatedCheck);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setReanalyzingAi(false);
+    }
+  };
 
   const getConversationDisplayName = (c: Conversation): string => {
     if (c.participantName && !isOwnBrand(c.participantName)) return c.participantName;
@@ -1310,6 +1335,21 @@ export function InboxPage() {
                         </div>
                       ))}
                     </div>
+                  )}
+                  {(aiTraceNotice || commercialCheck.aiLastTrace) && (
+                    <div className="muted t-small" style={{ borderTop: "1px solid var(--lc-line)", paddingTop: 6 }}>
+                      <strong>IA:</strong> {aiTraceNotice || commercialCheck.aiLastTrace}
+                    </div>
+                  )}
+                  {getConversationChannel(activeConversation) === "email" && (
+                    <button
+                      type="button"
+                      className="btn ghost compact"
+                      disabled={reanalyzingAi || busy}
+                      onClick={() => void reanalyzeWithAi()}
+                    >
+                      {reanalyzingAi ? "Analizando con IA…" : "↻ Re-analizar con IA"}
+                    </button>
                   )}
                 </div>
               )}

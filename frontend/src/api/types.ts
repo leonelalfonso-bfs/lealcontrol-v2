@@ -2765,6 +2765,14 @@ export type AiSettings = {
   lastError?: string | null;
   monthSpentUsd: number;
   monthCalls: number;
+  recentUsage?: Array<{
+    atUtc: string;
+    feature: string;
+    model: string;
+    ok: boolean;
+    error?: string | null;
+    costUsd: number;
+  }>;
 };
 
 export type CommercialCircuitReport = {
@@ -2814,6 +2822,7 @@ export type CommercialCircuitReport = {
     link?: string | null;
   }>;
   isComplete: boolean;
+  aiLastTrace?: string | null;
 };
 
 export type AiDraftResult = {

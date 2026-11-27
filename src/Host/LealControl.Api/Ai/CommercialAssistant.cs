@@ -36,7 +36,8 @@ public sealed record CommercialCircuitReport(
     CircuitOpportunityInfo? Opportunity,
     IReadOnlyList<CircuitQuoteInfo> Quotes,
     IReadOnlyList<CircuitFinding> MissingItems,
-    bool IsComplete);
+    bool IsComplete,
+    string? AiLastTrace = null);
 
 /// <summary>
 /// Revisión determinística (sin IA, costo $0) del circuito comercial de una conversación:
@@ -219,7 +220,7 @@ public static class CommercialCircuitChecker
         }
 
         var isComplete = !missing.Any(m => m.Severity is "warn" or "danger");
-        return new CommercialCircuitReport(customerInfo, contactInfo, leadInfo, oppInfo, quotes, missing, isComplete);
+        return new CommercialCircuitReport(customerInfo, contactInfo, leadInfo, oppInfo, quotes, missing, isComplete, conversation.AiLastTrace);
     }
 
     private static async Task<List<CircuitQuoteInfo>> LoadQuotesAsync(

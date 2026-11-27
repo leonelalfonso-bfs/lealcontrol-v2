@@ -157,6 +157,41 @@ export function AiSettingsCard() {
           <button type="button" className="btn ghost danger" disabled={busy} onClick={(e) => void save(e as unknown as React.FormEvent, true)}>Borrar la clave</button>
         )}
       </div>
+
+      {settings.recentUsage && settings.recentUsage.length > 0 && (
+        <div className="stack" style={{ marginTop: 14, gap: 6 }}>
+          <strong className="t-small">Últimas ejecuciones de IA</strong>
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Tarea</th>
+                <th>Resultado</th>
+                <th className="t-right">Costo (USD)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {settings.recentUsage.map((u, idx) => (
+                <tr key={`${u.atUtc}-${idx}`}>
+                  <td className="t-small">{new Date(u.atUtc).toLocaleString("es-AR")}</td>
+                  <td className="t-small">
+                    {u.feature === "mail-reading" ? "Lectura de mail"
+                      : u.feature === "cuit-web-lookup" ? "Búsqueda CUIT web"
+                      : u.feature === "reply-draft" ? "Borrador de respuesta"
+                      : u.feature === "supervisor" ? "Supervisor comercial"
+                      : u.feature === "test" ? "Prueba de clave"
+                      : u.feature}
+                  </td>
+                  <td className="t-small">
+                    {u.ok ? <span className="badge ok">OK</span> : <span className="badge danger">{u.error || "Error"}</span>}
+                  </td>
+                  <td className="t-small t-right">{u.costUsd.toLocaleString("es-AR", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </form>
   );
 }
