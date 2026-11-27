@@ -458,14 +458,24 @@ public sealed class AiMailReaderTests : IAsyncLifetime
             Assert.NotNull(read[cWebCuit.Id].RelatedOpportunityId);
             agroCustomerId = read[cWebCuit.Id].RelatedCustomerId!.Value;
 
-            // 3) ARCA con condición fiscal Pendiente → NO crea cliente, cae a Lead
+            // 3) ARCA con condición fiscal Pendiente → NO crea cliente, cae a Lead y deja traza explicativa
             Assert.Null(read[cPendingTax.Id].RelatedCustomerId);
             Assert.NotNull(read[cPendingTax.Id].RelatedLeadId);
+            Assert.Contains("Pendiente", read[cPendingTax.Id].AiLastTrace ?? "", StringComparison.OrdinalIgnoreCase);
 
-            // 4) Búsqueda web devuelve CUIT de razón social distinta → bloqueado, cae a Lead
+            // 4) Búsqueda web devuelve CUIT de razón social distinta → bloqueado, cae a Lead y deja traza
             Assert.Null(read[cWrongHomonym.Id].RelatedCustomerId);
             Assert.NotNull(read[cWrongHomonym.Id].RelatedLeadId);
+            Assert.Contains("no coincide", read[cWrongHomonym.Id].AiLastTrace ?? "", StringComparison.OrdinalIgnoreCase);
+
+            // Las conversaciones exitosas también guardan traza.
+            Assert.Contains("ARCA", read[cDirectCuit.Id].AiLastTrace ?? "", StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("ARCA", read[cWebCuit.Id].AiLastTrace ?? "", StringComparison.OrdinalIgnoreCase);
         }
+
+        // El chequeo del circuito comercial expone la traza de la IA.
+        var checkDirect = await Json(await inbox.GetAsync($"/api/v1/communications/conversations/{cDirectCuit.Id}/commercial-check"));
+        Assert.Contains("ARCA", checkDirect.GetProperty("aiLastTrace").GetString() ?? "", StringComparison.OrdinalIgnoreCase);
 
         // Ambos clientes nuevos están marcados AddedAutomatically = true y tienen sus contactos guardados.
         var acopio = await Json(await admin.GetAsync($"/api/v1/crm/customers/{acopioCustomerId}"));
@@ -484,8 +494,38 @@ public sealed class AiMailReaderTests : IAsyncLifetime
         var reviewed = await Json(await admin.PostAsync($"/api/v1/crm/customers/{acopioCustomerId}/mark-reviewed", null));
         Assert.False(reviewed.GetProperty("addedAutomatically").GetBoolean());
 
-        // El gasto mensual incluye las 2 búsquedas web ($0,01 c/u = $0,02 + tokens).
+        // Re-analizar a pedido sobre un hilo YA leído cuya oportunidad estaba sin cliente: vincula el cliente a esa oportunidad.
+        var createdOpp = await Json(await admin.PostAsJsonAsync("/api/v1/crm/opportunities", new
+        {
+            title = "Oportunidad previa sin cliente"
+        }));
+        var existingOppId = createdOpp.GetProperty("id").GetGuid();
+
+        var cReanalyze = Mail("cuitdirecto@acopio.com.ar", "Acopio Sur CUIT 30-70987654-3 seguimiento", now.AddMinutes(-2));
+        cReanalyze.SetAiReading("seguimiento", 2, "Leído previamente", now.AddMinutes(-1));
+        cReanalyze.LinkOpportunity(existingOppId);
+        await using (var comms = new CommunicationsDbContext(new DbContextOptionsBuilder<CommunicationsDbContext>().UseNpgsql(cs).Options))
+        {
+            comms.Conversations.Add(cReanalyze);
+            var msg = EmailMessage.Create(tenantId, Guid.NewGuid(), Guid.NewGuid().ToString("N"), null, cReanalyze.ThreadKey, EmailDirection.Incoming,
+                "Seguimiento", cReanalyze.ParticipantEmail!, "ventas@empresa.com", cReanalyze.LastMessagePreview ?? "", cReanalyze.LastMessageAtUtc);
+            msg.SetConversationId(cReanalyze.Id);
+            comms.EmailMessages.Add(msg);
+            await comms.SaveChangesAsync();
+        }
+
+        var reanalyzed = await reader.ReanalyzeConversationAsync(cs, tenantId, cReanalyze.Id, now, default);
+        Assert.True(reanalyzed.Ok);
+        Assert.Equal(acopioCustomerId, reanalyzed.CustomerId);
+        Assert.Equal(existingOppId, reanalyzed.OpportunityId);
+        Assert.False(string.IsNullOrWhiteSpace(reanalyzed.Trace));
+
+        var customerOpps = await Json(await admin.GetAsync($"/api/v1/crm/customers/{acopioCustomerId}/opportunities"));
+        Assert.Contains(customerOpps.EnumerateArray(), o => o.GetProperty("id").GetGuid() == existingOppId);
+
+        // El gasto mensual incluye las 2 búsquedas web ($0,01 c/u = $0,02 + tokens) y expone recentUsage.
         var aiSettings = await Json(await inbox.GetAsync("/api/v1/communications/ai/settings"));
         Assert.True(aiSettings.GetProperty("monthSpentUsd").GetDecimal() >= 0.02m);
+        Assert.True(aiSettings.GetProperty("recentUsage").GetArrayLength() >= 4);
     }
 }

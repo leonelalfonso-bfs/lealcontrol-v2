@@ -591,6 +591,11 @@ export const api = {
     request<import("./types").CommercialCircuitReport>(`/api/v1/communications/conversations/${conversationId}/commercial-check`),
   generateAiReplyDraft: (conversationId: string) =>
     request<import("./types").AiDraftResult>(`/api/v1/communications/conversations/${conversationId}/ai-draft`, { method: "POST" }),
+  reanalyzeConversationWithAi: (conversationId: string) =>
+    request<{ ok: boolean; trace?: string | null; error?: string | null; customerId?: string | null; opportunityId?: string | null }>(
+      `/api/v1/communications/conversations/${conversationId}/ai-reanalyze`,
+      { method: "POST" }
+    ),
   listMailAccounts: () => request<import("./types").MailAccount[]>("/api/v1/communications/accounts"),
   saveMailAccount: (body: object) => request<{ id: string }>("/api/v1/communications/accounts", { method: "POST", body: JSON.stringify(body) }),
   testMailAccount: (id: string) => request<{ connected: boolean }>(`/api/v1/communications/accounts/${id}/test`, { method: "POST" }),

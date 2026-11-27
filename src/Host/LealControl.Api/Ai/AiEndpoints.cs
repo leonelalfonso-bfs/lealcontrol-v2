@@ -60,6 +60,12 @@ public static class AiEndpoints
             await using var db = await OpenAsync(cs, ct);
             var settings = await db.Settings.AsNoTracking().FirstOrDefaultAsync(s => s.TenantId == tenant.TenantId.Value, ct) ?? AiSettings.For(tenant.TenantId.Value);
             var (spent, calls) = await db.MonthAsync(tenant.TenantId.Value, clock.GetUtcNow().UtcDateTime, ct);
+            var recentUsage = await db.Usage.AsNoTracking()
+                .Where(u => u.TenantId == tenant.TenantId.Value)
+                .OrderByDescending(u => u.AtUtc)
+                .Take(10)
+                .Select(u => new { u.AtUtc, u.Feature, u.Model, u.Ok, u.Error, u.CostUsd })
+                .ToListAsync(ct);
             return Results.Ok(new
             {
                 provider = "Claude (Anthropic)",
@@ -77,6 +83,7 @@ public static class AiEndpoints
                 settings.LastError,
                 monthSpentUsd = Math.Round(spent, 4),
                 monthCalls = calls,
+                recentUsage,
             });
         });
 
@@ -180,6 +187,16 @@ public static class AiEndpoints
             var cs = await connections.GetConnectionStringAsync(tenant.TenantId, ct);
             var result = await drafter.DraftAsync(cs, tenant.TenantId.Value, id, access.CanSeeAmounts, clock.GetUtcNow().UtcDateTime, ct);
             return result.Circuit is null ? Results.NotFound() : Results.Ok(result);
+        });
+
+        // Re-analizar una conversación puntual con IA (para probar o actualizar hilos leídos antes).
+        convGroup.MapPost("/{id:guid}/ai-reanalyze", async (
+            Guid id, ITenantContext tenant, ITenantConnectionProvider connections,
+            AiMailReader reader, TimeProvider clock, CancellationToken ct) =>
+        {
+            var cs = await connections.GetConnectionStringAsync(tenant.TenantId, ct);
+            var result = await reader.ReanalyzeConversationAsync(cs, tenant.TenantId.Value, id, clock.GetUtcNow().UtcDateTime, ct);
+            return Results.Ok(result);
         });
 
         return app;

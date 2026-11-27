@@ -293,6 +293,7 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
             ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""AiCategory"" character varying(40);
             ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""AiUrgency"" integer;
             ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""AiSummary"" character varying(300);
+            ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""AiLastTrace"" text;
             ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""AiReadAtUtc"" timestamp with time zone;
             ALTER TABLE communications.mail_accounts ADD COLUMN IF NOT EXISTS ""IncomingFolders"" character varying(500) NOT NULL DEFAULT 'INBOX';
             ALTER TABLE communications.mail_accounts ADD COLUMN IF NOT EXISTS ""SentFolder"" character varying(200);

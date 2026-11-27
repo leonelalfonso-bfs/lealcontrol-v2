@@ -38,6 +38,14 @@ public sealed class Conversation
     public int? AiUrgency { get; private set; }
     public string? AiSummary { get; private set; }
     public DateTime? AiReadAtUtc { get; private set; }
+    /// <summary>Traza breve en español de qué hizo o por qué no vinculó/creó cliente o contacto la IA.</summary>
+    public string? AiLastTrace { get; private set; }
+
+    public void SetAiTrace(string? trace)
+    {
+        var text = (trace ?? "").Trim();
+        AiLastTrace = text.Length == 0 ? null : text.Length > 500 ? text[..500] : text;
+    }
 
     /// <summary>El nombre que leyó la IA (contacto · empresa), solo si hoy se muestra una dirección de mail.</summary>
     public void SetNameFromAi(string name)

@@ -85,7 +85,8 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
         "newsletter", "marketing", "billing", "sales", "accounting", "office", "gerencia", "direccion",
         "prensa", "legales", "consultas", "atencion", "clientes", "proveedores", "sistema", "sistemas",
         "webmaster", "comercial", "tecnica", "taller", "logistica", "deposito", "expedicion", "calidad",
-        "ingenieria", "produccion", "mantenimiento", "contaduria", "impuestos", "sueldos"
+        "ingenieria", "produccion", "mantenimiento", "contaduria", "impuestos", "sueldos",
+        "cuentascorrientes", "ctasctes", "ctacte"
     };
 
     private sealed record CustomerCandidate(
@@ -133,72 +134,147 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
                 break;
             }
 
-            var messages = await comms.EmailMessages.AsNoTracking()
-                .Where(m => m.TenantId == tenantId && m.ConversationId == conversation.Id && !m.Redacted)
-                .OrderByDescending(m => m.OccurredAtUtc).Take(4).ToListAsync(ct);
-            if (!messages.Any(m => m.Direction == EmailDirection.Incoming))
-            {
-                conversation.SetAiReading("otro", 1, "", nowUtc);
-                continue;
-            }
-
-            MailReading reading;
-            try
-            {
-                var completion = await ai.CompleteJsonAsync(apiKey, AiModels.Reader, system, Thread(messages), Schema, 1200, ct);
-                aiDb.Usage.Add(AiUsage.Record(tenantId, Feature, AiModels.Reader, completion.InputTokens, completion.OutputTokens,
-                    AiModels.Cost(AiModels.Reader, completion.InputTokens, completion.OutputTokens),
-                    completion.StopReason is "end_turn" ? null : $"La IA terminó por {completion.StopReason}", nowUtc));
-                if (completion.StopReason is not "end_turn")
-                {
-                    conversation.SetAiReading("otro", 1, "", nowUtc); // no se reintenta hasta el próximo mail
-                    continue;
-                }
-                reading = Parse(completion.Json);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                logger.LogWarning(ex, "Lectura de mails con IA falló (empresa {TenantId})", tenantId);
-                aiDb.Usage.Add(AiUsage.Record(tenantId, Feature, AiModels.Reader, 0, 0, 0m, ex.Message, nowUtc));
-                settings.RecordError(ex.Message);
-                break; // clave inválida, sin saldo o API caída: se reintenta en la próxima vuelta
-            }
-
-            conversation.SetAiReading(reading.Category, reading.Urgency, reading.Summary, nowUtc);
-            conversation.SetNameFromAi(string.Join(" · ", new[] { reading.ContactName, reading.Company }.Where(x => x.Length > 0)));
-
-            CustomerId? matchedCustomerId = null;
-            if (!IgnoredForCustomerSync.Contains(reading.Category))
-            {
-                var resolution = ResolveCustomerWithCertainty(conversation, reading, customerCandidates);
-                matchedCustomerId = resolution.CustomerId;
-
-                if (matchedCustomerId is null && !resolution.HasAmbiguityOrConflict
-                    && settings.AutoOpportunities && Commercial.Contains(reading.Category) && reading.IsNewBusiness
-                    && conversation.RelatedOpportunityId is null && arcaLookup is not null)
-                {
-                    matchedCustomerId = await TryCreateOrLinkCustomerFromArcaAsync(
-                        connectionString, tenantId, crm, aiDb, settings, apiKey, conversation, reading, customerCandidates, nowUtc, ct);
-                }
-
-                if (matchedCustomerId is { } cid)
-                {
-                    if (conversation.RelatedCustomerId is null) conversation.LinkCustomer(cid.Value);
-                    await EnsureContactSavedAsync(crm, tenant, cid, conversation, reading, nowUtc, ct);
-                }
-            }
-
-            if (settings.AutoOpportunities && Commercial.Contains(reading.Category) && reading.IsNewBusiness && conversation.RelatedOpportunityId is null)
-                await OpenOpportunityAsync(crm, tenant, conversation, reading, matchedCustomerId, nowUtc, ct);
-            if (crm.ChangeTracker.HasChanges())
-                await crm.SaveChangesAsync(ct);
-            settings.RecordError(null);
-            read++;
+            var outcome = await ProcessConversationAsync(
+                connectionString, tenantId, tenant, comms, crm, aiDb, settings, apiKey, system, conversation, customerCandidates, nowUtc, ct);
+            if (outcome.FatalError) break;
+            if (outcome.Read) read++;
         }
 
         await comms.SaveChangesAsync(ct);
         await aiDb.SaveChangesAsync(ct);
         return read;
+    }
+
+    public sealed record AiReanalyzeResult(bool Ok, string? Trace, string? Error, Guid? CustomerId, Guid? OpportunityId);
+
+    /// <summary>Re-analiza una conversación puntual a pedido (aunque ya haya sido leída antes).</summary>
+    public async Task<AiReanalyzeResult> ReanalyzeConversationAsync(
+        string connectionString, Guid tenantId, Guid conversationId, DateTime nowUtc, CancellationToken ct)
+    {
+        await using var aiDb = await AiEndpoints.OpenAsync(connectionString, ct);
+        var settings = await aiDb.Settings.FirstOrDefaultAsync(s => s.TenantId == tenantId, ct);
+        if (settings?.ProtectedApiKey is null)
+            return new(false, null, "Cargá la clave de la API de IA en Configuración → Comunicaciones → Correo.", null, null);
+
+        var (spent, _) = await aiDb.MonthAsync(tenantId, nowUtc, ct);
+        if (spent >= settings.MonthlyBudgetUsd)
+            return new(false, null, $"Se alcanzó el tope mensual de {settings.MonthlyBudgetUsd} USD.", null, null);
+
+        await using var comms = new CommunicationsDbContext(new DbContextOptionsBuilder<CommunicationsDbContext>().UseNpgsql(connectionString).Options);
+        await comms.EnsureTablesCreatedAsync(ct);
+        var conversation = await comms.Conversations.FirstOrDefaultAsync(c => c.Id == conversationId && c.TenantId == tenantId, ct);
+        if (conversation is null) return new(false, null, "No se encontró la conversación.", null, null);
+
+        await using var crm = new CrmDbContext(new DbContextOptionsBuilder<CrmDbContext>().UseNpgsql(connectionString).Options);
+        var tenant = new TenantId(tenantId);
+        var company = await crm.CompanySettings.AsNoTracking().Where(s => s.TenantId == tenant)
+            .Select(s => s.TradeName ?? s.LegalName).FirstOrDefaultAsync(ct);
+        var system = SystemPrompt(company, settings.BusinessDescription);
+        var apiKey = keys.Unprotect(settings.ProtectedApiKey);
+        var customerCandidates = await LoadCustomerCandidatesAsync(crm, tenant, ct);
+
+        var outcome = await ProcessConversationAsync(
+            connectionString, tenantId, tenant, comms, crm, aiDb, settings, apiKey, system, conversation, customerCandidates, nowUtc, ct);
+
+        await comms.SaveChangesAsync(ct);
+        await aiDb.SaveChangesAsync(ct);
+        return new(outcome.Read, conversation.AiLastTrace, outcome.Error, conversation.RelatedCustomerId, conversation.RelatedOpportunityId);
+    }
+
+    private sealed record ProcessOutcome(bool Read, bool FatalError, string? Error);
+
+    private async Task<ProcessOutcome> ProcessConversationAsync(
+        string connectionString, Guid tenantId, TenantId tenant, CommunicationsDbContext comms, CrmDbContext crm,
+        AiDbContext aiDb, AiSettings settings, string apiKey, string system, Conversation conversation,
+        List<CustomerCandidate> customerCandidates, DateTime nowUtc, CancellationToken ct)
+    {
+        var messages = await comms.EmailMessages.AsNoTracking()
+            .Where(m => m.TenantId == tenantId && m.ConversationId == conversation.Id && !m.Redacted)
+            .OrderByDescending(m => m.OccurredAtUtc).Take(4).ToListAsync(ct);
+        if (!messages.Any(m => m.Direction == EmailDirection.Incoming))
+        {
+            conversation.SetAiReading("otro", 1, "", nowUtc);
+            conversation.SetAiTrace("Sin mails entrantes para analizar.");
+            return new(false, false, "Sin mails entrantes para analizar.");
+        }
+
+        MailReading reading;
+        try
+        {
+            var completion = await ai.CompleteJsonAsync(apiKey, AiModels.Reader, system, Thread(messages), Schema, 1200, ct);
+            aiDb.Usage.Add(AiUsage.Record(tenantId, Feature, AiModels.Reader, completion.InputTokens, completion.OutputTokens,
+                AiModels.Cost(AiModels.Reader, completion.InputTokens, completion.OutputTokens),
+                completion.StopReason is "end_turn" ? null : $"La IA terminó por {completion.StopReason}", nowUtc));
+            if (completion.StopReason is not "end_turn")
+            {
+                conversation.SetAiReading("otro", 1, "", nowUtc);
+                conversation.SetAiTrace($"La lectura terminó incompleta ({completion.StopReason}).");
+                return new(false, false, $"La IA terminó por {completion.StopReason}");
+            }
+            reading = Parse(completion.Json);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Lectura de mails con IA falló (empresa {TenantId})", tenantId);
+            aiDb.Usage.Add(AiUsage.Record(tenantId, Feature, AiModels.Reader, 0, 0, 0m, ex.Message, nowUtc));
+            settings.RecordError(ex.Message);
+            return new(false, true, ex.Message);
+        }
+
+        var trace = new List<string>();
+        conversation.SetAiReading(reading.Category, reading.Urgency, reading.Summary, nowUtc);
+        conversation.SetNameFromAi(string.Join(" · ", new[] { reading.ContactName, reading.Company }.Where(x => x.Length > 0)));
+
+        CustomerId? matchedCustomerId = null;
+        if (!IgnoredForCustomerSync.Contains(reading.Category))
+        {
+            var resolution = ResolveCustomerWithCertainty(conversation, reading, customerCandidates);
+            matchedCustomerId = resolution.CustomerId;
+            if (!string.IsNullOrEmpty(resolution.Reason)) trace.Add(resolution.Reason);
+
+            if (matchedCustomerId is null && !resolution.HasAmbiguityOrConflict
+                && settings.AutoOpportunities && Commercial.Contains(reading.Category) && reading.IsNewBusiness
+                && arcaLookup is not null)
+            {
+                matchedCustomerId = await TryCreateOrLinkCustomerFromArcaAsync(
+                    connectionString, tenantId, crm, aiDb, settings, apiKey, conversation, reading, customerCandidates, trace, nowUtc, ct);
+            }
+
+            if (matchedCustomerId is { } cid)
+            {
+                if (conversation.RelatedCustomerId is null) conversation.LinkCustomer(cid.Value);
+                var contactNote = await EnsureContactSavedAsync(crm, tenant, cid, conversation, reading, nowUtc, ct);
+                if (!string.IsNullOrEmpty(contactNote)) trace.Add(contactNote);
+
+                // Si ya existía una oportunidad sin cliente vinculada a este hilo, la asociamos al cliente ahora.
+                if (conversation.RelatedOpportunityId is { } existingOppId)
+                {
+                    var existingOpp = await crm.Opportunities.FirstOrDefaultAsync(
+                        o => o.TenantId == tenant && o.Id == new OpportunityId(existingOppId), ct);
+                    if (existingOpp is not null && existingOpp.CustomerId is null)
+                    {
+                        existingOpp.AttachCustomer(cid, nowUtc);
+                        trace.Add("Oportunidad existente vinculada al cliente");
+                    }
+                }
+            }
+        }
+        else
+        {
+            trace.Add($"Clasificado como {reading.Category} (no crea clientes ni contactos)");
+        }
+
+        if (settings.AutoOpportunities && Commercial.Contains(reading.Category) && reading.IsNewBusiness && conversation.RelatedOpportunityId is null)
+        {
+            await OpenOpportunityAsync(crm, tenant, conversation, reading, matchedCustomerId, nowUtc, ct);
+            if (conversation.RelatedOpportunityId is not null) trace.Add("Oportunidad abierta");
+        }
+        if (crm.ChangeTracker.HasChanges())
+            await crm.SaveChangesAsync(ct);
+
+        conversation.SetAiTrace(string.Join(" · ", trace));
+        settings.RecordError(null);
+        return new(true, false, null);
     }
 
     private static async Task<List<CustomerCandidate>> LoadCustomerCandidatesAsync(CrmDbContext crm, TenantId tenant, CancellationToken ct)
@@ -218,7 +294,7 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
         )).ToList();
     }
 
-    private sealed record CustomerResolution(CustomerId? CustomerId, bool HasAmbiguityOrConflict);
+    private sealed record CustomerResolution(CustomerId? CustomerId, bool HasAmbiguityOrConflict, string? Reason);
 
     /// <summary>
     /// Vincula un cliente existente solo con certeza:
@@ -230,8 +306,8 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
     /// </summary>
     private static CustomerResolution ResolveCustomerWithCertainty(Conversation conversation, MailReading reading, List<CustomerCandidate> candidates)
     {
-        if (conversation.RelatedCustomerId is { } linked) return new(new CustomerId(linked), false);
-        if (candidates.Count == 0) return new(null, false);
+        if (conversation.RelatedCustomerId is { } linked) return new(new CustomerId(linked), false, "Cliente ya vinculado");
+        if (candidates.Count == 0) return new(null, false, null);
 
         var senderEmail = (conversation.ParticipantEmail ?? "").Trim().ToLowerInvariant();
         var cuit = new string(reading.Cuit.Where(char.IsDigit).ToArray());
@@ -253,16 +329,20 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
         // Candado de conflicto: si el CUIT del mail y el mail/dominio del remitente apuntan a clientes distintos, no vincular.
         if (cuitMatches.Count > 0)
         {
-            if (emailMatches.Count > 0 && !emailMatches.Any(id => cuitMatches.Contains(id))) return new(null, true);
-            if (domainMatches.Count > 0 && !domainMatches.Any(id => cuitMatches.Contains(id))) return new(null, true);
-            return cuitMatches.Count == 1 ? new(cuitMatches[0], false) : new(null, true);
+            if (emailMatches.Count > 0 && !emailMatches.Any(id => cuitMatches.Contains(id)))
+                return new(null, true, "Sin vincular: el CUIT del mail y el remitente apuntan a clientes distintos");
+            if (domainMatches.Count > 0 && !domainMatches.Any(id => cuitMatches.Contains(id)))
+                return new(null, true, "Sin vincular: el CUIT del mail y el dominio del remitente apuntan a clientes distintos");
+            return cuitMatches.Count == 1
+                ? new(cuitMatches[0], false, "Cliente vinculado por CUIT")
+                : new(null, true, "Sin vincular: más de un cliente con ese CUIT");
         }
 
-        if (emailMatches.Count == 1) return new(emailMatches[0], false);
-        if (emailMatches.Count > 1) return new(null, true);
+        if (emailMatches.Count == 1) return new(emailMatches[0], false, "Cliente vinculado por mail");
+        if (emailMatches.Count > 1) return new(null, true, "Sin vincular: más de un cliente tiene ese mail");
 
-        if (domainMatches.Count == 1) return new(domainMatches[0], false);
-        if (domainMatches.Count > 1) return new(null, true);
+        if (domainMatches.Count == 1) return new(domainMatches[0], false, $"Cliente vinculado por dominio (@{corporateDomain})");
+        if (domainMatches.Count > 1) return new(null, true, $"Sin vincular: {domainMatches.Count} clientes comparten @{corporateDomain}");
 
         var normalizedCompany = NormalizeCompanyName(reading.Company);
         if (normalizedCompany.Length >= 3)
@@ -271,8 +351,8 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
                 .Where(c => NormalizeCompanyName(c.LegalName) == normalizedCompany
                     || (c.TradeName is not null && NormalizeCompanyName(c.TradeName) == normalizedCompany))
                 .Select(c => c.Id).Distinct().ToList();
-            if (exactNameMatches.Count == 1) return new(exactNameMatches[0], false);
-            if (exactNameMatches.Count > 1) return new(null, true);
+            if (exactNameMatches.Count == 1) return new(exactNameMatches[0], false, "Cliente vinculado por nombre de empresa");
+            if (exactNameMatches.Count > 1) return new(null, true, "Sin vincular: varios clientes coinciden con ese nombre");
 
             if (normalizedCompany.Length >= 5)
             {
@@ -280,12 +360,12 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
                     .Where(c => NameContainsWholeWords(NormalizeCompanyName(c.LegalName), normalizedCompany)
                         || (c.TradeName is not null && NameContainsWholeWords(NormalizeCompanyName(c.TradeName), normalizedCompany)))
                     .Select(c => c.Id).Distinct().ToList();
-                if (containsNameMatches.Count == 1) return new(containsNameMatches[0], false);
-                if (containsNameMatches.Count > 1) return new(null, true);
+                if (containsNameMatches.Count == 1) return new(containsNameMatches[0], false, "Cliente vinculado por nombre parecido");
+                if (containsNameMatches.Count > 1) return new(null, true, "Sin vincular: varios clientes con nombre parecido");
             }
         }
 
-        return new(null, false);
+        return new(null, false, null);
     }
 
     /// <summary>
@@ -295,29 +375,51 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
     /// </summary>
     private async Task<CustomerId?> TryCreateOrLinkCustomerFromArcaAsync(
         string connectionString, Guid tenantId, CrmDbContext crm, AiDbContext aiDb, AiSettings settings, string apiKey,
-        Conversation conversation, MailReading reading, List<CustomerCandidate> candidates, DateTime nowUtc, CancellationToken ct)
+        Conversation conversation, MailReading reading, List<CustomerCandidate> candidates, List<string> trace, DateTime nowUtc, CancellationToken ct)
     {
         var cuit = new string(reading.Cuit.Where(char.IsDigit).ToArray());
         var cuitFromWeb = false;
         if (Cuit.Create(cuit).IsFailure)
         {
             cuit = "";
-            if (settings.WebCuitLookupEnabled && NormalizeCompanyName(reading.Company).Length >= 3)
+            if (!settings.WebCuitLookupEnabled)
             {
-                var (spent, _) = await aiDb.MonthAsync(tenantId, nowUtc, ct);
-                if (spent < settings.MonthlyBudgetUsd)
-                {
-                    cuit = await SearchCuitOnWebAsync(aiDb, tenantId, apiKey, conversation, reading, nowUtc, ct);
-                    cuitFromWeb = cuit.Length == 11;
-                }
+                trace.Add("Sin CUIT en el mail (búsqueda web desactivada)");
+                return null;
             }
+            if (NormalizeCompanyName(reading.Company).Length < 3)
+            {
+                trace.Add("Sin nombre de empresa claro para buscar CUIT");
+                return null;
+            }
+            var (spent, _) = await aiDb.MonthAsync(tenantId, nowUtc, ct);
+            if (spent >= settings.MonthlyBudgetUsd)
+            {
+                trace.Add("Búsqueda web omitida por tope mensual");
+                return null;
+            }
+            var (foundCuit, webError) = await SearchCuitOnWebAsync(aiDb, tenantId, apiKey, conversation, reading, nowUtc, ct);
+            cuit = foundCuit;
+            cuitFromWeb = cuit.Length == 11;
+            if (!cuitFromWeb)
+            {
+                trace.Add(webError is not null
+                    ? $"Búsqueda web de CUIT falló: {webError}"
+                    : $"Búsqueda web de CUIT para «{reading.Company}»: no encontró con certeza");
+                return null;
+            }
+            trace.Add($"CUIT encontrado en web: {cuit}");
         }
 
         if (cuit.Length != 11 || Cuit.Create(cuit).IsFailure) return null;
 
         // Si el CUIT encontrado en la web ya existe en nuestros clientes, vinculamos ese cliente en vez de duplicar.
         var existingByCuit = candidates.FirstOrDefault(c => c.DocumentNumber == cuit);
-        if (existingByCuit is not null) return existingByCuit.Id;
+        if (existingByCuit is not null)
+        {
+            trace.Add("Cliente existente vinculado por CUIT");
+            return existingByCuit.Id;
+        }
 
         Result<ArcaCuitLookupResult> lookup;
         try
@@ -327,20 +429,40 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogWarning(ex, "IA: falló la consulta a ARCA para el CUIT {Cuit}", cuit);
+            trace.Add($"ARCA falló al consultar {cuit}: {ex.Message}");
             return null;
         }
 
-        if (lookup.IsFailure || !lookup.Value.IsActive || string.IsNullOrWhiteSpace(lookup.Value.LegalName)) return null;
+        if (lookup.IsFailure)
+        {
+            trace.Add($"ARCA rechazó {cuit}: {lookup.Error.Message}");
+            return null;
+        }
+        if (!lookup.Value.IsActive || string.IsNullOrWhiteSpace(lookup.Value.LegalName))
+        {
+            trace.Add($"ARCA devolvió {cuit} inactivo o sin razón social");
+            return null;
+        }
 
         // Regla fiscal estricta: nunca dar de alta un cliente con condición fiscal desconocida o pendiente.
-        if (!TryParseKnownTaxCondition(lookup.Value.TaxCondition, out var taxCondition)) return null;
+        if (!TryParseKnownTaxCondition(lookup.Value.TaxCondition, out var taxCondition))
+        {
+            trace.Add($"ARCA devolvió condición fiscal no válida ({lookup.Value.TaxCondition})");
+            return null;
+        }
 
         // Candado de identidad: verificar que la razón social de ARCA coincida con la empresa del mail.
         if (cuitFromWeb && !ArcaNameMatchesCompany(reading.Company, lookup.Value.LegalName, lookup.Value.TradeName))
+        {
+            trace.Add($"ARCA devolvió «{lookup.Value.LegalName}», no coincide con «{reading.Company}»");
             return null;
+        }
         if (!cuitFromWeb && NormalizeCompanyName(reading.Company).Length >= 3
             && !ArcaNameMatchesCompany(reading.Company, lookup.Value.LegalName, lookup.Value.TradeName))
+        {
+            trace.Add($"ARCA devolvió «{lookup.Value.LegalName}», no coincide con «{reading.Company}»");
             return null;
+        }
 
         var document = PartyDocument.ForTaxCondition(taxCondition, DocumentType.Cuit, lookup.Value.Cuit);
         if (document.IsFailure) return null;
@@ -395,10 +517,11 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
             null,
             []));
 
+        trace.Add($"Cliente creado desde ARCA (A revisar): {registered.Value.LegalName}");
         return registered.Value.Id;
     }
 
-    private async Task<string> SearchCuitOnWebAsync(
+    private async Task<(string Cuit, string? Error)> SearchCuitOnWebAsync(
         AiDbContext aiDb, Guid tenantId, string apiKey, Conversation conversation, MailReading reading, DateTime nowUtc, CancellationToken ct)
     {
         var domain = ExtractCorporateDomain(conversation.ParticipantEmail);
@@ -415,20 +538,20 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
             aiDb.Usage.Add(AiUsage.Record(tenantId, WebCuitFeature, AiModels.Reader, completion.InputTokens, completion.OutputTokens,
                 AiModels.Cost(AiModels.Reader, completion.InputTokens, completion.OutputTokens, completion.WebSearchRequests),
                 completion.StopReason is "end_turn" ? null : $"La IA terminó por {completion.StopReason}", nowUtc));
-            if (completion.StopReason is not "end_turn") return "";
+            if (completion.StopReason is not "end_turn") return ("", $"respuesta incompleta ({completion.StopReason})");
 
             using var doc = JsonDocument.Parse(completion.Json);
             var root = doc.RootElement;
             var raw = root.TryGetProperty("cuit", out var c) && c.ValueKind == JsonValueKind.String ? c.GetString() ?? "" : "";
             var confident = root.TryGetProperty("confident", out var cf) && cf.ValueKind == JsonValueKind.True;
             var digits = new string(raw.Where(char.IsDigit).ToArray());
-            return confident && digits.Length == 11 && Cuit.Create(digits).IsSuccess ? digits : "";
+            return confident && digits.Length == 11 && Cuit.Create(digits).IsSuccess ? (digits, null) : ("", null);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogWarning(ex, "IA: búsqueda web de CUIT falló para {Company}", reading.Company);
             aiDb.Usage.Add(AiUsage.Record(tenantId, WebCuitFeature, AiModels.Reader, 0, 0, 0m, ex.Message, nowUtc));
-            return "";
+            return ("", ex.Message);
         }
     }
 
@@ -513,37 +636,39 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
     };
 
     /// <summary>Guarda el contacto en el cliente existente si es una persona real con dirección no genérica y aún no existe.</summary>
-    private static async Task EnsureContactSavedAsync(
+    private static async Task<string?> EnsureContactSavedAsync(
         CrmDbContext crm, TenantId tenant, CustomerId customerId, Conversation conversation, MailReading reading, DateTime nowUtc, CancellationToken ct)
     {
         var rawEmail = FirstNonEmpty(conversation.ParticipantEmail, reading.Email).Trim().ToLowerInvariant();
-        if (rawEmail.Length == 0 || IsGenericEmailAddress(rawEmail)) return;
+        if (rawEmail.Length == 0 || IsGenericEmailAddress(rawEmail))
+            return "Contacto omitido (casilla genérica)";
 
         var contactName = reading.ContactName.Trim();
-        if (contactName.Length < 2 || contactName.Contains('@')) return;
+        if (contactName.Length < 2 || contactName.Contains('@'))
+            return "Contacto omitido (sin nombre de persona en el mail)";
 
         var email = EmailAddress.CreateOptional(rawEmail);
-        if (email.IsFailure || email.Value is null) return;
+        if (email.IsFailure || email.Value is null) return null;
 
         var customer = await crm.Customers
             .Include(c => c.Contacts)
             .FirstOrDefaultAsync(c => c.TenantId == tenant && c.Id == customerId && c.DeletedAtUtc == null, ct);
-        if (customer is null) return;
+        if (customer is null) return null;
 
         // No guardar si el nombre es igual al de la empresa (sin persona real).
         var normContact = NormalizeCompanyName(contactName);
         if (normContact.Length > 0 && (normContact == NormalizeCompanyName(customer.LegalName)
             || (customer.TradeName is not null && normContact == NormalizeCompanyName(customer.TradeName))
             || (reading.Company.Length > 0 && normContact == NormalizeCompanyName(reading.Company))))
-            return;
+            return "Contacto omitido (sin nombre de persona, solo empresa)";
 
         // No duplicar si el mail ya está en el cliente o en alguno de sus contactos.
-        if (string.Equals(customer.Email?.Value, rawEmail, StringComparison.OrdinalIgnoreCase)) return;
-        if (customer.Contacts.Any(c => string.Equals(c.Email?.Value, rawEmail, StringComparison.OrdinalIgnoreCase))) return;
+        if (string.Equals(customer.Email?.Value, rawEmail, StringComparison.OrdinalIgnoreCase)) return null;
+        if (customer.Contacts.Any(c => string.Equals(c.Email?.Value, rawEmail, StringComparison.OrdinalIgnoreCase))) return null;
 
         var phone = PhoneNumber.CreateOptional(reading.Phone);
         var role = InferContactRole(reading.Position, reading.Category);
-        customer.AddContact(
+        var added = customer.AddContact(
             contactName,
             role,
             locationId: null,
@@ -555,6 +680,9 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
             nowUtc,
             position: NullIfEmpty(reading.Position),
             addedAutomatically: true);
+        return added.IsSuccess
+            ? $"Contacto guardado: {contactName}{(string.IsNullOrWhiteSpace(reading.Position) ? "" : $" ({reading.Position})")}"
+            : null;
     }
 
     /// <summary>Oportunidad nueva en "Relevamiento", con el cliente existente o con un lead nuevo (sin duplicar leads abiertos).</summary>
