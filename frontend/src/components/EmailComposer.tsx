@@ -20,6 +20,8 @@ export type EmailContext = {
   inReplyTo?: string | null;
   /** Genera el PDF del documento al enviar (marcado por defecto). */
   documentPdf?: { elementId: string; fileName: string };
+  /** Si se pasa, dispara automáticamente el borrador de IA al abrir el compositor. */
+  autoDraftFocus?: "missing_info";
 };
 
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
@@ -81,17 +83,21 @@ export function EmailComposer({ context, onClose, onSent }: { context: EmailCont
     api.getCommercialCheck(context.conversationId).then(setCircuit).catch(() => setCircuit(null));
   }, [context.conversationId]);
 
-  const suggestReply = async () => {
+  const suggestReply = async (focus?: "missing_info") => {
     if (!context.conversationId) return;
     setDrafting(true);
     setError(null);
     setDraftNote(null);
     try {
-      const res = await api.generateAiReplyDraft(context.conversationId);
+      const res = await api.generateAiReplyDraft(context.conversationId, focus);
       if (res.circuit) setCircuit(res.circuit);
       if (res.ok && res.body) {
         setBody(res.body);
-        setDraftNote("Borrador armado con el estado real del circuito. Revisalo y editalo antes de enviar.");
+        setDraftNote(
+          focus === "missing_info"
+            ? "Borrador armado para pedir los datos faltantes antes de cotizar. Revisalo antes de enviar."
+            : "Borrador armado con el estado real del circuito. Revisalo y editalo antes de enviar."
+        );
       } else {
         setError(res.error || "No se pudo generar el borrador.");
       }
@@ -101,6 +107,13 @@ export function EmailComposer({ context, onClose, onSent }: { context: EmailCont
       setDrafting(false);
     }
   };
+
+  useEffect(() => {
+    if (context.autoDraftFocus && context.conversationId) {
+      void suggestReply(context.autoDraftFocus);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [context.autoDraftFocus, context.conversationId]);
 
   const selectedAccount = accounts.find((a) => a.id === accountId);
   const signature = selectedAccount?.signature?.trim() || "";

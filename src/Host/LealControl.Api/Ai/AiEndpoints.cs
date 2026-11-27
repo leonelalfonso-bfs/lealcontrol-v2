@@ -181,11 +181,11 @@ public static class AiEndpoints
 
         // Borrador de respuesta con IA a pedido (nunca se envía solo; usa el estado real del circuito).
         convGroup.MapPost("/{id:guid}/ai-draft", async (
-            Guid id, ITenantContext tenant, ITenantConnectionProvider connections,
+            Guid id, string? focus, ITenantContext tenant, ITenantConnectionProvider connections,
             LealControl.BuildingBlocks.Security.ISensitiveDataAccess access, AiReplyDrafter drafter, TimeProvider clock, CancellationToken ct) =>
         {
             var cs = await connections.GetConnectionStringAsync(tenant.TenantId, ct);
-            var result = await drafter.DraftAsync(cs, tenant.TenantId.Value, id, access.CanSeeAmounts, clock.GetUtcNow().UtcDateTime, ct);
+            var result = await drafter.DraftAsync(cs, tenant.TenantId.Value, id, access.CanSeeAmounts, clock.GetUtcNow().UtcDateTime, ct, focus);
             return result.Circuit is null ? Results.NotFound() : Results.Ok(result);
         });
 

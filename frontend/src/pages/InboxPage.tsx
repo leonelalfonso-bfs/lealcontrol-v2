@@ -126,6 +126,7 @@ export function InboxPage() {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [compose, setCompose] = useState(false);
   const [reply, setReply] = useState(false);
+  const [replyAutoDraftFocus, setReplyAutoDraftFocus] = useState<"missing_info" | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [channel, setChannel] = useState<ChannelType>("all");
@@ -1114,7 +1115,7 @@ export function InboxPage() {
                 </form>
               ) : (
                 <div style={{ padding: 14, borderTop: "1px solid var(--lc-line)", display: "flex", justifyContent: "flex-end" }}>
-                  <button className="btn btn-outline" onClick={() => setReply(true)}>
+                  <button className="btn btn-outline" onClick={() => { setReplyAutoDraftFocus(undefined); setReply(true); }}>
                     ↩ Responder Correo
                   </button>
                 </div>
@@ -1129,9 +1130,10 @@ export function InboxPage() {
                     to: activeConversation.participantEmail || activeConversation.participantId,
                     subject: activeMessages[activeMessages.length - 1].subject.startsWith("Re:") ? activeMessages[activeMessages.length - 1].subject : `Re: ${activeMessages[activeMessages.length - 1].subject}`,
                     body: `\n\n--- Mensaje original ---\n${activeMessages[activeMessages.length - 1].bodyPreview}`,
-                    inReplyTo: activeMessages[activeMessages.length - 1].internetMessageId
+                    inReplyTo: activeMessages[activeMessages.length - 1].internetMessageId,
+                    autoDraftFocus: replyAutoDraftFocus
                   }}
-                  onClose={() => setReply(false)}
+                  onClose={() => { setReply(false); setReplyAutoDraftFocus(undefined); }}
                   onSent={async () => { await loadConversations(); if (selectedConversationId) await loadActiveMessages(selectedConversationId); }}
                 />
               )}
@@ -1301,6 +1303,34 @@ export function InboxPage() {
                       {commercialCheck.isComplete ? "Al día" : `${commercialCheck.missingItems.length} pendiente${commercialCheck.missingItems.length === 1 ? "" : "s"}`}
                     </span>
                   </div>
+                  {commercialCheck.aiQuoteDeadlineUtc && (
+                    <div className="t-small" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, padding: "4px 6px", borderRadius: 6, background: "var(--lc-surface-2)" }}>
+                      <span className="muted">Cierre de cotización</span>
+                      <strong>{new Date(commercialCheck.aiQuoteDeadlineUtc).toLocaleDateString("es-AR")}</strong>
+                    </div>
+                  )}
+                  {commercialCheck.customerHistory && (
+                    <div className="t-small muted" style={{ padding: "4px 6px", borderRadius: 6, background: "var(--lc-surface-2)" }}>
+                      Historial: <strong>{commercialCheck.customerHistory.totalQuotes}</strong> presupuesto{commercialCheck.customerHistory.totalQuotes === 1 ? "" : "s"}
+                      {commercialCheck.customerHistory.acceptedQuotes > 0 && ` (${commercialCheck.customerHistory.acceptedQuotes} aceptado${commercialCheck.customerHistory.acceptedQuotes === 1 ? "" : "s"})`}
+                      {commercialCheck.customerHistory.overdueInvoicesCount > 0 && (
+                        <> · <span className="badge danger">{commercialCheck.customerHistory.overdueInvoicesCount} vencida{commercialCheck.customerHistory.overdueInvoicesCount === 1 ? "" : "s"}</span></>
+                      )}
+                    </div>
+                  )}
+                  {commercialCheck.aiMissingInfo && getConversationChannel(activeConversation) === "email" && (
+                    <div className="stack" style={{ gap: 6, padding: "6px 8px", borderRadius: 6, background: "var(--lc-surface-2)", border: "1px solid var(--lc-line)" }}>
+                      <span className="t-small"><strong>Falta para cotizar:</strong> {commercialCheck.aiMissingInfo}</span>
+                      <button
+                        type="button"
+                        className="btn btn-outline compact"
+                        disabled={busy || activeMessages.length === 0}
+                        onClick={() => { setReplyAutoDraftFocus("missing_info"); setReply(true); }}
+                      >
+                        ✨ Pedir datos faltantes
+                      </button>
+                    </div>
+                  )}
                   {commercialCheck.quotes.length > 0 && (
                     <div className="stack" style={{ gap: 4 }}>
                       <span className="muted t-small">Presupuestos</span>

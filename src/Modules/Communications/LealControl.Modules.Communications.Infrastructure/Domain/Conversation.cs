@@ -40,11 +40,22 @@ public sealed class Conversation
     public DateTime? AiReadAtUtc { get; private set; }
     /// <summary>Traza breve en español de qué hizo o por qué no vinculó/creó cliente o contacto la IA.</summary>
     public string? AiLastTrace { get; private set; }
+    /// <summary>Datos técnicos o comerciales faltantes para poder cotizar, detectados por la IA.</summary>
+    public string? AiMissingInfo { get; private set; }
+    /// <summary>Fecha límite de entrega de cotización/oferta detectada por la IA en el mail o adjunto.</summary>
+    public DateTime? AiQuoteDeadlineUtc { get; private set; }
 
     public void SetAiTrace(string? trace)
     {
         var text = (trace ?? "").Trim();
         AiLastTrace = text.Length == 0 ? null : text.Length > 500 ? text[..500] : text;
+    }
+
+    public void SetAiQuoteReadiness(string? missingInfo, DateTime? quoteDeadlineUtc)
+    {
+        var text = (missingInfo ?? "").Trim();
+        AiMissingInfo = text.Length == 0 ? null : text.Length > 500 ? text[..500] : text;
+        AiQuoteDeadlineUtc = quoteDeadlineUtc;
     }
 
     /// <summary>El nombre que leyó la IA (contacto · empresa), solo si hoy se muestra una dirección de mail.</summary>

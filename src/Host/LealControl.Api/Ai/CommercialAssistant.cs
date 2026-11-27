@@ -14,6 +14,7 @@ using LealControl.Modules.Crm.Domain.Customers;
 using LealControl.Modules.Crm.Domain.Leads;
 using LealControl.Modules.Crm.Domain.Opportunities;
 using LealControl.Modules.Crm.Infrastructure.Persistence;
+using LealControl.Modules.Finance.Infrastructure;
 using LealControl.Modules.Sales.Domain.Quotes;
 using LealControl.Modules.Sales.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -27,6 +28,7 @@ public sealed record CircuitContactInfo(bool Saved, string? Name, string? Positi
 public sealed record CircuitLeadInfo(Guid Id, string Name, string Status);
 public sealed record CircuitOpportunityInfo(Guid Id, string Title, string Stage, string StageLabel, decimal? Amount, string? Currency, string? OwnerName, bool HasNextAction, DateTime? NextFollowUpUtc);
 public sealed record CircuitQuoteInfo(Guid Id, string Number, int Revision, string Status, string StatusLabel, DateTime? SentAtUtc, int? DaysSinceSent, DateTime ValidUntilUtc, bool IsExpired, decimal? Total, string Currency);
+public sealed record CircuitCustomerHistory(int TotalQuotes, int AcceptedQuotes, int OverdueInvoicesCount, decimal? OverdueAmountArs, decimal? OverdueAmountUsd);
 public sealed record CircuitFinding(string Code, string Severity, string Text, string? Link);
 
 public sealed record CommercialCircuitReport(
@@ -37,7 +39,10 @@ public sealed record CommercialCircuitReport(
     IReadOnlyList<CircuitQuoteInfo> Quotes,
     IReadOnlyList<CircuitFinding> MissingItems,
     bool IsComplete,
-    string? AiLastTrace = null);
+    string? AiLastTrace = null,
+    string? AiMissingInfo = null,
+    DateTime? AiQuoteDeadlineUtc = null,
+    CircuitCustomerHistory? CustomerHistory = null);
 
 /// <summary>
 /// Revisión determinística (sin IA, costo $0) del circuito comercial de una conversación:
@@ -219,8 +224,152 @@ public static class CommercialCircuitChecker
             }
         }
 
+        var hasSentOrAcceptedQuote = quotes.Any(q => q.Status is nameof(QuoteStatus.Sent) or nameof(QuoteStatus.Accepted) or nameof(QuoteStatus.Ordered));
+
+        if (conversation.AiQuoteDeadlineUtc is { } deadlineUtc && !hasSentOrAcceptedQuote)
+        {
+            var deadlineStr = deadlineUtc.AddHours(-3).ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
+            if (deadlineUtc < nowUtc)
+            {
+                missing.Add(new("quote.deadline", "danger",
+                    $"La fecha límite de cotización ({deadlineStr}) ya venció y no hay presupuesto enviado.",
+                    opportunity is not null ? $"/oportunidades/{opportunity.Id.Value}" : null));
+            }
+            else if (deadlineUtc <= nowUtc.AddHours(48))
+            {
+                missing.Add(new("quote.deadline", "warn",
+                    $"Fecha límite de cotización próxima ({deadlineStr}) — falta enviar el presupuesto.",
+                    opportunity is not null ? $"/oportunidades/{opportunity.Id.Value}" : null));
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(conversation.AiMissingInfo) && !hasSentOrAcceptedQuote)
+        {
+            missing.Add(new("quote.missing-info", "info",
+                $"Falta definir para cotizar: {conversation.AiMissingInfo}",
+                null));
+        }
+
+        CircuitCustomerHistory? history = null;
+        if (customer is not null)
+        {
+            history = await LoadCustomerHistoryAsync(connectionString, tenantId, customer.Id.Value, seesAmounts, nowUtc, ct);
+            if (history is { OverdueInvoicesCount: > 0 })
+            {
+                var parts = new List<string>();
+                if (seesAmounts && history.OverdueAmountArs is > 0)
+                    parts.Add($"ARS {history.OverdueAmountArs.Value.ToString("N2", CultureInfo.GetCultureInfo("es-AR"))}");
+                if (seesAmounts && history.OverdueAmountUsd is > 0)
+                    parts.Add($"USD {history.OverdueAmountUsd.Value.ToString("N2", CultureInfo.GetCultureInfo("es-AR"))}");
+                var amountDetail = parts.Count > 0 ? $" ({string.Join(" + ", parts)})" : "";
+                missing.Add(new("customer.overdue", "danger",
+                    $"El cliente tiene {history.OverdueInvoicesCount} factura{(history.OverdueInvoicesCount == 1 ? "" : "s")} vencida{(history.OverdueInvoicesCount == 1 ? "" : "s")}{amountDetail} — revisá cuenta corriente antes de cotizar condiciones de pago.",
+                    $"/clientes/{customer.Id.Value}"));
+            }
+        }
+
         var isComplete = !missing.Any(m => m.Severity is "warn" or "danger");
-        return new CommercialCircuitReport(customerInfo, contactInfo, leadInfo, oppInfo, quotes, missing, isComplete, conversation.AiLastTrace);
+        return new CommercialCircuitReport(
+            customerInfo, contactInfo, leadInfo, oppInfo, quotes, missing, isComplete,
+            conversation.AiLastTrace, conversation.AiMissingInfo, conversation.AiQuoteDeadlineUtc, history);
+    }
+
+    private static async Task<CircuitCustomerHistory?> LoadCustomerHistoryAsync(
+        string connectionString, Guid tenantId, Guid customerId, bool seesAmounts, DateTime nowUtc, CancellationToken ct)
+    {
+        try
+        {
+            await using var sales = new SalesDbContext(new DbContextOptionsBuilder<SalesDbContext>().UseNpgsql(connectionString).Options);
+            var tenant = new TenantId(tenantId);
+
+            var quoteStatuses = await sales.Quotes.AsNoTracking()
+                .Where(q => q.TenantId == tenant && q.CustomerId == customerId)
+                .Select(q => q.Status)
+                .ToListAsync(ct);
+
+            var totalQuotes = quoteStatuses.Count;
+            var acceptedQuotes = quoteStatuses.Count(s => s is QuoteStatus.Accepted or QuoteStatus.Ordered);
+
+            var overdueInvoices = await sales.Invoices.AsNoTracking()
+                .Where(i => i.TenantId == tenant && i.CustomerId == customerId
+                    && i.Status == "Authorized"
+                    && !i.InvoiceType.StartsWith("NC_")
+                    && i.DueDate < nowUtc)
+                .Select(i => new { i.Id, i.Total, i.Currency })
+                .ToListAsync(ct);
+
+            var overdueCount = 0;
+            decimal overdueArs = 0m;
+            decimal overdueUsd = 0m;
+
+            if (overdueInvoices.Count > 0)
+            {
+                var invoiceIds = overdueInvoices.Select(i => i.Id).ToList();
+                var paidByInvoice = new Dictionary<Guid, decimal>();
+
+                // Notas de crédito asociadas descuentan el saldo de la factura original.
+                var credits = await sales.Invoices.AsNoTracking()
+                    .Where(i => i.TenantId == tenant && i.CustomerId == customerId
+                        && i.Status == "Authorized" && i.InvoiceType.StartsWith("NC_")
+                        && i.AssociatedInvoiceId != null && invoiceIds.Contains(i.AssociatedInvoiceId.Value))
+                    .GroupBy(i => i.AssociatedInvoiceId!.Value)
+                    .Select(g => new { InvoiceId = g.Key, Total = g.Sum(x => x.Total) })
+                    .ToListAsync(ct);
+                foreach (var c in credits)
+                    paidByInvoice[c.InvoiceId] = paidByInvoice.GetValueOrDefault(c.InvoiceId) + c.Total;
+
+                // Cobros imputados en Finanzas (si el esquema finance existe).
+                try
+                {
+                    await using var fin = new FinanceDbContext(new DbContextOptionsBuilder<FinanceDbContext>().UseNpgsql(connectionString).Options);
+                    var imputed = await fin.CollectionReceiptImputations.AsNoTracking()
+                        .Where(x => x.TenantId == tenantId && x.Status == "Active" && invoiceIds.Contains(x.InvoiceId))
+                        .GroupBy(x => x.InvoiceId)
+                        .Select(g => new { InvoiceId = g.Key, Paid = g.Sum(x => x.AmountImputed) })
+                        .ToListAsync(ct);
+                    foreach (var p in imputed)
+                        paidByInvoice[p.InvoiceId] = paidByInvoice.GetValueOrDefault(p.InvoiceId) + p.Paid;
+
+                    var directReceipts = await fin.CollectionReceipts.AsNoTracking()
+                        .Where(r => r.TenantId == tenantId && r.Status != "Voided" && r.InvoiceId != null && invoiceIds.Contains(r.InvoiceId.Value))
+                        .GroupBy(r => r.InvoiceId!.Value)
+                        .Select(g => new { InvoiceId = g.Key, Paid = g.Sum(x => x.Amount) })
+                        .ToListAsync(ct);
+                    foreach (var r in directReceipts)
+                    {
+                        if (!imputed.Any(i => i.InvoiceId == r.InvoiceId))
+                            paidByInvoice[r.InvoiceId] = paidByInvoice.GetValueOrDefault(r.InvoiceId) + r.Paid;
+                    }
+                }
+                catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UndefinedTable)
+                {
+                    // Sin tablas de finanzas aún: se toma el saldo total de la factura.
+                }
+
+                foreach (var inv in overdueInvoices)
+                {
+                    var remaining = inv.Total - paidByInvoice.GetValueOrDefault(inv.Id);
+                    if (remaining <= 0.01m) continue;
+                    overdueCount++;
+                    if (string.Equals(inv.Currency, "USD", StringComparison.OrdinalIgnoreCase))
+                        overdueUsd += remaining;
+                    else
+                        overdueArs += remaining;
+                }
+            }
+
+            if (totalQuotes == 0 && overdueCount == 0) return null;
+            return new CircuitCustomerHistory(
+                totalQuotes,
+                acceptedQuotes,
+                overdueCount,
+                seesAmounts ? overdueArs : null,
+                seesAmounts ? overdueUsd : null);
+        }
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UndefinedTable)
+        {
+            return null;
+        }
     }
 
     private static async Task<List<CircuitQuoteInfo>> LoadQuotesAsync(
@@ -299,7 +448,7 @@ public sealed class AiReplyDrafter(IAiClient ai, AiKeyProtector keys, ILogger<Ai
     private static readonly CultureInfo Ar = CultureInfo.GetCultureInfo("es-AR");
 
     public async Task<AiDraftResult> DraftAsync(
-        string connectionString, Guid tenantId, Guid conversationId, bool seesAmounts, DateTime nowUtc, CancellationToken ct)
+        string connectionString, Guid tenantId, Guid conversationId, bool seesAmounts, DateTime nowUtc, CancellationToken ct, string? focus = null)
     {
         var circuit = await CommercialCircuitChecker.CheckAsync(connectionString, tenantId, conversationId, seesAmounts, nowUtc, ct);
         if (circuit is null) return new(false, null, "No se encontró la conversación.", null);
@@ -323,7 +472,7 @@ public sealed class AiReplyDrafter(IAiClient ai, AiKeyProtector keys, ILogger<Ai
         var company = await crm.CompanySettings.AsNoTracking().Where(s => s.TenantId == tenant)
             .Select(s => s.TradeName ?? s.LegalName).FirstOrDefaultAsync(ct);
 
-        var prompt = BuildUserPrompt(circuit, messages);
+        var prompt = BuildUserPrompt(circuit, messages, focus);
         try
         {
             var completion = await ai.CompleteJsonAsync(
@@ -369,7 +518,7 @@ public sealed class AiReplyDrafter(IAiClient ai, AiKeyProtector keys, ILogger<Ai
         - NO incluyas firma ni despedida con datos de empresa al final (el sistema agrega la firma con logo automáticamente).
         """;
 
-    private static string BuildUserPrompt(CommercialCircuitReport circuit, List<EmailMessage> newestFirst)
+    private static string BuildUserPrompt(CommercialCircuitReport circuit, List<EmailMessage> newestFirst, string? focus = null)
     {
         var sb = new StringBuilder();
         sb.AppendLine("## Estado actual del circuito comercial (datos reales del ERP)");
@@ -385,6 +534,17 @@ public sealed class AiReplyDrafter(IAiClient ai, AiKeyProtector keys, ILogger<Ai
 
         if (circuit.Opportunity is { } o)
             sb.AppendLine($"- Oportunidad: {o.Title} · Etapa: {o.StageLabel}");
+
+        if (circuit.AiQuoteDeadlineUtc is { } dl)
+            sb.AppendLine($"- Fecha límite de cotización detectada: {dl.AddHours(-3):dd/MM/yyyy}");
+
+        if (!string.IsNullOrWhiteSpace(circuit.AiMissingInfo))
+            sb.AppendLine($"- Datos técnicos/comerciales faltantes para cotizar: {circuit.AiMissingInfo}");
+
+        if (string.Equals(focus, "missing_info", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(circuit.AiMissingInfo))
+        {
+            sb.AppendLine("- OBJETIVO DE ESTE BORRADOR: agradecé la consulta y pedí de forma clara, breve y ordenada (en viñetas) los datos faltantes listados arriba para poder armar la cotización cuanto antes.");
+        }
 
         if (circuit.Quotes.Count > 0)
         {
