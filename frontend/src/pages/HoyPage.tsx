@@ -45,12 +45,12 @@ export function HoyPage() {
   const [saving, setSaving] = useState(false);
 
   const load = () => {
-    Promise.all([api.listCustomers(), api.listLeads(), api.listOpportunities(), api.listFollowUps()])
-      .then(([page, openLeads, openOpportunities, activities]) => {
-        setCustomers(page.items);
-        setLeads(openLeads);
-        setOpportunities(openOpportunities);
-        setFollowUps(activities);
+    Promise.all([api.listAllCustomers(""), api.listLeads(), api.listOpportunities(), api.listFollowUps()])
+      .then(([allCustomers, openLeads, openOpportunities, activities]) => {
+        setCustomers(allCustomers || []);
+        setLeads(openLeads || []);
+        setOpportunities(openOpportunities || []);
+        setFollowUps(activities || []);
       })
       .catch((e: Error) => setError(e.message));
   };
@@ -73,17 +73,20 @@ export function HoyPage() {
     }
 
     const activeOpportunities = opportunities.filter((opportunity) => !["Won", "Lost"].includes(opportunity.stage));
+    const toQuote = activeOpportunities.filter((opportunity) => opportunity.stage === "Lead" || opportunity.stage === "Qualified");
     const withoutNextAction = activeOpportunities.filter((opportunity) => opportunity.activityBadgeStatus === "Gray");
+    const rotting = activeOpportunities.filter((opportunity) => opportunity.isRotting);
     const pastCloseDate = activeOpportunities.filter((opportunity) =>
       opportunity.expectedCloseDate && new Date(opportunity.expectedCloseDate).getTime() < todayStart
     );
+    const autoAddedCustomers = customers.filter((c) => c.addedAutomatically);
 
-    return { overdue, today, upcoming, withoutNextAction, pastCloseDate };
-  }, [followUps, opportunities]);
+    return { overdue, today, upcoming, toQuote, withoutNextAction, rotting, pastCloseDate, autoAddedCustomers };
+  }, [followUps, opportunities, customers]);
 
   const linkFor = (activity: Activity) => {
-    if (activity.customerId) return `/clientes/${activity.customerId}?returnUrl=/`;
-    if (activity.opportunityId) return "/oportunidades";
+    if (activity.opportunityId) return `/oportunidades/${activity.opportunityId}`;
+    if (activity.customerId) return `/clientes/${activity.customerId}?returnUrl=/crm`;
     if (activity.leadId) return "/prospectos";
     return null;
   };
@@ -122,31 +125,66 @@ export function HoyPage() {
     <div className="workspace-page">
       <div className="page-head">
         <div>
-          <h1>Hoy</h1>
-          <div className="muted">Tu centro de trabajo: primero lo vencido y los negocios sin siguiente paso.</div>
+          <span className="eyebrow">CRM · CENTRO DE CONTROL</span>
+          <h1>Tablero de CRM</h1>
+          <div className="muted">Para cotizar, seguimientos vencidos, oportunidades sin próximo paso y clientes a revisar.</div>
         </div>
         <div className="toolbar">
           <Link className="btn ghost" to="/prospectos">Nuevo prospecto</Link>
-          <Link className="btn ghost" to="/oportunidades">Nueva oportunidad</Link>
-          <Link className="btn" to="/clientes/nuevo?returnUrl=/directorio">Nueva empresa</Link>
+          <Link className="btn ghost" to="/oportunidades">Oportunidades</Link>
+          <Link className="btn" to="/clientes/nuevo?returnUrl=/crm">Nueva empresa</Link>
         </div>
       </div>
 
       {error && <div className="alert">{error}</div>}
 
       <div className="kpi kpi-4">
-        <div className="card"><span className="muted">Vencidas</span><strong>{buckets.overdue.length}</strong></div>
-        <div className="card"><span className="muted">Para hoy</span><strong>{buckets.today.length}</strong></div>
+        <Link className="card" to="/oportunidades" style={{ textDecoration: "none", color: "inherit" }}>
+          <span className="muted">Para cotizar</span>
+          <strong>{buckets.toQuote.length}</strong>
+        </Link>
+        <div className="card"><span className="muted">Seguimientos vencidos</span><strong>{buckets.overdue.length}</strong></div>
         <div className="card"><span className="muted">Sin próxima acción</span><strong>{buckets.withoutNextAction.length}</strong></div>
-        <div className="card"><span className="muted">Cierre vencido</span><strong>{buckets.pastCloseDate.length}</strong></div>
+        <div className="card"><span className="muted">Frías / cierre vencido</span><strong>{buckets.rotting.length + buckets.pastCloseDate.length}</strong></div>
       </div>
 
-      {(buckets.overdue.length > 0 || buckets.today.length > 0 || buckets.withoutNextAction.length > 0 || buckets.pastCloseDate.length > 0) && (
+      {buckets.toQuote.length > 0 && (
+        <section className="card pad" style={{ marginBottom: 18 }}>
+          <div className="section-head">
+            <div>
+              <h2>Para cotizar ({buckets.toQuote.length})</h2>
+              <p className="muted">Oportunidades en etapa inicial listas para armar presupuesto.</p>
+            </div>
+            <Link className="btn btn-outline compact" to="/oportunidades">Ver embudo →</Link>
+          </div>
+          {buckets.toQuote.slice(0, 8).map((opp) => (
+            <div className="production-setup-row" key={opp.id} style={{ cursor: "default" }}>
+              <Link to={`/oportunidades/${opp.id}`} style={{ textDecoration: "none", color: "inherit", flex: 1, minWidth: 0 }}>
+                <strong>{opp.title}</strong>
+                <small>{opp.customerName ?? "Sin empresa"} · {label(opp.stage)} · {money(opp.amount, opp.currency)}</small>
+              </Link>
+              <div style={{ display: "flex", gap: 6 }}>
+                {opp.customerId && (
+                  <Link className="btn btn-outline compact" to={`/presupuestos/nuevo?opportunityId=${opp.id}`}>
+                    Cotizar →
+                  </Link>
+                )}
+                <button type="button" className="btn ghost compact" onClick={() => openSchedule(opp)}>
+                  + Seguimiento
+                </button>
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {(buckets.overdue.length > 0 || buckets.withoutNextAction.length > 0 || buckets.rotting.length > 0 || buckets.pastCloseDate.length > 0) && (
         <section className="card pad" style={{ marginBottom: 18 }}>
           <h3>Requiere atención</h3>
           <div className="split hoy-grid">
             <FollowSection title="Seguimientos vencidos" items={buckets.overdue} tone="warn" linkFor={linkFor} />
             <OpportunityAttention title="Sin próxima acción" items={buckets.withoutNextAction} onSchedule={openSchedule} />
+            <OpportunityAttention title="Oportunidades frías" items={buckets.rotting} onSchedule={openSchedule} tone="warn" />
             <OpportunityAttention title="Fecha estimada vencida" items={buckets.pastCloseDate} onSchedule={openSchedule} tone="warn" />
           </div>
         </section>
@@ -161,8 +199,25 @@ export function HoyPage() {
         </section>
 
         <div className="stack">
+          {buckets.autoAddedCustomers.length > 0 && (
+            <section className="card pad">
+              <div className="section-head">
+                <div>
+                  <h3>Clientes a revisar ({buckets.autoAddedCustomers.length})</h3>
+                  <p className="muted">Dados de alta automáticamente — revisá datos fiscales antes de facturar.</p>
+                </div>
+                <Link className="btn btn-outline compact" to="/directorio">Directorio →</Link>
+              </div>
+              {buckets.autoAddedCustomers.slice(0, 6).map((customer) => (
+                <Link key={customer.id} to={`/clientes/${customer.id}?returnUrl=/crm`} className="list-item">
+                  <strong>{customer.tradeName || customer.legalName}</strong>
+                  <div className="muted">{customer.documentNumber} · {label(customer.taxCondition)}</div>
+                </Link>
+              ))}
+            </section>
+          )}
           <section className="card pad">
-            <h3>Prospectos para calificar</h3>
+            <h3>Prospectos para calificar ({leads.length})</h3>
             {leads.slice(0, 6).map((lead) => (
               <Link key={lead.id} to="/prospectos" className="list-item">
                 <strong>{lead.name || lead.companyName}</strong>
@@ -174,8 +229,8 @@ export function HoyPage() {
           <section className="card pad">
             <h3>Empresas recientes</h3>
             {customers.slice(0, 6).map((customer) => (
-              <Link key={customer.id} to={`/clientes/${customer.id}?returnUrl=/`} className="list-item">
-                <strong>{customer.legalName}</strong>
+              <Link key={customer.id} to={`/clientes/${customer.id}?returnUrl=/crm`} className="list-item">
+                <strong>{customer.tradeName || customer.legalName}</strong>
                 <div className="muted">{customer.documentNumber} · {label(customer.taxCondition)}</div>
               </Link>
             ))}
@@ -213,5 +268,5 @@ function FollowSection({ title, items, tone, linkFor }: { title: string; items: 
 
 function OpportunityAttention({ title, items, onSchedule, tone }: { title: string; items: Opportunity[]; onSchedule: (opportunity: Opportunity) => void; tone?: "warn" }) {
   if (items.length === 0) return null;
-  return <div className="follow-block"><div className="follow-title"><span className={tone === "warn" ? "badge warn" : "badge"}>{title} ({items.length})</span></div>{items.slice(0, 6).map((opportunity) => <div key={opportunity.id} className="list-item"><strong>{opportunity.title}</strong><div className="muted">{opportunity.customerName ?? "Sin empresa"} · {label(opportunity.stage)} · {money(opportunity.amount, opportunity.currency)}</div><button type="button" className="btn ghost" style={{ marginTop: 8 }} onClick={() => onSchedule(opportunity)}>Programar siguiente paso</button></div>)}</div>;
+  return <div className="follow-block"><div className="follow-title"><span className={tone === "warn" ? "badge warn" : "badge"}>{title} ({items.length})</span></div>{items.slice(0, 6).map((opportunity) => <div key={opportunity.id} className="list-item"><Link to={`/oportunidades/${opportunity.id}`} style={{ textDecoration: "none", color: "inherit" }}><strong>{opportunity.title}</strong></Link><div className="muted">{opportunity.customerName ?? "Sin empresa"} · {label(opportunity.stage)} · {money(opportunity.amount, opportunity.currency)}</div><button type="button" className="btn ghost" style={{ marginTop: 8 }} onClick={() => onSchedule(opportunity)}>Programar siguiente paso</button></div>)}</div>;
 }

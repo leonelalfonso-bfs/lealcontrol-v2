@@ -140,7 +140,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     requiredPermission: "crm.read",
     dependencies: ["directorio"],
     items: [
-      { path: "/crm", label: "Centro de Pendientes", icon: "📌", end: true },
+      { path: "/crm", label: "Tablero de CRM", icon: "📊", end: true },
       { path: "/prospectos", label: "Prospectos", icon: "⚡" },
       { path: "/oportunidades", label: "Oportunidades", icon: "📈" },
       { path: "/reportes", label: "Analítica comercial", icon: "📊" },
