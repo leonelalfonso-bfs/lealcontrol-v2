@@ -8,9 +8,6 @@ public interface IOpportunityQuoteSync
     /// <summary>Abre una oportunidad en etapa Propuesta para el cliente y devuelve su id.</summary>
     Task<Guid?> OpenForQuoteAsync(Guid customerId, string title, decimal amount, string currency, string? ownerName, CancellationToken cancellationToken = default);
 
-    /// <summary>Devuelve el id de la oportunidad abierta del cliente solo si tiene exactamente UNA abierta (sin adivinar).</summary>
-    Task<Guid?> TryFindUniqueOpenOpportunityAsync(Guid customerId, CancellationToken cancellationToken = default);
-
     /// <summary>Actualiza monto/moneda y avanza la etapa de la oportunidad cuando un presupuesto se edita, envía o acepta.</summary>
     Task SyncQuoteProgressAsync(Guid opportunityId, decimal amount, string currency, bool isSent, bool isAccepted, CancellationToken cancellationToken = default);
 

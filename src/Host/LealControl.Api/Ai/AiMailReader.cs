@@ -132,6 +132,7 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
                 break;
             }
 
+            var candidatesBefore = customerCandidates.Count;
             try
             {
                 var outcome = await ProcessConversationAsync(
@@ -149,6 +150,9 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
             {
                 logger.LogWarning(ex, "Lectura de mails con IA falló en conversación {ConversationId} (empresa {TenantId})", conversation.Id, tenantId);
                 crm.ChangeTracker.Clear();
+                if (customerCandidates.Count > candidatesBefore)
+                    customerCandidates.RemoveRange(candidatesBefore, customerCandidates.Count - candidatesBefore);
+                try { await comms.Entry(conversation).ReloadAsync(ct); } catch { /* mejor esfuerzo */ }
                 if (aiDb.ChangeTracker.HasChanges())
                 {
                     try { await aiDb.SaveChangesAsync(ct); } catch { /* mejor esfuerzo */ }
@@ -189,6 +193,7 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
         var apiKey = keys.Unprotect(settings.ProtectedApiKey);
         var customerCandidates = await LoadCustomerCandidatesAsync(crm, tenant, ct);
 
+        var candidatesBefore = customerCandidates.Count;
         try
         {
             var outcome = await ProcessConversationAsync(
@@ -204,6 +209,9 @@ public sealed partial class AiMailReader(IAiClient ai, AiKeyProtector keys, ILog
         {
             logger.LogWarning(ex, "Re-análisis con IA falló en conversación {ConversationId} (empresa {TenantId})", conversationId, tenantId);
             crm.ChangeTracker.Clear();
+            if (customerCandidates.Count > candidatesBefore)
+                customerCandidates.RemoveRange(candidatesBefore, customerCandidates.Count - candidatesBefore);
+            try { await comms.Entry(conversation).ReloadAsync(ct); } catch { /* mejor esfuerzo */ }
             if (aiDb.ChangeTracker.HasChanges())
             {
                 try { await aiDb.SaveChangesAsync(ct); } catch { /* mejor esfuerzo */ }
