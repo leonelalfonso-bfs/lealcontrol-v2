@@ -155,6 +155,7 @@ export const RemitoPrintPage = named(() => import("../pages/RemitoPrintPage"), "
 export const RemitosPage = named(() => import("../pages/RemitosPage"), "RemitosPage");
 export const RemitoReturnsPage = named(() => import("../pages/RemitoReturnsPage"), "RemitoReturnsPage");
 export const ReportsPage = named(() => import("../pages/ReportsPage"), "ReportsPage");
+export const SalesDashboardPage = named(() => import("../pages/SalesDashboardPage"), "SalesDashboardPage");
 export const SettingsPage = named(() => import("../pages/SettingsPage"), "SettingsPage");
 export const DocumentTemplatesPage = named(() => import("../pages/DocumentTemplatesPage"), "DocumentTemplatesPage");
 export const SuppliersPage = named(() => import("../pages/SuppliersPage"), "SuppliersPage");

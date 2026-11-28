@@ -196,6 +196,7 @@ import {
   RemitoReturnsPage,
   ReplyTemplatesPage,
   ReportsPage,
+  SalesDashboardPage,
   SalesHelpPage,
   SettingsPage,
   StandardWeightFormPage,
@@ -417,6 +418,7 @@ export function App() {
               <Route path="/crm/ayuda" element={<CrmHelpPage />} />
 
               {/* Sales & Commercial Routes */}
+              <Route path="/ventas" element={<SalesDashboardPage />} />
               <Route path="/productos" element={<ProductsPage />} />
               <Route path="/productos/nuevo" element={<ProductFormPage />} />
               <Route path="/productos/:id/editar" element={<ProductFormPage />} />
