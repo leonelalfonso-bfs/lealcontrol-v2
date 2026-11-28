@@ -626,3 +626,210 @@ public sealed class AiReplyDrafter(IAiClient ai, AiKeyProtector keys, ILogger<Ai
         ["additionalProperties"] = JsonSerializer.SerializeToElement(false),
     };
 }
+
+public sealed record CollectionReminderInvoice(
+    Guid Id,
+    string Number,
+    DateOnly DueDate,
+    int DaysOverdue,
+    string Currency,
+    decimal PendingAmount);
+
+public sealed record CollectionReminderDraftResult(
+    bool Ok,
+    string? To,
+    string? Subject,
+    string? Body,
+    bool UsedAi,
+    int OverdueCount,
+    IReadOnlyList<CollectionReminderInvoice> Invoices,
+    string? Error);
+
+/// <summary>
+/// Redacta un borrador de recordatorio de cobro para un cliente con facturas vencidas (nunca se envía solo).
+/// Usa las mismas facturas vencidas y saldos pendientes que OverdueInvoiceNotices. Si la IA está configurada y dentro
+/// del tope mensual, pule el texto en español rioplatense; si no, entrega un borrador determinístico prolijo a costo $0.
+/// </summary>
+public sealed class CollectionReminderDrafter(IAiClient ai, AiKeyProtector keys, ILogger<CollectionReminderDrafter> logger)
+{
+    public const string Feature = "collection-reminder";
+    private static readonly CultureInfo Ar = CultureInfo.GetCultureInfo("es-AR");
+
+    private static readonly string[] BillingRoleKeywords =
+        ["admin", "pago", "cobro", "cuenta", "contab", "tesor", "finanz", "factur"];
+
+    public async Task<CollectionReminderDraftResult> DraftAsync(
+        string connectionString, Guid tenantId, Guid customerId, bool seesAmounts, DateTime nowUtc, CancellationToken ct)
+    {
+        if (!seesAmounts)
+            return new(false, null, null, null, false, 0, [], "Tu perfil no tiene permiso para ver importes.");
+
+        var tenant = new TenantId(tenantId);
+        var today = ArgentinaTime.Today(new DateTimeOffset(nowUtc, TimeSpan.Zero));
+        var todayUtc = today.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+
+        await using var crm = new CrmDbContext(new DbContextOptionsBuilder<CrmDbContext>().UseNpgsql(connectionString).Options);
+        var customer = await crm.Customers.AsNoTracking()
+            .Include(c => c.Contacts)
+            .FirstOrDefaultAsync(c => c.TenantId == tenant && c.Id == new CustomerId(customerId) && c.DeletedAtUtc == null, ct);
+        if (customer is null)
+            return new(false, null, null, null, false, 0, [], "No se encontró el cliente.");
+
+        var company = await crm.CompanySettings.AsNoTracking()
+            .Where(s => s.TenantId == tenant)
+            .Select(s => s.TradeName ?? s.LegalName)
+            .FirstOrDefaultAsync(ct);
+
+        var recipient = PickBillingRecipient(customer);
+
+        await using var sales = new SalesDbContext(new DbContextOptionsBuilder<SalesDbContext>().UseNpgsql(connectionString).Options);
+        var rawOverdue = await sales.Invoices.AsNoTracking()
+            .Where(i => i.TenantId == tenant && i.CustomerId == customerId
+                && i.Status == "Authorized" && i.DueDate < todayUtc && !i.InvoiceType.StartsWith("NC"))
+            .Select(i => new { i.Id, i.FormattedNumber, i.DueDate, i.Currency })
+            .ToListAsync(ct);
+
+        if (rawOverdue.Count == 0)
+            return new(false, recipient, null, null, false, 0, [], "Este cliente no tiene facturas vencidas con saldo pendiente.");
+
+        var balances = await ReceivableBalances.ComputeAsync(sales, tenant, ct);
+        var overdue = rawOverdue
+            .Select(i =>
+            {
+                var pending = balances.TryGetValue(i.Id, out var b) ? b.Pending : 0m;
+                var due = DateOnly.FromDateTime(i.DueDate);
+                var days = Math.Max(1, today.DayNumber - due.DayNumber);
+                return new CollectionReminderInvoice(i.Id, i.FormattedNumber, due, days, i.Currency, Math.Round(pending, 2));
+            })
+            .Where(x => x.PendingAmount > 0.01m)
+            .OrderBy(x => x.DueDate)
+            .ToList();
+
+        if (overdue.Count == 0)
+            return new(false, recipient, null, null, false, 0, [], "Este cliente no tiene facturas vencidas con saldo pendiente.");
+
+        var customerName = customer.TradeName ?? customer.LegalName;
+        var fallbackSubject = string.IsNullOrWhiteSpace(company)
+            ? "Recordatorio de facturas vencidas"
+            : $"Recordatorio de facturas vencidas - {company}";
+        var fallbackBody = BuildDeterministicBody(customerName, overdue);
+
+        try
+        {
+            await using var aiDb = await AiEndpoints.OpenAsync(connectionString, ct);
+            var settings = await aiDb.Settings.FirstOrDefaultAsync(s => s.TenantId == tenantId, ct);
+            if (settings?.ProtectedApiKey is not null)
+            {
+                var (spent, _) = await aiDb.MonthAsync(tenantId, nowUtc, ct);
+                if (spent < settings.MonthlyBudgetUsd)
+                {
+                    var completion = await ai.CompleteJsonAsync(
+                        keys.Unprotect(settings.ProtectedApiKey),
+                        AiModels.Reader,
+                        SystemPrompt(company),
+                        BuildUserPrompt(customerName, today, overdue),
+                        Schema,
+                        700,
+                        ct);
+
+                    var ok = completion.StopReason is "end_turn";
+                    aiDb.Usage.Add(AiUsage.Record(tenantId, Feature, AiModels.Reader, completion.InputTokens, completion.OutputTokens,
+                        AiModels.Cost(AiModels.Reader, completion.InputTokens, completion.OutputTokens),
+                        ok ? null : $"La IA terminó por {completion.StopReason}", nowUtc));
+                    await aiDb.SaveChangesAsync(ct);
+
+                    if (ok)
+                    {
+                        using var doc = JsonDocument.Parse(completion.Json);
+                        var subject = doc.RootElement.TryGetProperty("subject", out var sEl) && sEl.ValueKind == JsonValueKind.String
+                            ? sEl.GetString()!.Trim() : "";
+                        var body = doc.RootElement.TryGetProperty("body", out var bEl) && bEl.ValueKind == JsonValueKind.String
+                            ? bEl.GetString()!.Trim() : "";
+                        if (body.Length > 0)
+                        {
+                            return new(true, recipient, subject.Length > 0 ? subject : fallbackSubject, body, true, overdue.Count, overdue, null);
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "IA: falló el borrador de recordatorio de cobro, se usa plantilla determinística (empresa {TenantId})", tenantId);
+        }
+
+        return new(true, recipient, fallbackSubject, fallbackBody, false, overdue.Count, overdue, null);
+    }
+
+    private static string? PickBillingRecipient(Customer customer)
+    {
+        var billingContact = customer.Contacts.FirstOrDefault(c =>
+            c.Email is not null && !string.IsNullOrWhiteSpace(c.Email.Value)
+            && BillingRoleKeywords.Any(k =>
+                (c.Position?.Contains(k, StringComparison.OrdinalIgnoreCase) ?? false)
+                || (c.Name?.Contains(k, StringComparison.OrdinalIgnoreCase) ?? false)));
+        if (billingContact?.Email is not null) return billingContact.Email.Value;
+        if (!string.IsNullOrWhiteSpace(customer.Email?.Value)) return customer.Email.Value;
+        return customer.Contacts.FirstOrDefault(c => !string.IsNullOrWhiteSpace(c.Email?.Value))?.Email?.Value;
+    }
+
+    private static string Money(string currency, decimal amount) =>
+        $"{(currency == "ARS" ? "$" : currency)} {amount.ToString("N2", Ar)}";
+
+    private static string BuildDeterministicBody(string customerName, List<CollectionReminderInvoice> overdue)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"Estimados ({customerName}),");
+        sb.AppendLine();
+        sb.AppendLine(overdue.Count == 1
+            ? "Les escribimos a modo de recordatorio cordial porque registramos el siguiente comprobante vencido con saldo pendiente:"
+            : "Les escribimos a modo de recordatorio cordial porque registramos los siguientes comprobantes vencidos con saldo pendiente:");
+        sb.AppendLine();
+        foreach (var inv in overdue)
+        {
+            sb.AppendLine($"• {inv.Number} — vencida el {inv.DueDate:dd/MM/yyyy} ({inv.DaysOverdue} día{(inv.DaysOverdue == 1 ? "" : "s")}) — saldo {Money(inv.Currency, inv.PendingAmount)}");
+        }
+        var totals = overdue.GroupBy(i => i.Currency)
+            .Select(g => Money(g.Key, g.Sum(x => x.PendingAmount)))
+            .ToList();
+        sb.AppendLine();
+        sb.AppendLine($"Total vencido pendiente: {string.Join(" + ", totals)}.");
+        sb.AppendLine();
+        sb.AppendLine("En caso de haber realizado el pago recientemente, les pedimos si nos pueden compartir el comprobante para imputarlo en cuenta corriente. Ante cualquier consulta o diferencia, quedamos a disposición.");
+        return sb.ToString().Trim();
+    }
+
+    private static string SystemPrompt(string? company) => $"""
+        Redactás un borrador de mail de recordatorio de cobro en español rioplatense para el área administrativa de {(string.IsNullOrWhiteSpace(company) ? "una empresa argentina" : company)}.
+        Reglas estrictas:
+        - Usá únicamente los comprobantes, fechas y saldos exactos que te damos. NUNCA inventes importes, intereses, CBU ni datos bancarios.
+        - Tono cordial, profesional y claro ("ustedes" o "les escribimos"), sin amenazas ni agresividad.
+        - Incluí una lista clara con los comprobantes vencidos y el total pendiente por moneda.
+        - Aclará que si el pago ya fue realizado, pueden responder con el comprobante para imputarlo.
+        - NO incluyas firma ni datos de contacto al final (el sistema agrega la firma automáticamente).
+        - Devolvé también un asunto corto y claro en "subject".
+        """;
+
+    private static string BuildUserPrompt(string customerName, DateOnly today, List<CollectionReminderInvoice> overdue)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"Fecha de hoy: {today:dd/MM/yyyy}");
+        sb.AppendLine($"Cliente: {customerName}");
+        sb.AppendLine("Comprobantes vencidos con saldo pendiente:");
+        foreach (var inv in overdue)
+            sb.AppendLine($"- {inv.Number} | vencimiento {inv.DueDate:dd/MM/yyyy} ({inv.DaysOverdue} días) | saldo {Money(inv.Currency, inv.PendingAmount)}");
+        return sb.ToString();
+    }
+
+    private static readonly IReadOnlyDictionary<string, JsonElement> Schema = new Dictionary<string, JsonElement>
+    {
+        ["type"] = JsonSerializer.SerializeToElement("object"),
+        ["properties"] = JsonSerializer.SerializeToElement(new Dictionary<string, object>
+        {
+            ["subject"] = new { type = "string" },
+            ["body"] = new { type = "string" },
+        }),
+        ["required"] = JsonSerializer.SerializeToElement(new[] { "subject", "body" }),
+        ["additionalProperties"] = JsonSerializer.SerializeToElement(false),
+    };
+}

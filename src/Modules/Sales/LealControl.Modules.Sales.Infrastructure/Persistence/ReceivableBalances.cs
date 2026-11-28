@@ -16,7 +16,7 @@ public sealed record ReceivableBalance(decimal Collected, decimal Credited, deci
 ///   diferencia de cambio, que se cancelan con el cobro que las origina.
 /// - Una nota de crédito, o una nota por diferencia de cambio, no es un saldo a cobrar.
 /// </summary>
-internal static class ReceivableBalances
+public static class ReceivableBalances
 {
     private sealed record InvoiceRow(Guid Id, string InvoiceType, string Status, string Currency,
         decimal ExchangeRate, decimal Total, Guid? AssociatedInvoiceId, Guid? ExchangeDifferenceImputationId);

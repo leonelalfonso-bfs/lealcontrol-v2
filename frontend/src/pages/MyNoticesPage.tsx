@@ -75,6 +75,18 @@ export function MyNoticesPage() {
                     <Link className="t-strong" to={item.link} style={{ color: SEVERITY_COLOR[item.severity] }}>{item.title}</Link>
                   ) : <span className="t-strong" style={{ color: SEVERITY_COLOR[item.severity] }}>{item.title}</span>}
                   {item.detail && <span className="muted"> — {item.detail}</span>}
+                  {group.code === "sales.overdue-invoices" && item.link?.startsWith("/finanzas/cuenta-corriente?cuenta=") && (
+                    <>
+                      {" "}
+                      <Link
+                        className="t-small t-accent t-strong"
+                        to={`${item.link}&recordatorio=1`}
+                        title="Abrir borrador de recordatorio de cobro (nunca se envía solo)"
+                      >
+                        ✉ Armar recordatorio
+                      </Link>
+                    </>
+                  )}
                 </li>
               ))}
             </ul>

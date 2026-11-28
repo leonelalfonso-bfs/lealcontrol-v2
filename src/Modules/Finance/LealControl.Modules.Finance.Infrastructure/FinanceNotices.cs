@@ -43,3 +43,51 @@ public sealed class ChequesToDepositNotices : INoticeProvider
         }).ToList();
     }
 }
+
+/// <summary>Aviso: cheques propios emitidos pendientes de débito que vencen en los próximos días.</summary>
+public sealed class OwnChequesDueNotices : INoticeProvider
+{
+    public string Code => "finance.own-cheques-due";
+    public string Module => "finance";
+    public int MinimumLevel => 1;
+    public NoticeSensitivity Sensitivity => NoticeSensitivity.Amounts;
+    public string Label => "Cheques propios próximos a debitarse";
+    public string Description => "Cheques propios emitidos pendientes de débito cuya fecha de pago ya pasó, es hoy o llega en los próximos 5 días.";
+    public bool DefaultOn => true;
+
+    public async Task<IReadOnlyList<NoticeItem>> GetAsync(NoticeContext context, CancellationToken cancellationToken)
+    {
+        await using var db = new FinanceDbContext(new DbContextOptionsBuilder<FinanceDbContext>().UseNpgsql(context.ConnectionString).Options);
+        var limit = context.Today.AddDays(5).ToDateTime(new TimeOnly(23, 59), DateTimeKind.Utc);
+        var cheques = await db.ReceivedCheques.AsNoTracking()
+            .Where(c => c.TenantId == context.TenantId && c.Direction == ChequeDirection.Issued
+                && c.Status == ReceivedChequeStatus.Issued && c.DueDateUtc != null && c.DueDateUtc <= limit)
+            .OrderBy(c => c.DueDateUtc)
+            .ToListAsync(cancellationToken);
+        var ar = CultureInfo.GetCultureInfo("es-AR");
+        var items = cheques.Take(25).Select(c =>
+        {
+            var due = DateOnly.FromDateTime(c.DueDateUtc!.Value);
+            var days = due.DayNumber - context.Today.DayNumber;
+            var amount = $"{(c.Currency == "ARS" ? "$" : c.Currency)} {c.Amount.ToString("N2", ar)}";
+            var beneficiary = !string.IsNullOrWhiteSpace(c.IssuerName)
+                ? c.IssuerName
+                : !string.IsNullOrWhiteSpace(c.ReceivedFrom) ? c.ReceivedFrom : "sin beneficiario";
+            var bankPart = string.IsNullOrWhiteSpace(c.BankName) ? "" : $" · {c.BankName}";
+            var when = days < 0
+                ? $"Venció el {due:dd/MM/yyyy}"
+                : days == 0 ? "Vence hoy"
+                : days == 1 ? "Vence mañana"
+                : $"Vence el {due:dd/MM/yyyy} (en {days} días)";
+            return new NoticeItem(
+                $"Cheque propio {c.CheckNumber} · {beneficiary}",
+                $"{when} · {amount}{bankPart}",
+                "/finanzas/echeqs",
+                days <= 1 ? NoticeSeverity.Critical : NoticeSeverity.Warning);
+        }).ToList();
+
+        if (cheques.Count > 25)
+            items.Add(new NoticeItem($"Y {cheques.Count - 25} cheques propios más", null, "/finanzas/echeqs", NoticeSeverity.Info));
+        return items;
+    }
+}

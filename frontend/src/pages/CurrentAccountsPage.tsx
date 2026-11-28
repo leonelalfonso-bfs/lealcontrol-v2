@@ -149,7 +149,10 @@ export function CurrentAccountsPage() {
     setSearchParams(entity ? { cuenta: entity.id } : {});
   const [company, setCompany] = useState<CompanySettings | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
-  const [sendVia, setSendVia] = useState<"email" | null>(null);
+  const [sendVia, setSendVia] = useState<"email" | "reminder" | null>(null);
+  const [draftingReminder, setDraftingReminder] = useState(false);
+  const [reminderDraft, setReminderDraft] = useState<{ to?: string; subject: string; body: string } | null>(null);
+  const [reminderError, setReminderError] = useState<string | null>(null);
   useEffect(() => {
     void api.getCompanySettings().then(setCompany).catch(() => setCompany(null));
   }, []);
@@ -182,6 +185,8 @@ export function CurrentAccountsPage() {
   useEffect(() => {
     if (!ledgerEntity) {
       setLedger(null);
+      setReminderDraft(null);
+      setReminderError(null);
       return;
     }
     let cancelled = false;
@@ -190,6 +195,38 @@ export function CurrentAccountsPage() {
       .catch((e) => !cancelled && setError(e instanceof Error ? e.message : "No se pudo cargar la cuenta."));
     return () => { cancelled = true; };
   }, [ledgerEntity?.id]);
+
+  const openCollectionReminder = async (customerId: string) => {
+    setDraftingReminder(true);
+    setReminderError(null);
+    try {
+      const res = await api.generateCollectionReminderDraft(customerId);
+      if (res.ok && res.body) {
+        setReminderDraft({
+          to: res.to ?? undefined,
+          subject: res.subject || "Recordatorio de facturas vencidas",
+          body: res.body
+        });
+        setSendVia("reminder");
+      } else {
+        setReminderError(res.error || "No se pudo armar el borrador de recordatorio.");
+      }
+    } catch (e) {
+      setReminderError(e instanceof Error ? e.message : "No se pudo armar el borrador de recordatorio.");
+    } finally {
+      setDraftingReminder(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!ledgerEntity || !ledgerEntity.isCustomer) return;
+    if (searchParams.get("recordatorio") !== "1") return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("recordatorio");
+    setSearchParams(next, { replace: true });
+    void openCollectionReminder(ledgerEntity.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ledgerEntity?.id, searchParams]);
 
   const accountRows = useMemo(() => entities.map((entity) => {
     const x = summaries.get(entity.id);
@@ -328,6 +365,16 @@ export function CurrentAccountsPage() {
                 {downloadingPdf ? "Generando…" : "Descargar PDF"}
               </button>
               <button className="btn btn-outline compact" onClick={() => setSendVia("email")}>✉ Email</button>
+              {ledgerEntity.isCustomer && ((row?.receivableBalance ?? 0) > 0.01 || (row?.receivableBalanceUsd ?? 0) > 0.01) && (
+                <button
+                  className="btn btn-outline compact"
+                  disabled={draftingReminder}
+                  onClick={() => void openCollectionReminder(ledgerEntity.id)}
+                  title="Armar un borrador de recordatorio con las facturas vencidas de este cliente (nunca se envía solo)"
+                >
+                  {draftingReminder ? "Armando borrador…" : "✨ Recordatorio de cobro"}
+                </button>
+              )}
               {ledgerEntity.isCustomer && (
                 <Link className="btn compact" to={`/finanzas/cobranzas?customerId=${ledgerEntity.id}`}>Registrar cobro</Link>
               )}
@@ -416,22 +463,34 @@ export function CurrentAccountsPage() {
           </div>
         </div>
 
+        {reminderError && (
+          <div className="alert" style={{ marginTop: 12 }}>
+            {reminderError}
+          </div>
+        )}
+
         {sendVia && (() => {
           const fileName = `Estado_de_cuenta_${name.replace(/[^\w]+/g, "_")}_${todayAr()}.pdf`;
           const sender = company?.tradeName || company?.legalName || "";
           const balanceText = `$ ${finalBalance.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
           const documentPdf = { elementId: "account-statement-sheet", fileName };
+          const isReminder = sendVia === "reminder" && reminderDraft !== null;
           return (
             <EmailComposer
               context={{
                 entityType: "AccountStatement",
                 entityId: ledgerEntity.id,
-                to: ledgerEntity.email ?? undefined,
-                subject: `Estado de cuenta al ${today} - ${sender}`,
-                body: `Estimado cliente,\n\nAdjuntamos el estado de cuenta al ${today}. Saldo: ${balanceText}.\n\nSaludos cordiales,\n${sender}`,
+                to: isReminder ? (reminderDraft.to ?? ledgerEntity.email ?? undefined) : (ledgerEntity.email ?? undefined),
+                subject: isReminder ? reminderDraft.subject : `Estado de cuenta al ${today} - ${sender}`,
+                body: isReminder
+                  ? reminderDraft.body
+                  : `Estimado cliente,\n\nAdjuntamos el estado de cuenta al ${today}. Saldo: ${balanceText}.\n\nSaludos cordiales,\n${sender}`,
                 documentPdf
               }}
-              onClose={() => setSendVia(null)}
+              onClose={() => {
+                setSendVia(null);
+                setReminderDraft(null);
+              }}
             />
           );
         })()}

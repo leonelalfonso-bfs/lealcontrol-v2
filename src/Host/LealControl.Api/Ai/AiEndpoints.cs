@@ -43,6 +43,7 @@ public static class AiEndpoints
         services.AddSingleton<AiMailReader>();
         services.AddSingleton<AiSupervisor>();
         services.AddSingleton<AiReplyDrafter>();
+        services.AddSingleton<CollectionReminderDrafter>();
         services.AddScoped<LealControl.Modules.Crm.Application.Leads.ILeadConvertedHook, CommunicationsLeadConvertedHook>();
         services.AddSingleton<LealControl.BuildingBlocks.Notices.INoticeProvider, AiBriefingNotices>();
         services.AddHostedService<AiBackgroundService>();
@@ -198,6 +199,18 @@ public static class AiEndpoints
             var result = await reader.ReanalyzeConversationAsync(cs, tenant.TenantId.Value, id, clock.GetUtcNow().UtcDateTime, ct);
             return Results.Ok(result);
         });
+
+        // Borrador de recordatorio de cobro para un cliente con facturas vencidas (nunca se envía solo).
+        // Vive bajo /api/v1/finance para que cualquier usuario de Finanzas/Ventas con permiso de importes pueda usarlo
+        // desde Cuenta Corriente o Mis avisos sin depender de la bandeja de Comunicaciones.
+        app.MapPost("/api/v1/finance/collection-reminder/{customerId:guid}", async (
+            Guid customerId, ITenantContext tenant, ITenantConnectionProvider connections,
+            LealControl.BuildingBlocks.Security.ISensitiveDataAccess access, CollectionReminderDrafter drafter, TimeProvider clock, CancellationToken ct) =>
+        {
+            var cs = await connections.GetConnectionStringAsync(tenant.TenantId, ct);
+            var result = await drafter.DraftAsync(cs, tenant.TenantId.Value, customerId, access.CanSeeAmounts, clock.GetUtcNow().UtcDateTime, ct);
+            return Results.Ok(result);
+        }).RequireAuthorization();
 
         return app;
     }
