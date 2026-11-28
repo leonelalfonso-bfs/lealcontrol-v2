@@ -218,6 +218,8 @@ public sealed class CrmSalesSyncTests : IAsyncLifetime
             throw new InvalidOperationException("Falla simulada de CRM");
         public Task ReopenFromCancelledOrderAsync(Guid opportunityId, string reason, CancellationToken cancellationToken = default) =>
             throw new InvalidOperationException("Falla simulada de CRM");
+        public Task LogPartialConfirmationNoteAsync(Guid opportunityId, string note, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("Falla simulada de CRM");
     }
 
     [Fact]
@@ -271,5 +273,69 @@ public sealed class CrmSalesSyncTests : IAsyncLifetime
         var confirmRes = await resilientClient.PutAsJsonAsync($"/api/v1/sales/orders/{orderId}/status", new { status = "Confirmed" });
         var confirmed = await Json(confirmRes);
         Assert.Equal("Confirmed", confirmed.GetProperty("status").GetString());
+    }
+
+    [Fact]
+    public async Task Partial_quote_conversion_logs_note_on_opportunity_with_unconfirmed_lines()
+    {
+        using var client = _factory.CreateAuthenticatedClient();
+
+        var customer = await Json(await client.PostAsJsonAsync("/api/v1/crm/customers", new
+        {
+            legalName = "Bodega Parcial SA",
+            documentType = "Cuit",
+            documentNumber = "20123456786",
+            taxCondition = "ResponsableInscripto",
+            isCustomer = true
+        }));
+        var customerId = customer.GetProperty("id").GetGuid();
+
+        var opp = await Json(await client.PostAsJsonAsync("/api/v1/crm/opportunities", new
+        {
+            title = "Mantenimiento y repuestos",
+            customerId,
+            currency = "USD"
+        }));
+        var oppId = opp.GetProperty("id").GetGuid();
+
+        var quote = await Json(await client.PostAsJsonAsync($"/api/v1/sales/quotes/from-opportunity/{oppId}", new { }));
+        var quoteId = quote.GetProperty("id").GetGuid();
+
+        var updatedQuote = await Json(await client.PutAsJsonAsync($"/api/v1/sales/quotes/{quoteId}", new
+        {
+            customerId,
+            currency = "USD_BILLETE",
+            validDays = 15,
+            lines = new[]
+            {
+                new { description = "Indicador digital", quantity = 1m, unitPrice = 800m, currencyCode = "USD_BILLETE", discountPercent = 0m, taxRate = 21m, isOptional = false },
+                new { description = "celdas de carga", quantity = 2m, unitPrice = 600m, currencyCode = "USD_BILLETE", discountPercent = 0m, taxRate = 21m, isOptional = false },
+                new { description = "Calibración anual", quantity = 1m, unitPrice = 350m, currencyCode = "USD_BILLETE", discountPercent = 0m, taxRate = 21m, isOptional = false }
+            }
+        }));
+
+        var lines = updatedQuote.GetProperty("lines").EnumerateArray().ToList();
+        var indicatorLineId = lines.First(l => l.GetProperty("description").GetString() == "Indicador digital").GetProperty("id").GetGuid();
+
+        // Convertir SOLO el primer renglón a pedido.
+        await Json(await client.PostAsJsonAsync($"/api/v1/sales/orders/from-quote/{quoteId}", new
+        {
+            selectedLineIds = new[] { indicatorLineId },
+            customerPurchaseOrder = "OC-7701"
+        }));
+
+        // La oportunidad queda Ganada y registra una nota en el timeline con los 2 renglones no confirmados y su importe.
+        var oppAfter = await GetOpportunityAsync(client, oppId);
+        Assert.Equal("Won", oppAfter.GetProperty("stage").GetString());
+
+        var timeline = await Json(await client.GetAsync($"/api/v1/crm/opportunities/{oppId}/timeline"));
+        var notes = timeline.EnumerateArray()
+            .Select(a => a.GetProperty("description").GetString() ?? "")
+            .ToList();
+        var partialNote = Assert.Single(notes, n => n.Contains("No confirmado:", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains("2 celdas de carga", partialNote);
+        Assert.Contains("1.200", partialNote);
+        Assert.Contains("1 Calibración anual", partialNote);
+        Assert.Contains("350", partialNote);
     }
 }

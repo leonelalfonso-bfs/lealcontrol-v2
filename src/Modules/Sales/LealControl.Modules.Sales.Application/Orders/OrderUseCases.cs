@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -328,6 +329,27 @@ internal sealed class CreateOrderFromQuoteCommandHandler : IRequestHandler<Creat
             try
             {
                 await _crm.MarkWonAsync(opportunityId, order.Total, order.Currency, cancellationToken);
+
+                // Si fue confirmación parcial (quedaron renglones obligatorios sin confirmar), registrar nota en la oportunidad.
+                if (request.SelectedLineIds is { Count: > 0 })
+                {
+                    var selectedSet = new HashSet<Guid>(request.SelectedLineIds);
+                    var unconfirmed = quote.Lines
+                        .Where(l => !l.IsOptional && !selectedSet.Contains(l.Id.Value))
+                        .ToList();
+                    if (unconfirmed.Count > 0)
+                    {
+                        var ar = CultureInfo.GetCultureInfo("es-AR");
+                        var itemsText = string.Join("; ", unconfirmed.Select(l =>
+                        {
+                            var curr = l.CurrencyCode.StartsWith("USD", StringComparison.OrdinalIgnoreCase) ? "USD" : l.CurrencyCode;
+                            var qty = l.Quantity % 1 == 0 ? l.Quantity.ToString("0", ar) : l.Quantity.ToString("0.##", ar);
+                            return $"{qty} {l.Description}, {curr} {l.LineSubtotal.ToString("N2", ar)}";
+                        }));
+                        var note = $"Confirmación parcial de {quote.QuoteNumber} ({order.OrderNumber}). No confirmado: {itemsText}";
+                        await _crm.LogPartialConfirmationNoteAsync(opportunityId, note, cancellationToken);
+                    }
+                }
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {

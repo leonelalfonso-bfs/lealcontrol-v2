@@ -19,6 +19,9 @@ public interface IOpportunityQuoteSync
 
     /// <summary>Reabre una oportunidad Ganada a En negociación cuando se anula el único pedido que la ganó.</summary>
     Task ReopenFromCancelledOrderAsync(Guid opportunityId, string reason, CancellationToken cancellationToken = default);
+
+    /// <summary>Registra una nota en la oportunidad con los renglones no confirmados de una conversión parcial.</summary>
+    Task LogPartialConfirmationNoteAsync(Guid opportunityId, string note, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
