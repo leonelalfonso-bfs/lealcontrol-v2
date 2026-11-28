@@ -114,6 +114,7 @@ export function InboxPage() {
   const [savingNote, setSavingNote] = useState(false);
   const [accounts, setAccounts] = useState<MailAccount[]>([]);
   const [folder, setFolder] = useState<"Mine" | "Incoming" | "Outgoing" | "All" | "NeedsResponse" | "Unassigned" | "Unlinked">("All");
+  const [inboxView, setInboxView] = useState<"active" | "unread" | "closed">("active");
   const [search, setSearch] = useState("");
   const [searchDebounced, setSearchDebounced] = useState("");
   const [templates, setTemplates] = useState<MessageReplyTemplate[]>([]);
@@ -155,6 +156,10 @@ export function InboxPage() {
   const [linkedCustomerName, setLinkedCustomerName] = useState<string | null>(null);
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
   const selectedConversationIdRef = useRef<string | null>(null);
+  const pendingDeepLinkIdRef = useRef<string | null>(null);
+
+  const isConversationClosed = (c: { status?: string | null }) =>
+    c.status === "resolved" || c.status === "archived";
 
   const loadConversations = async () => {
     try {
@@ -236,7 +241,10 @@ export function InboxPage() {
     // Desde un aviso ("Mails sin atender") llega como ?conversation=<id>.
     const fromLink = new URLSearchParams(location.search).get("conversation");
     const id = state?.conversationId || pending || fromLink;
-    if (id) setSelectedConversationId(id);
+    if (id) {
+      pendingDeepLinkIdRef.current = id;
+      setSelectedConversationId(id);
+    }
   }, [location.state, location.search]);
 
   useEffect(() => {
@@ -246,7 +254,10 @@ export function InboxPage() {
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<{ conversationId: string }>).detail;
-      if (detail?.conversationId) setSelectedConversationId(detail.conversationId);
+      if (detail?.conversationId) {
+        pendingDeepLinkIdRef.current = detail.conversationId;
+        setSelectedConversationId(detail.conversationId);
+      }
     };
     window.addEventListener("leal:open-conversation", handler);
     return () => window.removeEventListener("leal:open-conversation", handler);
@@ -278,15 +289,48 @@ export function InboxPage() {
     return () => clearInterval(syncInterval);
   }, []);
 
-  const visibleConversations = conversations;
+  const activeConversationsCount = useMemo(
+    () => conversations.filter((c) => !isConversationClosed(c)).length,
+    [conversations]
+  );
+  const unreadConversationsCount = useMemo(
+    () => conversations.filter((c) => !isConversationClosed(c) && c.unreadCount > 0).length,
+    [conversations]
+  );
+  const closedConversationsCount = useMemo(
+    () => conversations.filter((c) => isConversationClosed(c)).length,
+    [conversations]
+  );
+
+  const visibleConversations = useMemo(() => {
+    if (inboxView === "closed") return conversations.filter((c) => isConversationClosed(c));
+    if (inboxView === "unread") return conversations.filter((c) => !isConversationClosed(c) && c.unreadCount > 0);
+    return conversations.filter((c) => !isConversationClosed(c));
+  }, [conversations, inboxView]);
 
   useEffect(() => {
+    const deepLinkId = pendingDeepLinkIdRef.current;
+    if (!deepLinkId || conversations.length === 0) return;
+    const target = conversations.find((c) => c.id === deepLinkId);
+    if (target) {
+      setInboxView(isConversationClosed(target) ? "closed" : "active");
+      setSelectedConversationId(target.id);
+    }
+    pendingDeepLinkIdRef.current = null;
+  }, [conversations]);
+
+  useEffect(() => {
+    if (pendingDeepLinkIdRef.current) return;
     if (!selectedConversationId && visibleConversations.length > 0) {
       setSelectedConversationId(visibleConversations[0].id);
     } else if (selectedConversationId && !visibleConversations.some((c) => c.id === selectedConversationId)) {
+      if (inboxView === "unread") {
+        const current = conversations.find((c) => c.id === selectedConversationId);
+        if (current && !isConversationClosed(current)) return;
+      }
       setSelectedConversationId(visibleConversations.length > 0 ? visibleConversations[0].id : null);
     }
-  }, [visibleConversations, selectedConversationId]);
+  }, [visibleConversations, selectedConversationId, inboxView, conversations]);
 
   useEffect(() => {
     selectedConversationIdRef.current = selectedConversationId;
@@ -771,6 +815,38 @@ export function InboxPage() {
           <div className="message-list-toolbar t-strong muted" style={{ padding: "12px 16px", borderBottom: "1px solid var(--lc-line)" }}>
             CONVERSACIONES ({visibleConversations.length})
           </div>
+          <div className="inbox-view-tabs" role="tablist" aria-label="Vista de conversaciones">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={inboxView === "active"}
+              className={inboxView === "active" ? "active" : ""}
+              onClick={() => setInboxView("active")}
+            >
+              <span>Activas</span>
+              <strong>{activeConversationsCount}</strong>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={inboxView === "unread"}
+              className={`${inboxView === "unread" ? "active" : ""}${unreadConversationsCount > 0 ? " has-unread" : ""}`.trim()}
+              onClick={() => setInboxView("unread")}
+            >
+              <span>Sin leer</span>
+              <strong>{unreadConversationsCount}</strong>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={inboxView === "closed"}
+              className={inboxView === "closed" ? "active" : ""}
+              onClick={() => setInboxView("closed")}
+            >
+              <span>Finalizadas</span>
+              <strong>{closedConversationsCount}</strong>
+            </button>
+          </div>
           <div style={{ padding: "8px 12px", borderBottom: "1px solid var(--lc-line)" }}>
             <SearchField
               value={search}
@@ -884,13 +960,21 @@ export function InboxPage() {
           })}
           {visibleConversations.length === 0 && (
             <div className="empty-state t-center" style={{ padding: 24 }}>
-              {folder === "All" && channel === "all" && !searchDebounced ? (
+              {conversations.length === 0 && folder === "All" && channel === "all" && !searchDebounced ? (
                 <>
                   <strong style={{ display: "block", marginBottom: 8 }}>Todavía no hay conversaciones</strong>
                   <span>Configurá una casilla de correo para empezar.</span>
                   <div style={{ marginTop: 12 }}><Link to="/configuracion/comunicaciones">Configurar correo →</Link></div>
                 </>
-              ) : "No hay conversaciones en este filtro."}
+              ) : inboxView === "unread" ? (
+                "No hay conversaciones sin leer. ¡Estás al día!"
+              ) : inboxView === "closed" ? (
+                "No hay conversaciones finalizadas en este filtro."
+              ) : closedConversationsCount > 0 ? (
+                "No hay conversaciones activas pendientes. Podés ver las finalizadas en la pestaña Finalizadas."
+              ) : (
+                "No hay conversaciones en este filtro."
+              )}
             </div>
           )}
           </div>
@@ -937,6 +1021,25 @@ export function InboxPage() {
                     <Link className="btn btn-outline compact" to={`/clientes/${activeConversation.relatedCustomerId}`}>
                       Ver cliente
                     </Link>
+                  )}
+                  {isConversationClosed(activeConversation) ? (
+                    <button
+                      className="btn btn-outline compact"
+                      onClick={() => void changeStatus(activeConversation.id, "open")}
+                      disabled={busy}
+                      title="Volver a mover esta conversación a Activas"
+                    >
+                      ↩ Reabrir
+                    </button>
+                  ) : (
+                    <button
+                      className="btn btn-outline compact"
+                      onClick={() => void changeStatus(activeConversation.id, "resolved")}
+                      disabled={busy}
+                      title="Marcar como finalizada para sacarla de Activas. Si el cliente vuelve a escribir, se reabre sola."
+                    >
+                      ✓ Finalizar
+                    </button>
                   )}
                   <button className="btn btn-danger compact" onClick={() => setDiscardOpen(true)} disabled={busy}
                     title="Sacar de la bandeja. No se borra del teléfono.">

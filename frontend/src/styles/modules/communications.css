@@ -229,6 +229,52 @@
 .inbox-folders button.active { background: var(--lc-key-fill); box-shadow: var(--lc-key-relief); color: var(--lc-accent-strong); font-weight: 800; }
 .inbox-folders button strong { min-width: 22px; padding: 1px 7px; border-radius: var(--lc-radius-pill); background: var(--lc-surface-sunken); color: inherit; font-size: 11.5px; text-align: center; }
 .inbox-folders__links { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 2px 4px 0; font-size: 12.5px; }
+.inbox-view-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--lc-line);
+  background: var(--lc-surface-2);
+}
+.inbox-view-tabs button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--lc-radius-control);
+  background: transparent;
+  color: var(--lc-ink-2);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.inbox-view-tabs button:hover { background: var(--lc-surface); color: var(--lc-ink); }
+.inbox-view-tabs button.active {
+  background: var(--lc-surface);
+  border-color: var(--lc-line-2);
+  color: var(--lc-accent-strong);
+  box-shadow: var(--lc-raise-1);
+  font-weight: 800;
+}
+.inbox-view-tabs button strong {
+  min-width: 18px;
+  padding: 1px 6px;
+  border-radius: var(--lc-radius-pill);
+  background: var(--lc-surface-sunken);
+  color: inherit;
+  font-size: 11px;
+  text-align: center;
+}
+.inbox-view-tabs button.has-unread strong {
+  background: var(--lc-accent-soft);
+  color: var(--lc-accent-strong);
+}
 
 /* Pantallas medianas: el contexto pasa abajo del mensaje en lugar de apretarlo. */
 @media (max-width: 1280px) {
