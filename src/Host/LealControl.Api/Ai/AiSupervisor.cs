@@ -16,8 +16,8 @@ using Npgsql;
 
 namespace LealControl.Api.Ai;
 
-/// <summary>Una prioridad del día, con su explicación con importes y sin importes.</summary>
-public sealed record BriefingItem(string Title, string WithAmounts, string WithoutAmounts, string? Link, int Urgency);
+/// <summary>Una prioridad del día, con su explicación con importes, sin importes y el módulo del que proviene.</summary>
+public sealed record BriefingItem(string Title, string WithAmounts, string WithoutAmounts, string? Link, int Urgency, string? Module = null);
 
 /// <summary>
 /// Supervisor comercial: una vez por día hábil, a partir de las 6, lee los avisos comerciales de la empresa (mails sin
@@ -68,15 +68,24 @@ public sealed partial class AiSupervisor(IAiClient ai, AiKeyProtector keys, IEnu
             if (lastFailure > nowUtc.AddMinutes(-30)) return false;
         }
 
-        // Lo que hoy ve un usuario con todos los permisos comerciales.
+        // Lo que hoy ve un usuario con todos los permisos comerciales y financieros.
         var context = new NoticeContext(tenantId, connectionString, today, SeesAmounts: true);
-        var sections = new List<(string Label, IReadOnlyList<NoticeItem> Items)>();
+        var sections = new List<(string Module, string Label, IReadOnlyList<NoticeItem> Items)>();
         foreach (var provider in providers.Where(p => Sources.Contains(p.Code)).OrderBy(p => Array.IndexOf(Sources, p.Code)))
         {
-            try { sections.Add((provider.Label, await provider.GetAsync(context, ct))); }
+            try { sections.Add((provider.Module, provider.Label, await provider.GetAsync(context, ct))); }
             catch (Exception ex) when (ex is not OperationCanceledException) { logger.LogWarning(ex, "Supervisor: el aviso {Code} falló", provider.Code); }
         }
         var links = sections.SelectMany(s => s.Items).Select(i => i.Link).Where(l => l is not null).ToHashSet();
+        var linkToModule = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (module, _, items) in sections)
+        {
+            foreach (var item in items)
+            {
+                if (!string.IsNullOrWhiteSpace(item.Link))
+                    linkToModule.TryAdd(item.Link, module);
+            }
+        }
         if (sections.All(s => s.Items.Count == 0))
         {
             if (existing is not null) aiDb.Briefings.Remove(existing);
@@ -101,7 +110,7 @@ public sealed partial class AiSupervisor(IAiClient ai, AiKeyProtector keys, IEnu
             if (ok)
             {
                 if (existing is not null) aiDb.Briefings.Remove(existing);
-                aiDb.Briefings.Add(AiBriefing.Create(tenantId, today, JsonSerializer.Serialize(Parse(completion.Json, links)), nowUtc));
+                aiDb.Briefings.Add(AiBriefing.Create(tenantId, today, JsonSerializer.Serialize(Parse(completion.Json, links, linkToModule)), nowUtc));
                 settings.RecordError(null);
             }
             await aiDb.SaveChangesAsync(ct);
@@ -134,23 +143,24 @@ public sealed partial class AiSupervisor(IAiClient ai, AiKeyProtector keys, IEnu
         - why_with_amounts: una o dos oraciones con el porqué, con los montos y los días cuando ayuden.
         - why_without_amounts: el mismo porqué sin ningún importe ni monto de dinero.
         - link: el enlace (lo que está entre corchetes) del aviso principal, copiado exacto; vacío si no hay.
+        - module: el módulo del aviso principal ("sales", "finance", "communications" o "crm").
         - urgency: 3 si es para resolver hoy sin falta, 2 si es importante, 1 si puede esperar a la tarde.
         Español rioplatense, directo, sin saludos ni relleno.
         """;
 
-    private static string State(DateOnly today, List<(string Label, IReadOnlyList<NoticeItem> Items)> sections)
+    private static string State(DateOnly today, List<(string Module, string Label, IReadOnlyList<NoticeItem> Items)> sections)
     {
         var text = new StringBuilder($"Hoy es {today.ToString("dddd dd/MM/yyyy", System.Globalization.CultureInfo.GetCultureInfo("es-AR"))}.\n");
-        foreach (var (label, items) in sections.Where(s => s.Items.Count > 0))
+        foreach (var (module, label, items) in sections.Where(s => s.Items.Count > 0))
         {
-            text.AppendLine($"\n## {label}");
+            text.AppendLine($"\n## {label} [módulo: {module}]");
             foreach (var item in items)
                 text.AppendLine($"- [{item.Link ?? ""}] {item.Title}{(string.IsNullOrWhiteSpace(item.Detail) ? "" : $" — {item.Detail}")} ({item.Severity})");
         }
         return text.ToString();
     }
 
-    public static List<BriefingItem> Parse(string json, IReadOnlySet<string?> links)
+    public static List<BriefingItem> Parse(string json, IReadOnlySet<string?> links, IReadOnlyDictionary<string, string>? linkToModule = null)
     {
         using var doc = JsonDocument.Parse(json);
         var result = new List<BriefingItem>();
@@ -161,9 +171,17 @@ public sealed partial class AiSupervisor(IAiClient ai, AiKeyProtector keys, IEnu
             var title = WithoutMoney(S("title"));
             if (title.Length == 0) continue;
             var link = S("link");
+            var validLink = links.Contains(link) ? link : null;
+            var rawModule = S("module").ToLowerInvariant();
+            string? resolvedModule = null;
+            if (validLink is not null && linkToModule is not null && linkToModule.TryGetValue(validLink, out var mappedModule))
+                resolvedModule = mappedModule;
+            else if (rawModule is "sales" or "finance" or "communications" or "crm")
+                resolvedModule = rawModule;
             result.Add(new BriefingItem(title, S("why_with_amounts"), WithoutMoney(S("why_without_amounts")),
-                links.Contains(link) ? link : null,
-                p.TryGetProperty("urgency", out var u) && u.TryGetInt32(out var urgency) ? Math.Clamp(urgency, 1, 3) : 2));
+                validLink,
+                p.TryGetProperty("urgency", out var u) && u.TryGetInt32(out var urgency) ? Math.Clamp(urgency, 1, 3) : 2,
+                resolvedModule));
         }
         return result;
     }
@@ -188,9 +206,10 @@ public sealed partial class AiSupervisor(IAiClient ai, AiKeyProtector keys, IEnu
                         ["why_with_amounts"] = new { type = "string" },
                         ["why_without_amounts"] = new { type = "string" },
                         ["link"] = new { type = "string" },
+                        ["module"] = new { type = "string", @enum = new[] { "sales", "finance", "communications", "crm" } },
                         ["urgency"] = new { type = "integer", @enum = new[] { 1, 2, 3 } },
                     },
-                    required = new[] { "title", "why_with_amounts", "why_without_amounts", "link", "urgency" },
+                    required = new[] { "title", "why_with_amounts", "why_without_amounts", "link", "module", "urgency" },
                     additionalProperties = false,
                 },
             },
@@ -226,6 +245,9 @@ public sealed class AiBriefingNotices : INoticeProvider
                 .Where(b => b.TenantId == context.TenantId && b.Day == context.Today).Select(b => b.ItemsJson).FirstOrDefaultAsync(cancellationToken);
             if (json is null) return [];
             return (JsonSerializer.Deserialize<List<BriefingItem>>(json) ?? [])
+                .Where(i => string.IsNullOrWhiteSpace(i.Module)
+                    || context.AllowedModules is null
+                    || context.AllowedModules.Contains(i.Module))
                 .Select(i => new NoticeItem(i.Title, context.SeesAmounts ? i.WithAmounts : i.WithoutAmounts, i.Link,
                     i.Urgency == 3 ? NoticeSeverity.Critical : i.Urgency == 2 ? NoticeSeverity.Warning : NoticeSeverity.Info))
                 .ToList();

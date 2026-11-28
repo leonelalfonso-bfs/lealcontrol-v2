@@ -743,10 +743,15 @@ public sealed class CollectionReminderDrafter(IAiClient ai, AiKeyProtector keys,
                         using var doc = JsonDocument.Parse(completion.Json);
                         var subject = doc.RootElement.TryGetProperty("subject", out var sEl) && sEl.ValueKind == JsonValueKind.String
                             ? sEl.GetString()!.Trim() : "";
-                        var body = doc.RootElement.TryGetProperty("body", out var bEl) && bEl.ValueKind == JsonValueKind.String
-                            ? bEl.GetString()!.Trim() : "";
-                        if (body.Length > 0)
+                        var opening = doc.RootElement.TryGetProperty("opening", out var oEl) && oEl.ValueKind == JsonValueKind.String
+                            ? oEl.GetString()!.Trim() : "";
+                        var closing = doc.RootElement.TryGetProperty("closing", out var cEl) && cEl.ValueKind == JsonValueKind.String
+                            ? cEl.GetString()!.Trim() : "";
+                        if (opening.Length > 0 && closing.Length > 0)
                         {
+                            // La tabla de facturas vencidas (número, vencimiento y saldo de ReceivableBalances) la inserta
+                            // siempre el sistema; la IA redacta únicamente saludo/introducción y cierre.
+                            var body = ComposeBody(opening, overdue, closing);
                             return new(true, recipient, subject.Length > 0 ? subject : fallbackSubject, body, true, overdue.Count, overdue, null);
                         }
                     }
@@ -776,15 +781,9 @@ public sealed class CollectionReminderDrafter(IAiClient ai, AiKeyProtector keys,
     private static string Money(string currency, decimal amount) =>
         $"{(currency == "ARS" ? "$" : currency)} {amount.ToString("N2", Ar)}";
 
-    private static string BuildDeterministicBody(string customerName, List<CollectionReminderInvoice> overdue)
+    private static string BuildInvoiceTable(List<CollectionReminderInvoice> overdue)
     {
         var sb = new StringBuilder();
-        sb.AppendLine($"Estimados ({customerName}),");
-        sb.AppendLine();
-        sb.AppendLine(overdue.Count == 1
-            ? "Les escribimos a modo de recordatorio cordial porque registramos el siguiente comprobante vencido con saldo pendiente:"
-            : "Les escribimos a modo de recordatorio cordial porque registramos los siguientes comprobantes vencidos con saldo pendiente:");
-        sb.AppendLine();
         foreach (var inv in overdue)
         {
             sb.AppendLine($"• {inv.Number} — vencida el {inv.DueDate:dd/MM/yyyy} ({inv.DaysOverdue} día{(inv.DaysOverdue == 1 ? "" : "s")}) — saldo {Money(inv.Currency, inv.PendingAmount)}");
@@ -793,33 +792,34 @@ public sealed class CollectionReminderDrafter(IAiClient ai, AiKeyProtector keys,
             .Select(g => Money(g.Key, g.Sum(x => x.PendingAmount)))
             .ToList();
         sb.AppendLine();
-        sb.AppendLine($"Total vencido pendiente: {string.Join(" + ", totals)}.");
-        sb.AppendLine();
-        sb.AppendLine("En caso de haber realizado el pago recientemente, les pedimos si nos pueden compartir el comprobante para imputarlo en cuenta corriente. Ante cualquier consulta o diferencia, quedamos a disposición.");
-        return sb.ToString().Trim();
+        sb.Append($"Total vencido pendiente: {string.Join(" + ", totals)}.");
+        return sb.ToString();
+    }
+
+    private static string ComposeBody(string opening, List<CollectionReminderInvoice> overdue, string closing) =>
+        $"{opening.Trim()}\n\n{BuildInvoiceTable(overdue)}\n\n{closing.Trim()}";
+
+    private static string BuildDeterministicBody(string customerName, List<CollectionReminderInvoice> overdue)
+    {
+        var opening = $"Estimados ({customerName}),\n\n" + (overdue.Count == 1
+            ? "Les escribimos a modo de recordatorio cordial porque registramos el siguiente comprobante vencido con saldo pendiente:"
+            : "Les escribimos a modo de recordatorio cordial porque registramos los siguientes comprobantes vencidos con saldo pendiente:");
+        const string closing = "En caso de haber realizado el pago recientemente, les pedimos si nos pueden compartir el comprobante para imputarlo en cuenta corriente. Ante cualquier consulta o diferencia, quedamos a disposición.";
+        return ComposeBody(opening, overdue, closing);
     }
 
     private static string SystemPrompt(string? company) => $"""
-        Redactás un borrador de mail de recordatorio de cobro en español rioplatense para el área administrativa de {(string.IsNullOrWhiteSpace(company) ? "una empresa argentina" : company)}.
+        Redactás únicamente el saludo/introducción ("opening") y el cierre ("closing") de un mail de recordatorio de cobro en español rioplatense para el área administrativa de {(string.IsNullOrWhiteSpace(company) ? "una empresa argentina" : company)}.
         Reglas estrictas:
-        - Usá únicamente los comprobantes, fechas y saldos exactos que te damos. NUNCA inventes importes, intereses, CBU ni datos bancarios.
-        - Tono cordial, profesional y claro ("ustedes" o "les escribimos"), sin amenazas ni agresividad.
-        - Incluí una lista clara con los comprobantes vencidos y el total pendiente por moneda.
-        - Aclará que si el pago ya fue realizado, pueden responder con el comprobante para imputarlo.
-        - NO incluyas firma ni datos de contacto al final (el sistema agrega la firma automáticamente).
-        - Devolvé también un asunto corto y claro en "subject".
+        - El sistema va a insertar automáticamente en el medio el detalle exacto de facturas vencidas, fechas y saldos.
+        - Por eso, NO escribas números de factura, NO escribas importes ni totales, NO inventes CBU, intereses ni datos bancarios.
+        - "opening": saludo y una o dos oraciones cordiales presentando el detalle que figura a continuación ("ustedes" o "les escribimos").
+        - "closing": una o dos oraciones cordiales aclarando que si el pago ya fue realizado pueden compartir el comprobante para imputarlo, y quedando a disposición. SIN firma ni despedida con datos de empresa (el sistema agrega la firma automáticamente).
+        - "subject": asunto corto y claro.
         """;
 
-    private static string BuildUserPrompt(string customerName, DateOnly today, List<CollectionReminderInvoice> overdue)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine($"Fecha de hoy: {today:dd/MM/yyyy}");
-        sb.AppendLine($"Cliente: {customerName}");
-        sb.AppendLine("Comprobantes vencidos con saldo pendiente:");
-        foreach (var inv in overdue)
-            sb.AppendLine($"- {inv.Number} | vencimiento {inv.DueDate:dd/MM/yyyy} ({inv.DaysOverdue} días) | saldo {Money(inv.Currency, inv.PendingAmount)}");
-        return sb.ToString();
-    }
+    private static string BuildUserPrompt(string customerName, DateOnly today, List<CollectionReminderInvoice> overdue) =>
+        $"Fecha de hoy: {today:dd/MM/yyyy}\nCliente: {customerName}\nCantidad de comprobantes vencidos: {overdue.Count}\nAtraso máximo en días: {overdue.Max(i => i.DaysOverdue)}";
 
     private static readonly IReadOnlyDictionary<string, JsonElement> Schema = new Dictionary<string, JsonElement>
     {
@@ -827,9 +827,10 @@ public sealed class CollectionReminderDrafter(IAiClient ai, AiKeyProtector keys,
         ["properties"] = JsonSerializer.SerializeToElement(new Dictionary<string, object>
         {
             ["subject"] = new { type = "string" },
-            ["body"] = new { type = "string" },
+            ["opening"] = new { type = "string" },
+            ["closing"] = new { type = "string" },
         }),
-        ["required"] = JsonSerializer.SerializeToElement(new[] { "subject", "body" }),
+        ["required"] = JsonSerializer.SerializeToElement(new[] { "subject", "opening", "closing" }),
         ["additionalProperties"] = JsonSerializer.SerializeToElement(false),
     };
 }
