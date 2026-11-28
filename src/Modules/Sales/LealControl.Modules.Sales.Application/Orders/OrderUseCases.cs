@@ -11,6 +11,8 @@ using LealControl.Modules.Sales.Application.Orders.Models;
 using LealControl.Modules.Sales.Domain.Orders;
 using LealControl.Modules.Sales.Domain.Quotes;
 using MediatR;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace LealControl.Modules.Sales.Application.Orders;
 
@@ -89,19 +91,22 @@ internal sealed class CreateOrderCommandHandler : IRequestHandler<CreateOrderCom
     private readonly ISalesUnitOfWork _unitOfWork;
     private readonly ITenantContext _tenantContext;
     private readonly IOpportunityQuoteSync _crm;
+    private readonly ILogger<CreateOrderCommandHandler> _logger;
 
     public CreateOrderCommandHandler(
         IOrderRepository orderRepository,
         IQuoteRepository quoteRepository,
         ISalesUnitOfWork unitOfWork,
         ITenantContext tenantContext,
-        IOpportunityQuoteSync crm)
+        IOpportunityQuoteSync crm,
+        ILogger<CreateOrderCommandHandler>? logger = null)
     {
         _orderRepository = orderRepository;
         _quoteRepository = quoteRepository;
         _unitOfWork = unitOfWork;
         _tenantContext = tenantContext;
         _crm = crm;
+        _logger = logger ?? NullLogger<CreateOrderCommandHandler>.Instance;
     }
 
     public async Task<Result<OrderDto>> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
@@ -116,9 +121,8 @@ internal sealed class CreateOrderCommandHandler : IRequestHandler<CreateOrderCom
             linkedQuote = await _quoteRepository.GetByIdAsync(new QuoteId(qid), cancellationToken);
         }
 
-        var opportunityId = request.Model.OpportunityId
-            ?? linkedQuote?.OpportunityId
-            ?? await _crm.TryFindUniqueOpenOpportunityAsync(request.Model.CustomerId, cancellationToken);
+        // Sin OpportunityId explícito (del modelo o del presupuesto) el pedido NO se vincula a ninguna oportunidad.
+        var opportunityId = request.Model.OpportunityId ?? linkedQuote?.OpportunityId;
 
         var order = Order.Create(
             _tenantContext.TenantId,
@@ -166,10 +170,17 @@ internal sealed class CreateOrderCommandHandler : IRequestHandler<CreateOrderCom
 
         if (opportunityId is { } oppId)
         {
-            if (order.Status == OrderStatus.Draft)
-                await _crm.SyncQuoteProgressAsync(oppId, order.Total, order.Currency, isSent: true, isAccepted: true, cancellationToken);
-            else if (order.Status != OrderStatus.Cancelled)
-                await _crm.MarkWonAsync(oppId, order.Total, order.Currency, cancellationToken);
+            try
+            {
+                if (order.Status == OrderStatus.Draft)
+                    await _crm.SyncQuoteProgressAsync(oppId, order.Total, order.Currency, isSent: true, isAccepted: true, cancellationToken);
+                else if (order.Status != OrderStatus.Cancelled)
+                    await _crm.MarkWonAsync(oppId, order.Total, order.Currency, cancellationToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogWarning(ex, "Ventas guardó el pedido {OrderNumber}, pero falló la sincronización con CRM (oportunidad {OpportunityId}).", order.OrderNumber, oppId);
+            }
         }
 
         return Result.Success(order.ToDto());
@@ -183,19 +194,22 @@ internal sealed class CreateOrderFromQuoteCommandHandler : IRequestHandler<Creat
     private readonly ISalesUnitOfWork _unitOfWork;
     private readonly ITenantContext _tenantContext;
     private readonly IOpportunityQuoteSync _crm;
+    private readonly ILogger<CreateOrderFromQuoteCommandHandler> _logger;
 
     public CreateOrderFromQuoteCommandHandler(
         IQuoteRepository quoteRepository,
         IOrderRepository orderRepository,
         ISalesUnitOfWork unitOfWork,
         ITenantContext tenantContext,
-        IOpportunityQuoteSync crm)
+        IOpportunityQuoteSync crm,
+        ILogger<CreateOrderFromQuoteCommandHandler>? logger = null)
     {
         _crm = crm;
         _quoteRepository = quoteRepository;
         _orderRepository = orderRepository;
         _unitOfWork = unitOfWork;
         _tenantContext = tenantContext;
+        _logger = logger ?? NullLogger<CreateOrderFromQuoteCommandHandler>.Instance;
     }
 
     public async Task<Result<OrderDto>> Handle(CreateOrderFromQuoteCommand request, CancellationToken cancellationToken)
@@ -215,7 +229,16 @@ internal sealed class CreateOrderFromQuoteCommandHandler : IRequestHandler<Creat
         {
             var existingOppId = existingOrder.OpportunityId ?? quote.OpportunityId;
             if (existingOppId is { } oppId && existingOrder.Status != OrderStatus.Cancelled)
-                await _crm.MarkWonAsync(oppId, existingOrder.Total, existingOrder.Currency, cancellationToken);
+            {
+                try
+                {
+                    await _crm.MarkWonAsync(oppId, existingOrder.Total, existingOrder.Currency, cancellationToken);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    _logger.LogWarning(ex, "El pedido {OrderNumber} ya existía, pero falló la sincronización con CRM (oportunidad {OpportunityId}).", existingOrder.OrderNumber, oppId);
+                }
+            }
             return Result.Success(existingOrder.ToDto());
         }
 
@@ -251,13 +274,6 @@ internal sealed class CreateOrderFromQuoteCommandHandler : IRequestHandler<Creat
                 "Seleccioná al menos un renglón del presupuesto para generar el pedido."));
         }
 
-        var resolvedOpportunityId = quote.OpportunityId
-            ?? await _crm.TryFindUniqueOpenOpportunityAsync(quote.CustomerId, cancellationToken);
-        if (resolvedOpportunityId is { } foundOppId && quote.OpportunityId is null)
-        {
-            quote.AttachOpportunity(foundOppId);
-        }
-
         var order = Order.Create(
             _tenantContext.TenantId,
             orderNumber,
@@ -267,7 +283,7 @@ internal sealed class CreateOrderFromQuoteCommandHandler : IRequestHandler<Creat
             quote.QuoteNumber,
             quote.LocationId,
             quote.ContactId,
-            resolvedOpportunityId,
+            quote.OpportunityId,
             quote.Currency,
             quote.ExchangeRateUsdBillete,
             quote.ExchangeRateUsdDivisa,
@@ -307,8 +323,17 @@ internal sealed class CreateOrderFromQuoteCommandHandler : IRequestHandler<Creat
         await _orderRepository.AddAsync(order, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         // El pedido gana la oportunidad del CRM y actualiza su monto al del pedido.
-        if (resolvedOpportunityId is { } opportunityId)
-            await _crm.MarkWonAsync(opportunityId, order.Total, order.Currency, cancellationToken);
+        if (quote.OpportunityId is { } opportunityId)
+        {
+            try
+            {
+                await _crm.MarkWonAsync(opportunityId, order.Total, order.Currency, cancellationToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogWarning(ex, "Ventas guardó el pedido {OrderNumber}, pero falló la sincronización con CRM (oportunidad {OpportunityId}).", order.OrderNumber, opportunityId);
+            }
+        }
 
         return Result.Success(order.ToDto());
     }
@@ -319,15 +344,18 @@ internal sealed class UpdateOrderCommandHandler : IRequestHandler<UpdateOrderCom
     private readonly IOrderRepository _orderRepository;
     private readonly ISalesUnitOfWork _unitOfWork;
     private readonly IOpportunityQuoteSync _crm;
+    private readonly ILogger<UpdateOrderCommandHandler> _logger;
 
     public UpdateOrderCommandHandler(
         IOrderRepository orderRepository,
         ISalesUnitOfWork unitOfWork,
-        IOpportunityQuoteSync crm)
+        IOpportunityQuoteSync crm,
+        ILogger<UpdateOrderCommandHandler>? logger = null)
     {
         _orderRepository = orderRepository;
         _unitOfWork = unitOfWork;
         _crm = crm;
+        _logger = logger ?? NullLogger<UpdateOrderCommandHandler>.Instance;
     }
 
     public async Task<Result<OrderDto>> Handle(UpdateOrderCommand request, CancellationToken cancellationToken)
@@ -363,7 +391,14 @@ internal sealed class UpdateOrderCommandHandler : IRequestHandler<UpdateOrderCom
 
         if (order.OpportunityId is { } oppId && order.Status != OrderStatus.Draft && order.Status != OrderStatus.Cancelled)
         {
-            await _crm.MarkWonAsync(oppId, order.Total, order.Currency, cancellationToken);
+            try
+            {
+                await _crm.MarkWonAsync(oppId, order.Total, order.Currency, cancellationToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogWarning(ex, "Ventas actualizó el pedido {OrderNumber}, pero falló la sincronización con CRM (oportunidad {OpportunityId}).", order.OrderNumber, oppId);
+            }
         }
 
         return Result.Success(order.ToDto());
@@ -377,19 +412,22 @@ internal sealed class UpdateOrderStatusCommandHandler : IRequestHandler<UpdateOr
     private readonly ISalesUnitOfWork _unitOfWork;
     private readonly ITenantContext _tenantContext;
     private readonly IOpportunityQuoteSync _crm;
+    private readonly ILogger<UpdateOrderStatusCommandHandler> _logger;
 
     public UpdateOrderStatusCommandHandler(
         IOrderRepository orderRepository,
         IQuoteRepository quoteRepository,
         ISalesUnitOfWork unitOfWork,
         ITenantContext tenantContext,
-        IOpportunityQuoteSync crm)
+        IOpportunityQuoteSync crm,
+        ILogger<UpdateOrderStatusCommandHandler>? logger = null)
     {
         _orderRepository = orderRepository;
         _quoteRepository = quoteRepository;
         _unitOfWork = unitOfWork;
         _tenantContext = tenantContext;
         _crm = crm;
+        _logger = logger ?? NullLogger<UpdateOrderStatusCommandHandler>.Instance;
     }
 
     public async Task<Result<OrderDto>> Handle(UpdateOrderStatusCommand request, CancellationToken cancellationToken)
@@ -418,15 +456,22 @@ internal sealed class UpdateOrderStatusCommandHandler : IRequestHandler<UpdateOr
 
         if (order.OpportunityId is { } oppId)
         {
-            if (request.NewStatus == OrderStatus.Cancelled)
+            try
             {
-                var hasOtherActive = await _orderRepository.HasActiveOrderForOpportunityAsync(_tenantContext.TenantId, oppId, order.Id.Value, cancellationToken);
-                if (!hasOtherActive)
-                    await _crm.ReopenFromCancelledOrderAsync(oppId, $"Pedido {order.OrderNumber} anulado", cancellationToken);
+                if (request.NewStatus == OrderStatus.Cancelled)
+                {
+                    var hasOtherActive = await _orderRepository.HasActiveOrderForOpportunityAsync(_tenantContext.TenantId, oppId, order.Id.Value, cancellationToken);
+                    if (!hasOtherActive)
+                        await _crm.ReopenFromCancelledOrderAsync(oppId, $"Pedido {order.OrderNumber} anulado", cancellationToken);
+                }
+                else if (request.NewStatus != OrderStatus.Draft)
+                {
+                    await _crm.MarkWonAsync(oppId, order.Total, order.Currency, cancellationToken);
+                }
             }
-            else if (request.NewStatus != OrderStatus.Draft)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                await _crm.MarkWonAsync(oppId, order.Total, order.Currency, cancellationToken);
+                _logger.LogWarning(ex, "Ventas cambió el estado del pedido {OrderNumber} a {Status}, pero falló la sincronización con CRM (oportunidad {OpportunityId}).", order.OrderNumber, request.NewStatus, oppId);
             }
         }
 

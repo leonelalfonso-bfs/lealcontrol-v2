@@ -33,18 +33,6 @@ internal sealed class OpportunityQuoteSync(CrmDbContext db, ITenantContext tenan
         return opened.Value.Id.Value;
     }
 
-    public async Task<Guid?> TryFindUniqueOpenOpportunityAsync(Guid customerId, CancellationToken cancellationToken = default)
-    {
-        var cid = new CustomerId(customerId);
-        var openIds = await db.Opportunities.AsNoTracking()
-            .Where(o => o.TenantId == tenant.TenantId && o.CustomerId == cid
-                && o.Stage != OpportunityStage.Won && o.Stage != OpportunityStage.Lost)
-            .Select(o => o.Id)
-            .Take(2)
-            .ToListAsync(cancellationToken);
-        return openIds.Count == 1 ? openIds[0].Value : null;
-    }
-
     public async Task SyncQuoteProgressAsync(Guid opportunityId, decimal amount, string currency, bool isSent, bool isAccepted, CancellationToken cancellationToken = default)
     {
         var opportunity = await db.Opportunities.FirstOrDefaultAsync(
