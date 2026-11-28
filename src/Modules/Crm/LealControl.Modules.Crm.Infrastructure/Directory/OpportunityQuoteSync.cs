@@ -1,5 +1,6 @@
 using LealControl.BuildingBlocks.Tenancy;
 using LealControl.Modules.Crm.Contracts.Opportunities;
+using LealControl.Modules.Crm.Domain.Activities;
 using LealControl.Modules.Crm.Domain.Customers;
 using LealControl.Modules.Crm.Domain.Opportunities;
 using LealControl.Modules.Crm.Infrastructure.Persistence;
@@ -105,6 +106,31 @@ internal sealed class OpportunityQuoteSync(CrmDbContext db, ITenantContext tenan
         var now = clock.GetUtcNow().UtcDateTime;
         if (opportunity.Reopen(OpportunityStage.Negotiation, reason, now).IsSuccess)
             await db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task LogPartialConfirmationNoteAsync(Guid opportunityId, string note, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(note)) return;
+        var opportunity = await db.Opportunities.AsNoTracking().FirstOrDefaultAsync(
+            o => o.TenantId == tenant.TenantId && o.Id == new OpportunityId(opportunityId), cancellationToken);
+        if (opportunity is null) return;
+
+        var now = clock.GetUtcNow().UtcDateTime;
+        var logged = Activity.Log(
+            tenant.TenantId,
+            ActivityType.Note,
+            note.Trim(),
+            opportunity.CustomerId,
+            opportunity.LeadId,
+            opportunity.Id,
+            authorId: null,
+            nextFollowUpOn: null,
+            now);
+        if (logged.IsSuccess)
+        {
+            db.Activities.Add(logged.Value);
+            await db.SaveChangesAsync(cancellationToken);
+        }
     }
 
     private static string NormalizeCurrency(string? currency) =>
