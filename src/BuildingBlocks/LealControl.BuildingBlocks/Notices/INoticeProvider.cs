@@ -14,7 +14,12 @@ public enum NoticeSensitivity { None, Amounts, Costs, Salaries }
 /// Empresa y día (de Argentina) para los que se arma el aviso, y si quien lo recibe ve importes (para los avisos que
 /// tienen una versión con montos y otra sin).
 /// </summary>
-public sealed record NoticeContext(Guid TenantId, string ConnectionString, DateOnly Today, bool SeesAmounts = true);
+public sealed record NoticeContext(
+    Guid TenantId,
+    string ConnectionString,
+    DateOnly Today,
+    bool SeesAmounts = true,
+    IReadOnlySet<string>? AllowedModules = null);
 
 /// <summary>Un renglón del aviso: qué pasa, detalle y adónde ir a resolverlo.</summary>
 public sealed record NoticeItem(string Title, string? Detail, string? Link, NoticeSeverity Severity);

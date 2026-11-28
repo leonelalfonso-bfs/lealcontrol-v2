@@ -83,7 +83,7 @@ public sealed class NoticeCenter(
 {
     public const string EmailDigestCode = "__email__";
     private static readonly TimeSpan ItemsTtl = TimeSpan.FromMinutes(5);
-    private static readonly ConcurrentDictionary<(Guid Tenant, string Database, string Code, bool SeesAmounts), (DateTime Expires, IReadOnlyList<NoticeItem> Items)> ItemsCache = new();
+    private static readonly ConcurrentDictionary<(Guid Tenant, string Database, string Code, bool SeesAmounts, string ModulesKey), (DateTime Expires, IReadOnlyList<NoticeItem> Items)> ItemsCache = new();
 
     public IReadOnlyList<INoticeProvider> Providers { get; } = providers.OrderByDescending(p => p.Priority).ThenBy(p => p.Module).ThenBy(p => p.Label).ToList();
 
@@ -135,14 +135,26 @@ public sealed class NoticeCenter(
 
     private static bool SeesAmounts(UserPermissions permissions) => permissions.IsSuperAdmin || permissions.Sensitive.Amounts;
 
-    private async Task<IReadOnlyList<NoticeItem>> ItemsAsync(INoticeProvider provider, Guid tenantId, string connectionString, bool seesAmounts, CancellationToken ct)
+    private IReadOnlySet<string> AllowedModulesFor(UserPermissions permissions) =>
+        Providers.Where(p => Allows(permissions, p))
+            .Select(p => p.Module)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    private async Task<IReadOnlyList<NoticeItem>> ItemsAsync(
+        INoticeProvider provider,
+        Guid tenantId,
+        string connectionString,
+        bool seesAmounts,
+        IReadOnlySet<string> allowedModules,
+        CancellationToken ct)
     {
-        var key = (tenantId, connectionString, provider.Code, seesAmounts);
+        var modulesKey = string.Join(",", allowedModules.OrderBy(m => m, StringComparer.OrdinalIgnoreCase));
+        var key = (tenantId, connectionString, provider.Code, seesAmounts, modulesKey);
         if (ItemsCache.TryGetValue(key, out var cached) && cached.Expires > DateTime.UtcNow) return cached.Items;
         IReadOnlyList<NoticeItem> items;
         try
         {
-            items = await provider.GetAsync(new NoticeContext(tenantId, connectionString, Today, seesAmounts), ct);
+            items = await provider.GetAsync(new NoticeContext(tenantId, connectionString, Today, seesAmounts, allowedModules), ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -161,10 +173,11 @@ public sealed class NoticeCenter(
         await db.OpenAsync(ct);
         await EnsureTablesAsync(db, ct);
         var subscriptions = await SubscriptionsAsync(db, userId, ct);
+        var allowedModules = AllowedModulesFor(permissions);
         var groups = new List<NoticeGroup>();
         foreach (var provider in Chosen(permissions, subscriptions))
         {
-            var items = await ItemsAsync(provider, tenantId, cs, SeesAmounts(permissions), ct);
+            var items = await ItemsAsync(provider, tenantId, cs, SeesAmounts(permissions), allowedModules, ct);
             if (items.Count > 0) groups.Add(new NoticeGroup(provider.Code, provider.Module, provider.Label, items));
         }
         return groups;
@@ -236,10 +249,11 @@ public sealed class NoticeCenter(
         var subscriptions = await SubscriptionsAsync(db, userId, ct);
         if (!subscriptions.GetValueOrDefault(EmailDigestCode, true)) return (false, "Eligió no recibir el resumen por correo.");
 
+        var allowedModules = AllowedModulesFor(permissions);
         var groups = new List<NoticeGroup>();
         foreach (var provider in Chosen(permissions, subscriptions))
         {
-            var items = await ItemsAsync(provider, tenantId, cs, SeesAmounts(permissions), ct);
+            var items = await ItemsAsync(provider, tenantId, cs, SeesAmounts(permissions), allowedModules, ct);
             if (items.Count > 0) groups.Add(new NoticeGroup(provider.Code, provider.Module, provider.Label, items));
         }
         if (groups.Count == 0) return (false, "Sin novedades para hoy.");

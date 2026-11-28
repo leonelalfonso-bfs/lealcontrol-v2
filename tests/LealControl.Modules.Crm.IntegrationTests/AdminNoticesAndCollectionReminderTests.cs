@@ -163,4 +163,142 @@ public sealed class AdminNoticesAndCollectionReminderTests : IAsyncLifetime
         Assert.False(blocked.Ok);
         Assert.Contains("permiso", blocked.Error!, StringComparison.OrdinalIgnoreCase);
     }
+
+    private sealed class FakeReminderAi : IAiClient
+    {
+        public Task<AiCompletion> CompleteJsonAsync(string apiKey, string model, string system, string user,
+            IReadOnlyDictionary<string, JsonElement> schema, int maxTokens, CancellationToken ct, bool deeper = false, bool webSearch = false)
+            => Task.FromResult(new AiCompletion(
+                """{"subject":"Recordatorio amable","opening":"Hola equipo, les compartimos el detalle de comprobantes vencidos:","closing":"Si ya abonaron, por favor respóndannos con el comprobante."}""",
+                200, 80, "end_turn"));
+    }
+
+    [Fact]
+    public async Task CollectionReminderDrafter_with_ai_inserts_exact_ReceivableBalances_amounts_from_system()
+    {
+        var tenantId = CrmWebApplicationFactory.DemoTenantId;
+        var cs = _factory.DatabaseConnectionString;
+        var now = _factory.Services.GetRequiredService<TimeProvider>().GetUtcNow().UtcDateTime;
+        using var admin = _factory.CreateAuthenticatedClient();
+
+        var customerId = (await Json(await admin.PostAsJsonAsync("/api/v1/crm/customers", new
+        {
+            legalName = "Acopio Norte SA",
+            documentType = "Cuit",
+            documentNumber = "30709876542",
+            taxCondition = "ResponsableInscripto",
+            iibbRegime = "Local",
+            email = "cobros@acopionorte.com",
+            isCustomer = true,
+            isSupplier = false
+        }))).GetProperty("id").GetGuid();
+
+        var invoiceId = Guid.NewGuid();
+        await using (var sales = new SalesDbContext(new DbContextOptionsBuilder<SalesDbContext>().UseNpgsql(cs).Options))
+        {
+            await sales.EnsureTablesCreatedAsync();
+            var overdue = new Invoice(
+                invoiceId, new TenantId(tenantId),
+                "A", 1, 2055, "0001-00002055", null, null,
+                customerId, "Acopio Norte SA", "30709876542", "ResponsableInscripto", null,
+                now.AddDays(-30), now.AddDays(-12), "ARS", 1m,
+                200_000m, 42_000m, 0m, 0m, 0m, 0m, 242_000m,
+                "98765432101234", now.AddDays(10), null, "Authorized", null, null, now.AddDays(-30));
+            sales.Invoices.Add(overdue);
+            await sales.SaveChangesAsync();
+        }
+
+        // Cobro parcial imputado de 42.000 => ReceivableBalances deja saldo pendiente exacto de 200.000,00.
+        var receiptId = Guid.NewGuid();
+        await using (var fin = new FinanceDbContext(new DbContextOptionsBuilder<FinanceDbContext>().UseNpgsql(cs).Options))
+        {
+            await fin.Database.EnsureCreatedAsync();
+            fin.CollectionReceipts.Add(new CollectionReceipt
+            {
+                Id = receiptId,
+                TenantId = tenantId,
+                AccountId = Guid.NewGuid(),
+                CustomerId = customerId,
+                ReceiptNumber = "REC-0001",
+                Amount = 42_000m,
+                Currency = "ARS",
+                ReceiptDateUtc = now.AddDays(-5),
+                Description = "Cobro parcial",
+                Status = "Confirmed",
+                CreatedAtUtc = now.AddDays(-5)
+            });
+            fin.CollectionReceiptImputations.Add(new CollectionReceiptImputation
+            {
+                Id = Guid.NewGuid(),
+                TenantId = tenantId,
+                ReceiptId = receiptId,
+                InvoiceId = invoiceId,
+                InvoiceNumber = "0001-00002055",
+                InvoiceTotal = 242_000m,
+                AmountImputed = 42_000m,
+                Status = "Active",
+                CreatedAtUtc = now.AddDays(-5)
+            });
+            await fin.SaveChangesAsync();
+        }
+
+        var keys = _factory.Services.GetRequiredService<AiKeyProtector>();
+        await using (var aiDb = await AiEndpoints.OpenAsync(cs, CancellationToken.None))
+        {
+            var settings = await aiDb.Settings.FirstOrDefaultAsync(s => s.TenantId == tenantId) ?? AiSettings.For(tenantId);
+            if (aiDb.Entry(settings).State == EntityState.Detached) aiDb.Settings.Add(settings);
+            settings.SetApiKey(keys.Protect("sk-ant-fake-key"), "fake", now);
+            settings.Update(10m, true, false, false, "Básculas", now);
+            await aiDb.SaveChangesAsync();
+        }
+
+        var drafter = new CollectionReminderDrafter(new FakeReminderAi(), keys, Microsoft.Extensions.Logging.Abstractions.NullLogger<CollectionReminderDrafter>.Instance);
+        var result = await drafter.DraftAsync(cs, tenantId, customerId, seesAmounts: true, now, CancellationToken.None);
+
+        Assert.True(result.Ok);
+        Assert.True(result.UsedAi);
+        Assert.Equal("Recordatorio amable", result.Subject);
+        Assert.Contains("Hola equipo, les compartimos el detalle de comprobantes vencidos:", result.Body!);
+        Assert.Contains("0001-00002055", result.Body!);
+        Assert.Contains("200.000,00", result.Body!);
+        Assert.DoesNotContain("242.000,00", result.Body!);
+        Assert.Contains("Si ya abonaron, por favor respóndannos con el comprobante.", result.Body!);
+    }
+
+    [Fact]
+    public async Task AiBriefingNotices_hides_finance_cheque_priorities_for_user_with_sales_only()
+    {
+        var tenantId = CrmWebApplicationFactory.DemoTenantId;
+        var cs = _factory.DatabaseConnectionString;
+        var now = _factory.Services.GetRequiredService<TimeProvider>().GetUtcNow().UtcDateTime;
+        var today = LealControl.BuildingBlocks.Time.ArgentinaTime.Today(new DateTimeOffset(now, TimeSpan.Zero));
+
+        var items = new List<BriefingItem>
+        {
+            new("Fondear cuenta por cheque propio", "Cheque propio #100 vence mañana por $ 500.000", "Cheque propio #100 vence mañana", "/finanzas/echeqs", 3, "finance"),
+            new("Seguir presupuesto P-00088", "Enviado hace 7 días por USD 12.000", "Enviado hace 7 días", "/presupuestos/1", 2, "sales")
+        };
+
+        await using (var aiDb = await AiEndpoints.OpenAsync(cs, CancellationToken.None))
+        {
+            var existing = await aiDb.Briefings.FirstOrDefaultAsync(b => b.TenantId == tenantId && b.Day == today);
+            if (existing is not null) aiDb.Briefings.Remove(existing);
+            aiDb.Briefings.Add(AiBriefing.Create(tenantId, today, JsonSerializer.Serialize(items), now));
+            await aiDb.SaveChangesAsync();
+        }
+
+        var provider = new AiBriefingNotices();
+
+        // Usuario con Ventas pero sin Finanzas: NO ve la prioridad de cheques.
+        var salesOnlyModules = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "sales", "crm" };
+        var salesItems = await provider.GetAsync(new NoticeContext(tenantId, cs, today, SeesAmounts: true, AllowedModules: salesOnlyModules), CancellationToken.None);
+        Assert.Single(salesItems);
+        Assert.Contains("P-00088", salesItems[0].Title);
+        Assert.DoesNotContain(salesItems, i => i.Title.Contains("cheque", StringComparison.OrdinalIgnoreCase));
+
+        // Usuario con Ventas y Finanzas: ve ambas prioridades.
+        var fullModules = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "sales", "crm", "finance" };
+        var fullItems = await provider.GetAsync(new NoticeContext(tenantId, cs, today, SeesAmounts: true, AllowedModules: fullModules), CancellationToken.None);
+        Assert.Equal(2, fullItems.Count);
+    }
 }
