@@ -271,7 +271,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     requiredPermission: "purchasing.read",
     dependencies: ["ventas", "compras"],
     items: [
-      { path: "/finanzas", label: "Disponibilidad", icon: "💵" },
+      { path: "/finanzas", label: "Tablero y disponibilidad", icon: "📊", end: true },
       { path: "/finanzas/bancos", label: "Bancos y cajas", icon: "🏦" },
       { path: "/finanzas/fondos", label: "Fondos comunes de inversión", icon: "📈" },
       { path: "/finanzas/conciliacion", label: "Conciliación bancaria", icon: "🔗" },

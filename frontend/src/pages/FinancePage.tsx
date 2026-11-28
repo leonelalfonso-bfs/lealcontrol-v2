@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { businessDate } from "../lib/dates";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
-import type { InvestmentFund } from "../api/types/finance";
+import type { Invoice } from "../api/types";
+import type { FinanceMovementReview, InvestmentFund, ReceivedCheque } from "../api/types/finance";
 import { fileToBase64, fileToText } from "../lib/files";
 
 type Account = {
@@ -29,9 +30,21 @@ const money = (n: number, currency: string) =>
 
 const isManual = (a: Account) => (a.bookingMode || "Statement") === "Manual";
 
+function daysUntil(iso?: string | null) {
+  if (!iso) return null;
+  const target = Date.parse(iso.slice(0, 10) + "T00:00:00");
+  if (Number.isNaN(target)) return null;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  return Math.round((target - today) / 86_400_000);
+}
+
 export function FinancePage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [funds, setFunds] = useState<InvestmentFund[]>([]);
+  const [cheques, setCheques] = useState<ReceivedCheque[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [movementsToReview, setMovementsToReview] = useState<FinanceMovementReview[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [accountId, setAccountId] = useState("");
   const [csv, setCsv] = useState("");
@@ -54,15 +67,66 @@ export function FinancePage() {
   );
 
   const load = () =>
-    api
-      .listFinanceAccounts()
-      .then(setAccounts)
-      .catch((e) => setError(e instanceof Error ? e.message : "No se pudieron cargar las cuentas."));
+    Promise.all([
+      api.listFinanceAccounts().then(setAccounts),
+      api.listInvestmentFunds().then(setFunds).catch(() => setFunds([])),
+      api.listReceivedCheques().then(setCheques).catch(() => setCheques([])),
+      api.listInvoices().then(setInvoices).catch(() => setInvoices([])),
+      api.listFinanceMovementsForReview().then(setMovementsToReview).catch(() => setMovementsToReview([]))
+    ]).catch((e) => setError(e instanceof Error ? e.message : "No se pudieron cargar los datos de Finanzas."));
 
   useEffect(() => {
     void load();
-    api.listInvestmentFunds().then(setFunds).catch(() => setFunds([]));
   }, []);
+
+  const ownChequesDue = useMemo(
+    () =>
+      cheques
+        .filter((c) => c.direction === "Issued" && c.status === "Issued")
+        .map((c) => ({ cheque: c, days: daysUntil(c.dueDateUtc) }))
+        .filter((x): x is { cheque: ReceivedCheque; days: number } => x.days !== null && x.days <= 5)
+        .sort((a, b) => a.days - b.days),
+    [cheques]
+  );
+
+  const thirdPartyChequesToDeposit = useMemo(
+    () =>
+      cheques
+        .filter((c) => c.direction === "Received" && c.status === "Available")
+        .map((c) => ({ cheque: c, days: daysUntil(c.dueDateUtc) }))
+        .filter((x): x is { cheque: ReceivedCheque; days: number } => x.days !== null && x.days <= 3)
+        .sort((a, b) => a.days - b.days),
+    [cheques]
+  );
+
+  const overdueByCustomer = useMemo(() => {
+    const map = new Map<
+      string,
+      { customerId: string; customerName: string; count: number; maxDays: number; ars: number; usd: number }
+    >();
+    for (const inv of invoices) {
+      if (inv.status !== "Authorized" || /^NC/i.test(inv.invoiceType || "")) continue;
+      const pending = typeof inv.pending === "number" ? inv.pending : 0;
+      if (pending <= 0.01) continue;
+      const d = daysUntil(inv.dueDate);
+      if (d === null || d >= 0) continue;
+      const overdueDays = Math.abs(d);
+      const curr = map.get(inv.customerId) ?? {
+        customerId: inv.customerId,
+        customerName: inv.customerName || "Cliente",
+        count: 0,
+        maxDays: 0,
+        ars: 0,
+        usd: 0
+      };
+      curr.count += 1;
+      curr.maxDays = Math.max(curr.maxDays, overdueDays);
+      if ((inv.currency || "ARS").startsWith("USD")) curr.usd += pending;
+      else curr.ars += pending;
+      map.set(inv.customerId, curr);
+    }
+    return Array.from(map.values()).sort((a, b) => b.maxDays - a.maxDays || b.ars - a.ars);
+  }, [invoices]);
 
   const readFile = async (f: File) => {
     setFile({ fileBase64: await fileToBase64(f), fileName: f.name });
@@ -138,11 +202,13 @@ export function FinancePage() {
     <div className="page-wide">
       <div className="page-head">
         <div>
-          <span className="eyebrow">FINANZAS · TESORERÍA</span>
-          <h1>Disponibilidad financiera</h1>
-          <p className="muted">Bancos, cajas, billeteras e inversiones en un solo lugar.</p>
+          <span className="eyebrow">FINANZAS · CENTRO DE CONTROL</span>
+          <h1>Finanzas y Tesorería</h1>
+          <p className="muted">Disponibilidad, vencimientos de cheques, cobranzas vencidas y conciliación bancaria en un solo lugar.</p>
         </div>
         <div className="toolbar">
+          <Link className="btn btn-outline" to="/finanzas/cobranzas">+ Recibo de cobro</Link>
+          <Link className="btn btn-outline" to="/finanzas/pagos">+ Orden de pago</Link>
           <button className="btn btn-outline" onClick={() => setShowAccountForm((value) => !value)}>
             + Nueva cuenta
           </button>
@@ -252,6 +318,117 @@ export function FinancePage() {
             </small>
           </Link>
         ))}
+      </div>
+
+      <div className="kpi kpi-4" style={{ marginTop: 18 }}>
+        <Link className="card" to="/finanzas/echeqs" style={{ textDecoration: "none", color: "inherit" }}>
+          <span className="muted">Cheques propios (≤ 5 días)</span>
+          <strong>{ownChequesDue.length}</strong>
+        </Link>
+        <Link className="card" to="/finanzas/echeqs" style={{ textDecoration: "none", color: "inherit" }}>
+          <span className="muted">Cheques a depositar (≤ 3 días)</span>
+          <strong>{thirdPartyChequesToDeposit.length}</strong>
+        </Link>
+        <Link className="card" to="/finanzas/cuenta-corriente" style={{ textDecoration: "none", color: "inherit" }}>
+          <span className="muted">Clientes con facturas vencidas</span>
+          <strong>{overdueByCustomer.length}</strong>
+        </Link>
+        <Link className="card" to="/finanzas/conciliacion" style={{ textDecoration: "none", color: "inherit" }}>
+          <span className="muted">Movimientos por conciliar</span>
+          <strong>{movementsToReview.length}</strong>
+        </Link>
+      </div>
+
+      <div className="split" style={{ marginTop: 18 }}>
+        <section className="card pad">
+          <div className="section-head">
+            <div>
+              <h2>Cheques y conciliación bancaria</h2>
+              <p className="muted">Cheques propios a fondear, cheques de terceros listos para depositar y extractos pendientes.</p>
+            </div>
+            <Link className="btn btn-outline compact" to="/finanzas/echeqs">Cartera →</Link>
+          </div>
+          {ownChequesDue.length === 0 && thirdPartyChequesToDeposit.length === 0 && movementsToReview.length === 0 ? (
+            <p className="muted">No hay cheques próximos ni movimientos pendientes de conciliar. ¡Al día!</p>
+          ) : (
+            <>
+              {ownChequesDue.slice(0, 6).map(({ cheque: c, days }) => (
+                <Link className="production-setup-row" key={c.id} to="/finanzas/echeqs">
+                  <span>
+                    <strong>Cheque propio {c.checkNumber}</strong> · {c.issuerName || "Sin beneficiario"}
+                    <small>
+                      {days < 0 ? `Venció hace ${Math.abs(days)}d` : days === 0 ? "Vence hoy" : days === 1 ? "Vence mañana" : `Vence en ${days} días`}
+                      {" · "}{money(c.amount, c.currency || "ARS")}
+                      {c.bankName ? ` · ${c.bankName}` : ""}
+                    </small>
+                  </span>
+                  <span className={`badge ${days <= 1 ? "danger" : "warn"}`}>A debitarse</span>
+                </Link>
+              ))}
+              {thirdPartyChequesToDeposit.slice(0, 6).map(({ cheque: c, days }) => (
+                <Link className="production-setup-row" key={c.id} to="/finanzas/echeqs">
+                  <span>
+                    <strong>Cheque {c.checkNumber}</strong> · {c.issuerName || "Sin emisor"}
+                    <small>
+                      {days <= 0 ? "Listo para depositar hoy" : `Fecha de pago en ${days} día${days === 1 ? "" : "s"}`}
+                      {" · "}{money(c.amount, c.currency || "ARS")}
+                    </small>
+                  </span>
+                  <span className={`badge ${days <= 0 ? "warn" : "info"}`}>Depositar</span>
+                </Link>
+              ))}
+              {movementsToReview.length > 0 && (
+                <Link className="production-setup-row" to="/finanzas/conciliacion">
+                  <span>
+                    <strong>Conciliación bancaria pendiente</strong>
+                    <small>{movementsToReview.length} movimiento{movementsToReview.length === 1 ? "" : "s"} de extracto por revisar o clasificar</small>
+                  </span>
+                  <span className="badge info">Conciliar →</span>
+                </Link>
+              )}
+            </>
+          )}
+        </section>
+
+        <section className="card pad">
+          <div className="section-head">
+            <div>
+              <h2>Cobranzas vencidas por cliente</h2>
+              <p className="muted">Acceso directo a la cuenta corriente o a armar el borrador de recordatorio de cobro.</p>
+            </div>
+            <Link className="btn btn-outline compact" to="/finanzas/cuenta-corriente">Cuentas →</Link>
+          </div>
+          {overdueByCustomer.length === 0 ? (
+            <p className="muted">No hay facturas de venta vencidas con saldo pendiente.</p>
+          ) : (
+            overdueByCustomer.slice(0, 8).map((c) => {
+              const totals = [
+                c.ars > 0.01 ? money(c.ars, "ARS") : null,
+                c.usd > 0.01 ? `USD ${c.usd.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : null
+              ].filter(Boolean).join(" + ");
+              return (
+                <div className="production-setup-row" key={c.customerId} style={{ cursor: "default" }}>
+                  <Link
+                    to={`/finanzas/cuenta-corriente?cuenta=${c.customerId}`}
+                    style={{ textDecoration: "none", color: "inherit", flex: 1, minWidth: 0 }}
+                  >
+                    <strong>{c.customerName}</strong>
+                    <small>
+                      {c.count} factura{c.count === 1 ? "" : "s"} vencida{c.count === 1 ? "" : "s"} · hasta {c.maxDays}d · {totals}
+                    </small>
+                  </Link>
+                  <Link
+                    className="btn btn-outline compact"
+                    to={`/finanzas/cuenta-corriente?cuenta=${c.customerId}&recordatorio=1`}
+                    title="Abrir borrador de recordatorio de cobro (nunca se envía solo)"
+                  >
+                    ✉ Recordatorio
+                  </Link>
+                </div>
+              );
+            })
+          )}
+        </section>
       </div>
 
       <section className="card pad" style={{ marginTop: 22 }}>
