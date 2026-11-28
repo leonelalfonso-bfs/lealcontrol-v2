@@ -616,6 +616,11 @@ export const api = {
       `/api/v1/communications/conversations/${conversationId}/ai-reanalyze`,
       { method: "POST" }
     ),
+  generateCollectionReminderDraft: (customerId: string) =>
+    request<import("./types").CollectionReminderDraftResult>(
+      `/api/v1/finance/collection-reminder/${customerId}`,
+      { method: "POST" }
+    ),
   listMailAccounts: () => request<import("./types").MailAccount[]>("/api/v1/communications/accounts"),
   saveMailAccount: (body: object) => request<{ id: string }>("/api/v1/communications/accounts", { method: "POST", body: JSON.stringify(body) }),
   testMailAccount: (id: string) => request<{ connected: boolean }>(`/api/v1/communications/accounts/${id}/test`, { method: "POST" }),

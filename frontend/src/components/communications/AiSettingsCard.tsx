@@ -178,7 +178,8 @@ export function AiSettingsCard() {
                     {u.feature === "mail-reading" ? "Lectura de mail"
                       : u.feature === "cuit-web-lookup" ? "Búsqueda CUIT web"
                       : u.feature === "reply-draft" ? "Borrador de respuesta"
-                      : u.feature === "supervisor" ? "Supervisor comercial"
+                      : u.feature === "collection-reminder" ? "Recordatorio de cobro"
+                      : u.feature === "supervisor" ? "Supervisor diario"
                       : u.feature === "test" ? "Prueba de clave"
                       : u.feature}
                   </td>

@@ -2850,3 +2850,21 @@ export type AiDraftResult = {
   error?: string | null;
   circuit?: CommercialCircuitReport | null;
 };
+
+export type CollectionReminderDraftResult = {
+  ok: boolean;
+  to?: string | null;
+  subject?: string | null;
+  body?: string | null;
+  usedAi: boolean;
+  overdueCount: number;
+  invoices: Array<{
+    id: string;
+    number: string;
+    dueDate: string;
+    daysOverdue: number;
+    currency: string;
+    pendingAmount: number;
+  }>;
+  error?: string | null;
+};
