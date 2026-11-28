@@ -128,7 +128,8 @@ public sealed class Conversation
             ParticipantName = participantName;
         }
 
-        if (occurredAtUtc >= LastMessageAtUtc)
+        var isNewerOrEqual = occurredAtUtc >= LastMessageAtUtc;
+        if (isNewerOrEqual)
         {
             LastMessageAtUtc = occurredAtUtc;
             LastMessagePreview = preview;
@@ -138,6 +139,14 @@ public sealed class Conversation
         {
             UnreadCount++;
             if (LastIncomingAtUtc is null || occurredAtUtc > LastIncomingAtUtc) LastIncomingAtUtc = occurredAtUtc;
+            // Si la conversación estaba finalizada (resuelta o archivada) y entra un nuevo mensaje,
+            // se reabre sola para que vuelva a aparecer en Activas.
+            if (isNewerOrEqual
+                && (string.Equals(Status, "resolved", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(Status, "archived", StringComparison.OrdinalIgnoreCase)))
+            {
+                Status = "open";
+            }
         }
         else if (LastOutgoingAtUtc is null || occurredAtUtc > LastOutgoingAtUtc)
         {
